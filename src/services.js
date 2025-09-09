@@ -6,97 +6,48 @@
 // Google Sheets Service Class
 class GoogleSheetsService {
   constructor() {
-    this.baseURL = process.env.REACT_APP_GAS_WEB_APP_URL;
-
-    if (!this.baseURL) {
-      console.error('Google Apps Script URL not configured! Check your .env file');
-    } else {
-      console.log('Google Sheets Service initialized with URL:', this.baseURL);
-    }
+    // Use the API route in production, direct URL in development
+    this.baseURL = process.env.NODE_ENV === 'production' 
+      ? '/api/sheets'  // This will use your Vercel function
+      : process.env.REACT_APP_GAS_WEB_APP_URL;
+    
+    console.log('Google Sheets Service initialized');
+    console.log('Using URL:', this.baseURL);
   }
 
   async makeRequest(data) {
-    if (!this.baseURL) {
-        console.error("Google Apps Script URL is not configured. Cannot make request.");
-        return { success: false, message: "Configuration error." };
-    }
     try {
-      console.log('Sending request to Google Sheets:', data.action);
-      console.log('URL being used:', this.baseURL);
-      console.log('Data being sent:', data);
-
-      // CRITICAL: Use no-cors mode for Google Apps Script
-      await fetch(this.baseURL, {
+      console.log('Sending request:', data.action);
+      
+      const response = await fetch(this.baseURL, {
         method: 'POST',
-        mode: 'no-cors', // Required for Google Apps Script
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data)
       });
-
-      // With no-cors, we can't read response but request is sent
-      console.log('Request sent successfully to Google Sheets!');
-
-      // Return success
-      return { success: true, message: 'Data sent to Google Sheets' };
-
+      
+      // Now we can read the response!
+      const result = await response.json();
+      console.log('Response received:', result);
+      
+      if (!result.success && result.error) {
+        throw new Error(result.error);
+      }
+      
+      return result.data || result;
+      
     } catch (error) {
       console.error('Error communicating with Google Sheets:', error);
       throw error;
     }
   }
-
-  async getLeads(filters = {}) {
-    // With no-cors, we can't fetch data back
-    // Return empty array for now
-    console.log('Note: Reading from Google Sheets requires a different approach');
-    return [];
-  }
-
-  async addLead(lead) {
-    console.log('Service addLead called with:', lead.customerName);
-    console.log('Adding lead:', lead);
-    return this.makeRequest({
-      action: 'addLead',
-      lead: lead
+  
+  // Now this can actually work!
+  async getLeads() {
+    return this.makeRequest({ 
+      action: 'getLeads'
     });
-  }
-
-  async updateLead(lead) {
-    console.log('Updating lead:', lead);
-    return this.makeRequest({
-      action: 'updateLead',
-      lead: lead
-    });
-  }
-
-  async deleteLead(leadId) {
-    console.log('Deleting lead:', leadId);
-    return this.makeRequest({
-      action: 'deleteLead',
-      leadId: leadId
-    });
-  }
-
-  async getStats() {
-    return this.makeRequest({
-      action: 'getStats'
-    });
-  }
-}
-
-// Activity Logger Class
-class ActivityLogger {
-  constructor() {
-    this.backendURL = process.env.REACT_APP_GAS_WEB_APP_URL;
-  }
-
-  async logActivity(type, leadId, description) {
-    console.log(`Activity logged: ${type} - ${description}`);
-    // For now, just log to console
-    // Could send to Google Sheets if needed
-    return { success: true };
   }
 }
 
