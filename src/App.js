@@ -103,7 +103,12 @@ function App() {
 
   const addNotification = (message, type = 'info') => {
       const newNotification = { id: Date.now().toString(), message, type };
-      setNotifications(prev => [newNotification, ...prev].slice(0, 5)); // Keep last 5
+      setNotifications(prev => [newNotification, ...prev]);
+
+      // Set a timer to automatically remove the notification after 5 seconds
+      setTimeout(() => {
+          setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+      }, 5000);
   };
 
   const loadLeadsData = async () => {
@@ -111,9 +116,20 @@ function App() {
       setLoading(true);
       const sheetsLeads = await googleSheetsService.fetchLeads();
 
-      if (sheetsLeads.length > 0) {
-        setLeads(sheetsLeads);
-        addNotification(`Loaded ${sheetsLeads.length} leads from Google Sheets`, 'success');
+      // Filter out leads with no ID and remove duplicates to prevent key errors
+      const seenIds = new Set();
+      const uniqueLeads = sheetsLeads.filter(lead => {
+          if (!lead.id || seenIds.has(lead.id)) {
+              console.warn('Filtered out lead with missing or duplicate ID:', lead);
+              return false;
+          }
+          seenIds.add(lead.id);
+          return true;
+      });
+
+      if (uniqueLeads.length > 0) {
+        setLeads(uniqueLeads);
+        addNotification(`Loaded ${uniqueLeads.length} leads from Google Sheets`, 'success');
       } else {
         setLeads([]);
         addNotification('No leads found. Add your first lead to get started!', 'info');
@@ -697,3 +713,4 @@ function StatCard({ title, value, icon, color }) {
 }
 
 export default App;
+
