@@ -215,11 +215,15 @@ function App() {
       <header className="bg-white shadow-sm border-b sticky top-0 z-30"><div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"><div className="flex justify-between items-center py-4"><div className="flex items-center"><DollarSign className="h-8 w-8 text-blue-600 mr-3" /><h1 className="text-2xl font-bold text-gray-900">Bhotch CRM</h1></div><nav className="flex space-x-1 sm:space-x-4">
         <button onClick={() => setCurrentView('dashboard')} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}><Home className="w-4 h-4 inline mr-2" />Dashboard</button>
         <button onClick={() => setCurrentView('leads')} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'leads' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}><ClipboardList className="w-4 h-4 inline mr-2" />Leads</button>
+        <button onClick={() => setCurrentView('calendar')} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'calendar' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}><Calendar className="w-4 h-4 inline mr-2" />Calendar</button>
+        <button onClick={() => setCurrentView('map')} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'map' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}><MapPin className="w-4 h-4 inline mr-2" />Map</button>
       </nav></div></div></header>
       <div className="fixed top-5 right-5 w-80 z-50">{notifications.map(n => <div key={n.id} className={`p-3 rounded-md mb-2 shadow-lg animate-fade-in-right ${ n.type === 'success' ? 'bg-green-100 text-green-800' : n.type === 'warning' ? 'bg-yellow-100 text-yellow-800' : n.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }`}><div className="flex items-start">{n.type === 'success' && <CheckCircle className="w-5 h-5 mr-2 flex-shrink-0" />}{n.type === 'warning' && <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />}{n.type === 'error' && <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />}{n.type === 'info' && <Clock className="w-5 h-5 mr-2 flex-shrink-0" />}<span className="text-sm">{n.message}</span></div></div>)}</div>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'dashboard' && <DashboardView stats={getDashboardStats()} leads={leads} />}
         {currentView === 'leads' && <LeadsView leads={getFilteredLeads()} onAddLead={() => setShowAddForm(true)} onEditLead={setSelectedLead} onDeleteLead={deleteLead} filterCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} onRefreshLeads={() => loadLeadsData(true)} />}
+        {currentView === 'calendar' && <CalendarView leads={leads} />}
+        {currentView === 'map' && <MapView leads={leads} />}
       </main>
       {showAddForm && <AddLeadForm onSubmit={addLead} onCancel={() => setShowAddForm(false)} />}
       {selectedLead && <EditLeadForm lead={selectedLead} onSubmit={updateLead} onCancel={() => setSelectedLead(null)} />}
@@ -289,6 +293,41 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, filterCriteria,
   );
 }
 
+function CalendarView({ leads }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Calendar</h2>
+      <div className="bg-gray-100 h-96 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">Calendar integration coming soon.</p>
+           <p className="text-sm text-gray-500 mt-2">
+             View appointments and follow-up dates here.
+           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MapView({ leads }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Lead Map</h2>
+      <div className="bg-gray-100 h-96 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">Map integration coming soon.</p>
+           <p className="text-sm text-gray-500 mt-2">
+            Visualize your lead locations.
+           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function FilterControls({ filterCriteria, setFilterCriteria }) {
     const handleFilterChange = (key, value) => {
         setFilterCriteria(prev => ({ ...prev, [key]: value }));
@@ -301,7 +340,7 @@ function FilterControls({ filterCriteria, setFilterCriteria }) {
 }
 
 const FormModal = ({ children, title, onCancel }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40"><div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"><div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-medium text-gray-900">{title}</h3><button onClick={onCancel} className="text-gray-400 hover:text-gray-600">&times;</button></div><div className="p-6 overflow-y-auto">{children}</div></div></div>
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40"><div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"><div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-medium text-gray-900">{title}</h3><button onClick={onCancel} className="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button></div><div className="p-6 overflow-y-auto">{children}</div></div></div>
 );
 
 const FormSection = ({ title, children }) => <div className="mb-6"><h4 className="text-md font-semibold text-gray-800 border-b pb-2 mb-4">{title}</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div></div>;
