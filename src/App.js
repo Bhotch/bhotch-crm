@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Filter, Plus, Edit2, Trash2, Save, Navigation, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail } from 'lucide-react';
+import { MapPin, Calendar, Filter, Plus, Edit2, Trash2, Save, Navigation, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail, RefreshCw } from 'lucide-react';
 
 // --- Google Sheets Service Class ---
 class GoogleSheetsService {
@@ -333,6 +333,7 @@ function App() {
             onDeleteLead={deleteLead}
             filterCriteria={filterCriteria}
             setFilterCriteria={setFilterCriteria}
+            onRefreshLeads={loadLeadsData}
           />
         )}
         {currentView === 'calendar' && <CalendarView appointments={appointments} leads={leads} />}
@@ -410,18 +411,27 @@ function DashboardView({ stats, leads }) {
   );
 }
 
-function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, filterCriteria, setFilterCriteria }) {
+function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, filterCriteria, setFilterCriteria, onRefreshLeads }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Leads Management</h2>
-        <button
-          onClick={onAddLead}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Lead
-        </button>
+        <div className="flex space-x-2">
+            <button
+              onClick={onRefreshLeads}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </button>
+            <button
+              onClick={onAddLead}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Lead
+            </button>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow">

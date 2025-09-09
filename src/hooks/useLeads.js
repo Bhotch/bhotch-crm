@@ -83,65 +83,33 @@ function App() {
 
   // Load initial sample data on component mount
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  const loadInitialData = () => {
-    // In a real app, you can't read from Google Sheets with 'no-cors'.
-    // So, we'll start with sample data to ensure the UI is functional.
-    setTimeout(() => {
-      const sampleLeads = [
-        {
-          id: '1',
-          customerName: 'John Smith (Sample)',
-          address: '123 Oak Street, Denver, CO 80201',
-          phoneNumber: '(303) 555-0123',
-          dabellaQuote: '$12,500',
-          quality: 'Hot',
-          notes: 'Storm damage on north side, insurance claim approved',
-          disposition: 'Quoted',
-          leadSource: 'Door Knock',
-          email: 'john.smith@email.com',
-          lastContact: '2024-01-15',
-          appointmentDate: '2024-01-20',
-          inspectionStatus: 'Completed',
-          roofAge: '15 years',
-          roofType: 'Asphalt Shingle'
-        },
-        {
-          id: '2',
-          customerName: 'Sarah Johnson (Sample)',
-          address: '456 Pine Avenue, Aurora, CO 80012',
-          phoneNumber: '(720) 555-0456',
-          dabellaQuote: '$8,900',
-          quality: 'Warm',
-          notes: 'Interested in full replacement, comparing quotes',
-          disposition: 'Follow Up',
-          leadSource: 'Referral',
-          email: 'sarah.j@email.com',
-          lastContact: '2024-01-14',
-          appointmentDate: '2024-01-18',
-          inspectionStatus: 'Scheduled',
-          roofAge: '20 years',
-          roofType: 'Tile'
-        },
-      ];
-
-      setLeads(sampleLeads);
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching leads from Google Sheets...');
       
-      setAppointments([
-        { id: '1', leadId: '1', date: '2024-01-20', time: '10:00 AM', type: 'Final Inspection' },
-        { id: '2', leadId: '2', date: '2024-01-18', time: '2:00 PM', type: 'Initial Assessment' }
-      ]);
-
-      setNotifications([
-        { id: '1', message: 'Follow up with Sarah Johnson today', type: 'reminder' },
-        { id: '2', message: 'John Smith inspection completed', type: 'success' }
-      ]);
-
+      const result = await googleSheetsService.getLeads();
+      console.log('Leads received:', result);
+      
+      // Handle the response - it might be wrapped in a data property
+      const leadsData = result.data || result || [];
+      
+      // Ensure it's an array
+      const leadsArray = Array.isArray(leadsData) ? leadsData : [];
+      
+      setLeads(leadsArray);
+      console.log(`Loaded ${leadsArray.length} leads from Google Sheets`);
+      
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      setLeads([]); // Set empty array on error
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+  
+  fetchLeads();
+}, []); // Run once when component mounts
 
   // Lead management functions (NOW CONNECTED TO GOOGLE SHEETS)
   const addLead = async (leadData) => {
