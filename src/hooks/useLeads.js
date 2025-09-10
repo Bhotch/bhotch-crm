@@ -1,4 +1,4 @@
-// Save this as: src/hooks/useLeads.js
+
 // Professional Lead Management Hook with Google Sheets Integration
 
 import { useState, useEffect, useCallback } from 'react';
