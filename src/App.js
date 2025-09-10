@@ -202,8 +202,8 @@ const StatCard = ({ title, value, icon, color }) => {
 const FilterControls = ({ filterCriteria, setFilterCriteria }) => {
     const handleFilterChange = (key, value) => setFilterCriteria(prev => ({ ...prev, [key]: value }));
     return <>
-        <select value={filterCriteria.disposition} onChange={e => handleFilterChange('disposition', e.target.value)} className="rounded border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"><option value="all">All Dispositions</option><option>New</option><option>Contacted</option><option>Qualified</option><option>Quoted</option><option>Follow Up</option><option>Closed Won</option><option>Closed Lost</option></select>
-        <select value={filterCriteria.leadSource} onChange={e => handleFilterChange('leadSource', e.target.value)} className="rounded border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"><option value="all">All Sources</option><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></select>
+        <select value={filterCriteria.disposition} onChange={e => handleFilterChange('disposition', e.target.value)} className="rounded border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"><option value="all">All Dispositions</option><option>New</option><option>Scheduled</option><option>Insurance</option><option>Quoted</option><option>Follow Up</option><option>Closed Sold</option><option>Closed Lost</option></select>
+        <select value={filterCriteria.leadSource} onChange={e => handleFilterChange('leadSource', e.target.value)} className="rounded border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"><option value="all">All Sources</option><option>Door Knock</option><option>Referral</option><option>Rime</option><option>DaBella</option><option>Cold Call</option></select>
         <select value={filterCriteria.quality} onChange={e => handleFilterChange('quality', e.target.value)} className="rounded border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"><option value="all">All Qualities</option><option>Hot</option><option>Warm</option><option>Cold</option></select>
     </>;
 };
@@ -349,9 +349,9 @@ function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEd
             <FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} /></FormField>
         </FormSection>
         <FormSection title="Lead Details">
-            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></SelectInput></FormField>
+            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Referral</option><option>Rime</option><option>DaBella</option><option>Cold Call</option></SelectInput></FormField>
             <FormField label="Quality"><SelectInput name="quality" value={formData.quality} onChange={handleChange}><option>Hot</option><option>Warm</option><option>Cold</option></SelectInput></FormField>
-            <FormField label="Disposition"><SelectInput name="disposition" value={formData.disposition} onChange={handleChange}><option>New</option><option>Contacted</option><option>Qualified</option><option>Quoted</option><option>Follow Up</option><option>Closed Won</option><option>Closed Lost</option></SelectInput></FormField>
+            <FormField label="Disposition"><SelectInput name="disposition" value={formData.disposition} onChange={handleChange}><option>New</option><option>Scheduled</option><option>Insurance</option><option>Quoted</option><option>Follow Up</option><option>Closed Sold</option><option>Closed Lost</option></SelectInput></FormField>
         </FormSection>
         <FormSection title="Job & Quote Details">
             <FormField label="Roof Age"><TextInput name="roofAge" value={formData.roofAge} onChange={handleChange} /></FormField>
