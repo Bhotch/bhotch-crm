@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail, RefreshCw, X, User, Tag, Briefcase, Search, TrendingUp, MessageSquare, Eye, XCircle } from 'lucide-react';
+import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail, RefreshCw, X, User, Tag, Briefcase, Search, TrendingUp, MessageSquare, Eye, XCircle, ShieldCheck } from 'lucide-react';
 
 // --- Google Sheets Service Class ---
 class GoogleSheetsService {
@@ -245,9 +245,56 @@ function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEd
     </form></div></div></div>;
 }
 
+function LoginScreen({ onLoginSuccess }) {
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    
+    // IMPORTANT: Change this password to a secure one!
+    const CORRECT_PASSWORD = 'bhotchcrm';
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (password === CORRECT_PASSWORD) {
+            setError('');
+            onLoginSuccess();
+        } else {
+            setError('Incorrect password. Please try again.');
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
+            <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
+                <div className="text-center mb-6">
+                    <DollarSign className="h-12 w-12 text-blue-600 mx-auto" />
+                    <h1 className="text-2xl font-bold text-gray-900 mt-2">Bhotch CRM Login</h1>
+                </div>
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Password</label>
+                        <input 
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    {error && <p className="text-red-600 text-sm">{error}</p>}
+                    <div>
+                        <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 
 // --- Main App Component ---
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('dashboard');
@@ -255,7 +302,20 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
 
-  useEffect(() => { loadLeadsData(); }, []);
+  useEffect(() => {
+    const storedAuth = sessionStorage.getItem('isAuthenticated');
+    if (storedAuth === 'true') {
+        setIsAuthenticated(true);
+    } else {
+        setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if(isAuthenticated) {
+        loadLeadsData();
+    }
+  }, [isAuthenticated]);
 
   const addNotification = (message, type = 'info') => {
     const newNotification = { id: Date.now().toString(), message, type };
@@ -346,6 +406,15 @@ function App() {
     quotedLeads: leads.filter(l => l.disposition === 'Quoted').length,
     totalQuoteValue: leads.reduce((sum, lead) => sum + (parseFloat(String(lead.dabellaQuote).replace(/[$,]/g, '')) || 0), 0)
   });
+  
+  const handleLoginSuccess = () => {
+    sessionStorage.setItem('isAuthenticated', 'true');
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
 
   if (loading) return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div><p className="text-gray-600">Loading Bhotch CRM...</p></div></div>;
 
