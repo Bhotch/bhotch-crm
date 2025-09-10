@@ -52,7 +52,6 @@ class GoogleSheetsService {
 const googleSheetsService = new GoogleSheetsService();
 
 // --- Reusable UI Components ---
-
 const StatCard = ({ title, value, icon, color }) => {
     const colors = { blue: 'bg-blue-100 text-blue-800', red: 'bg-red-100 text-red-800', green: 'bg-green-100 text-green-800', purple: 'bg-purple-100 text-purple-800' };
     return <div className="bg-white rounded-lg shadow p-5"><div className="flex items-center"><div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div><div className="ml-4"><p className="text-sm font-medium text-gray-500 truncate">{title}</p><p className="text-2xl font-semibold text-gray-900">{value}</p></div></div></div>
@@ -65,8 +64,14 @@ const DetailItem = ({ icon, label, value }) => (
     </div>
 );
 
-// --- View Components ---
+const FormSection = ({ title, children }) => <div className="mb-6"><h4 className="text-md font-semibold text-gray-800 border-b pb-2 mb-4">{title}</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div></div>;
+const FormField = ({ label, children, fullWidth = false }) => <div className={fullWidth ? 'lg:col-span-3 md:col-span-2' : ''}><label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>{children}</div>;
+const TextInput = (props) => <input type="text" {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
+const SelectInput = ({ children, ...props }) => <select {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">{children}</select>;
+const TextareaInput = (props) => <textarea {...props} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
 
+
+// --- View Components ---
 function DashboardView({ stats, leads }) {
   const recentLeads = leads.slice(-5).reverse();
   return (
@@ -111,7 +116,15 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     const [sortOrder, setSortOrder] = useState('desc');
 
     const getStatusBadge = (status) => {
-        const badges = { 'New': { bg: 'bg-blue-100', text: 'text-blue-800', icon: Plus }, 'Quoted': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: DollarSign }, 'Contacted': { bg: 'bg-orange-100', text: 'text-orange-800', icon: Clock }, 'Closed Won': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle }, 'Closed Lost': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle } };
+        const badges = { 
+            'New': { bg: 'bg-blue-100', text: 'text-blue-800', icon: Plus },
+            'Scheduled': { bg: 'bg-cyan-100', text: 'text-cyan-800', icon: Calendar },
+            'Insurance': { bg: 'bg-indigo-100', text: 'text-indigo-800', icon: ShieldCheck },
+            'Quoted': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: DollarSign }, 
+            'Follow Up': { bg: 'bg-orange-100', text: 'text-orange-800', icon: Clock },
+            'Closed Sold': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle }, 
+            'Closed Lost': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle } 
+        };
         const badge = badges[status] || { bg: 'bg-gray-100', text: 'text-gray-800', icon: AlertCircle };
         const Icon = badge.icon;
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}><Icon className="w-3 h-3 mr-1" />{status}</span>;
@@ -152,6 +165,8 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
         return filtered;
     }, [leads, searchTerm, filterDisposition, filterSource, sortBy, sortOrder]);
 
+    const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -168,8 +183,11 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <input type="text" placeholder="Search by name, phone, or address..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
                     </div>
-                    <select value={filterDisposition} onChange={(e) => setFilterDisposition(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Dispositions</option><option>New</option><option>Scheduled</option><option>Insurance</option><option>Quoted</option><option>Follow Up</option><option>Closed Sold</option><option>Closed Lost</option></select>
-                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option><option>Door Knock</option><option>Rime</option><option>DaBella</option><option>Referral</option><option>Cold Call</option></select>
+                    <select value={filterDisposition} onChange={(e) => setFilterDisposition(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="All">All Dispositions</option>
+                        {dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></select>
                 </div>
             </div>
 
@@ -230,15 +248,19 @@ function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEd
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleSubmit = (e) => { e.preventDefault(); onSubmit(formData); };
     
-    const FormSection = ({ title, children }) => <div className="mb-6"><h4 className="text-md font-semibold text-gray-800 border-b pb-2 mb-4">{title}</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div></div>;
-    const FormField = ({ label, children, fullWidth = false }) => <div className={fullWidth ? 'lg:col-span-3 md:col-span-2' : ''}><label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>{children}</div>;
-    const TextInput = (props) => <input type="text" {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
-    const SelectInput = ({ children, ...props }) => <select {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">{children}</select>;
-    const TextareaInput = (props) => <textarea {...props} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
+    const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
 
     return <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40"><div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"><div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-medium text-gray-900">{isEdit ? "Edit Lead" : "Add New Lead"}</h3><button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={24}/></button></div><div className="p-6 overflow-y-auto"><form onSubmit={handleSubmit}>
         <FormSection title="Customer Information"><FormField label="Full Name *"><TextInput name="customerName" value={formData.customerName} onChange={handleChange} required /></FormField><FormField label="Phone Number *"><TextInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required /></FormField><FormField label="Email"><TextInput name="email" type="email" value={formData.email} onChange={handleChange} /></FormField><FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} /></FormField></FormSection>
-        <FormSection title="Lead Details"><FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></SelectInput></FormField><FormField label="Quality"><SelectInput name="quality" value={formData.quality} onChange={handleChange}><option>Hot</option><option>Warm</option><option>Cold</option></SelectInput></FormField><FormField label="Disposition"><SelectInput name="disposition" value={formData.disposition} onChange={handleChange}><option>New</option><option>Scheduled</option><option>Insurance</option><option>Quoted</option><option>Follow Up</option><option>Closed Sold</option><option>Closed Lost</option></SelectInput></FormField></FormSection>
+        <FormSection title="Lead Details">
+            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></SelectInput></FormField>
+            <FormField label="Quality"><SelectInput name="quality" value={formData.quality} onChange={handleChange}><option>Hot</option><option>Warm</option><option>Cold</option></SelectInput></FormField>
+            <FormField label="Disposition">
+                <SelectInput name="disposition" value={formData.disposition} onChange={handleChange}>
+                    {dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </SelectInput>
+            </FormField>
+        </FormSection>
         <FormSection title="Job & Quote Details"><FormField label="Roof Age"><TextInput name="roofAge" value={formData.roofAge} onChange={handleChange} /></FormField><FormField label="Roof Type"><SelectInput name="roofType" value={formData.roofType} onChange={handleChange}><option>Asphalt Shingle</option><option>Metal</option><option>Tile</option><option>Slate</option><option>Wood</option></SelectInput></FormField><FormField label="Quote Amount"><TextInput name="dabellaQuote" value={formData.dabellaQuote} onChange={handleChange} placeholder="$15,000" /></FormField></FormSection>
         <FormSection title="Notes"><FormField label="Notes" fullWidth><TextareaInput name="notes" value={formData.notes} onChange={handleChange} /></FormField></FormSection>
         <div className="flex justify-end space-x-3 pt-4 border-t mt-6"><button type="button" onClick={onCancel} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">{isEdit ? "Update Lead" : "Add Lead"}</button></div>
