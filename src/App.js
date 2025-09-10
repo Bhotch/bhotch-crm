@@ -272,7 +272,7 @@ function LoginScreen({ onLoginSuccess }) {
     const [error, setError] = useState('');
     
     // IMPORTANT: Change this password to a secure one!
-    const CORRECT_PASSWORD = 'bhotchcrm';
+    const CORRECT_PASSWORD = 'IAMBRANDON';
 
     const handleLogin = (e) => {
         e.preventDefault();
