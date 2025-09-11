@@ -4,20 +4,19 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 // --- Firebase Configuration ---
-// IMPORTANT: Replace this with your actual Firebase config object
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCa63Fy9PF-NV8C_z_5Qp7VWse5nRxRRJ8",
+  authDomain: "crmbackend-470221.firebaseapp.com",
+  projectId: "crmbackend-470221",
+  storageBucket: "crmbackend-470221.firebasestorage.app",
+  messagingSenderId: "874590395925",
+  appId: "1:874590395925:web:41fff249ed9a7b349af81c",
+  measurementId: "G-4BG7SZMK6K"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-
 
 // --- Google Sheets Service Class ---
 class GoogleSheetsService {
@@ -103,7 +102,7 @@ function DashboardView({ stats, leads }) {
         <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200"><h3 className="text-lg font-medium text-gray-900">Recent Leads</h3></div>
             <div className="p-6">
-                {recentLeads.length === 0 ? <p className="text-gray-500 text-center py-4">No recent leads.</p> : 
+                {recentLeads.length === 0 ? <p className="text-gray-500 text-center py-4">No recent leads.</p> :
                 <div className="space-y-4">
                     {recentLeads.map(lead => (
                         <div key={lead.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
@@ -130,14 +129,14 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDisposition, setFilterDisposition] = useState('All');
     const [filterSource, setFilterSource] = useState('All');
-    
+
     const getStatusBadge = (status) => {
         const badges = { 'New': { bg: 'bg-blue-100', text: 'text-blue-800', icon: Plus },'Scheduled': { bg: 'bg-cyan-100', text: 'text-cyan-800', icon: Calendar },'Insurance': { bg: 'bg-indigo-100', text: 'text-indigo-800', icon: ShieldCheck },'Quoted': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: DollarSign }, 'Follow Up': { bg: 'bg-orange-100', text: 'text-orange-800', icon: Clock },'Closed Sold': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle }, 'Closed Lost': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle } };
         const badge = badges[status] || { bg: 'bg-gray-100', text: 'text-gray-800', icon: AlertCircle };
         const Icon = badge.icon;
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}><Icon className="w-3 h-3 mr-1" />{status}</span>;
     };
-    
+
     const formatPhone = (phone) => {
         const phoneString = String(phone || '');
         if (!phoneString) return '';
@@ -145,7 +144,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
         if (cleaned.length === 10) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
         return phoneString;
     };
-    
+
     const formatCurrency = (amount) => {
         const amountString = String(amount || '');
         if (!amountString || amountString === '-' || amountString === '0') return 'N/A';
@@ -153,7 +152,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     };
 
     const filteredAndSortedLeads = useMemo(() => {
-        let filtered = leads.filter(lead => 
+        let filtered = leads.filter(lead =>
             (lead.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || lead.phoneNumber?.toString().includes(searchTerm) || lead.address?.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (filterDisposition === 'All' || lead.disposition === filterDisposition) &&
             (filterSource === 'All' || lead.leadSource === filterSource)
@@ -162,6 +161,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     }, [leads, searchTerm, filterDisposition, filterSource]);
 
     const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
+    const leadSourceOptions = ['Door Knock', 'Rime', 'DaBella', 'Adverta', 'Referral'];
 
     return (
         <div className="space-y-6">
@@ -172,7 +172,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                     <button onClick={onAddLead} className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-2" />Add Lead</button>
                 </div>
             </div>
-            
+
             <div className="bg-white p-4 rounded-lg shadow">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="relative md:col-span-2">
@@ -183,7 +183,10 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                         <option value="All">All Dispositions</option>
                         {dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
-                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option><option>Door Knock</option><option>Rime</option><option>DaBella</option><option>Adverta</option><option>Referral</option></select>
+                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="All">All Sources</option>
+                        {leadSourceOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
                 </div>
             </div>
 
@@ -244,12 +247,16 @@ function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEd
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleSubmit = (e) => { e.preventDefault(); onSubmit(formData); };
     const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
+    const leadSourceOptions = ['Door Knock', 'Rime', 'DaBella', 'Adverta', 'Referral'];
 
     return <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40"><div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"><div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-medium text-gray-900">{isEdit ? "Edit Lead" : "Add New Lead"}</h3><button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={24}/></button></div><div className="p-6 overflow-y-auto"><form onSubmit={handleSubmit}>
-        <FormSection title="Customer Information"><FormField label="Full Name *"><TextInput name="customerName" value={formData.customerName} onChange={handleChange} required /></FormField><FormField label="Phone Number *"><TextInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required /></FormField><FormField label="Email"><TextInput name="email" type="email" value={formData.email} onChange={handleChange} /></FormField><FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} /></FormField></FormSection>
+        <FormSection title="Customer Information"><FormField label="Full Name *"><TextInput name="customerName" value={formData.customerName} onChange={handleChange} required /></FormField><FormField label="Phone Number *"><TextInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required /></FormField><FormField label="Email"><TextInput type="email" value={formData.email} onChange={handleChange} /></FormField><FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} /></FormField></FormSection>
         <FormSection title="Lead Details">
-            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>New</option><option>Scheduled</option><option>Insurance</option><option>Quoted</option><option>Follow Up</option><option>Closed Sold</option><option>Closed Lost</option>
-</SelectInput></FormField>
+            <FormField label="Lead Source">
+                <SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}>
+                    {leadSourceOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </SelectInput>
+            </FormField>
             <FormField label="Quality"><SelectInput name="quality" value={formData.quality} onChange={handleChange}><option>Hot</option><option>Warm</option><option>Cold</option></SelectInput></FormField>
             <FormField label="Disposition"><SelectInput name="disposition" value={formData.disposition} onChange={handleChange}>{dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</SelectInput></FormField>
         </FormSection>
@@ -286,7 +293,7 @@ function LoginScreen({ onLoginSuccess }) {
                 <div className="text-center mb-6"><DollarSign className="h-12 w-12 text-blue-600 mx-auto" /><h1 className="text-2xl font-bold text-gray-900 mt-2">Bhotch CRM Login</h1></div>
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div><label className="block text-sm font-medium text-gray-700">Email</label><TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-                    <div><label className="block text-sm font-medium text-gray-700">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" /></div>
+                    <div><label className="block text-sm font-medium text-gray-700">Password</label><TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
                     {error && <p className="text-red-600 text-sm">{error}</p>}
                     <div><button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{loading ? 'Logging in...' : 'Login'}</button></div>
                 </form>
@@ -311,7 +318,7 @@ function App() {
     if (storedAuth === 'true') {
         setIsAuthenticated(true);
     }
-    setLoading(false); 
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -402,14 +409,14 @@ function App() {
       }
     }
   };
-  
+
   const getDashboardStats = () => ({
     totalLeads: leads.length,
     hotLeads: leads.filter(l => l.quality === 'Hot').length,
     quotedLeads: leads.filter(l => l.disposition === 'Quoted').length,
     totalQuoteValue: leads.reduce((sum, lead) => sum + (parseFloat(String(lead.dabellaQuote).replace(/[$,]/g, '')) || 0), 0)
   });
-  
+
   const handleLoginSuccess = () => {
     sessionStorage.setItem('isAuthenticated', 'true');
     setIsAuthenticated(true);
@@ -427,7 +434,7 @@ function App() {
         <button onClick={() => setCurrentView('dashboard')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}><Home className="w-4 h-4 mr-2" />Dashboard</button>
         <button onClick={() => setCurrentView('leads')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'leads' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}><ClipboardList className="w-4 h-4 mr-2" />Leads</button>
       </nav></div></div></header>
-      
+
       <div className="fixed top-5 right-5 w-80 z-50">{notifications.map(n => <div key={n.id} className={`p-3 rounded-md mb-2 shadow-lg animate-fade-in-right flex items-start ${ n.type === 'success' ? 'bg-green-100 text-green-800' : n.type === 'warning' ? 'bg-yellow-100 text-yellow-800' : n.type === 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800' }`}>
           {n.type === 'success' && <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />}
           {n.type === 'warning' && <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />}
@@ -435,7 +442,7 @@ function App() {
           {n.type === 'info' && <Clock className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />}
           <span className="text-sm">{n.message}</span>
       </div>)}</div>
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'dashboard' && <DashboardView stats={getDashboardStats()} leads={leads} />}
         {currentView === 'leads' && <ProfessionalLeadsView leads={leads} onAddLead={() => setShowAddForm(true)} onEditLead={setEditingLead} onDeleteLead={handleDeleteLead} onRefreshLeads={() => loadLeadsData(true)} />}
