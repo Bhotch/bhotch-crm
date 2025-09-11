@@ -1,5 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail, RefreshCw, X, User, Tag, Briefcase, Search, TrendingUp, MessageSquare, Eye, XCircle, ShieldCheck } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+
+// --- Firebase Configuration ---
+// IMPORTANT: Replace this with your actual Firebase config object
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
 
 // --- Google Sheets Service Class ---
 class GoogleSheetsService {
@@ -66,7 +84,7 @@ const DetailItem = ({ icon, label, value }) => (
 
 const FormSection = ({ title, children }) => <div className="mb-6"><h4 className="text-md font-semibold text-gray-800 border-b pb-2 mb-4">{title}</h4><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div></div>;
 const FormField = ({ label, children, fullWidth = false }) => <div className={fullWidth ? 'lg:col-span-3 md:col-span-2' : ''}><label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>{children}</div>;
-const TextInput = (props) => <input type="text" {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
+const TextInput = (props) => <input {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
 const SelectInput = ({ children, ...props }) => <select {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">{children}</select>;
 const TextareaInput = (props) => <textarea {...props} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
 
@@ -112,19 +130,9 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDisposition, setFilterDisposition] = useState('All');
     const [filterSource, setFilterSource] = useState('All');
-    const [sortBy, setSortBy] = useState('createdDate');
-    const [sortOrder, setSortOrder] = useState('desc');
-
+    
     const getStatusBadge = (status) => {
-        const badges = { 
-            'New': { bg: 'bg-blue-100', text: 'text-blue-800', icon: Plus },
-            'Scheduled': { bg: 'bg-cyan-100', text: 'text-cyan-800', icon: Calendar },
-            'Insurance': { bg: 'bg-indigo-100', text: 'text-indigo-800', icon: ShieldCheck },
-            'Quoted': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: DollarSign }, 
-            'Follow Up': { bg: 'bg-orange-100', text: 'text-orange-800', icon: Clock },
-            'Closed Sold': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle }, 
-            'Closed Lost': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle } 
-        };
+        const badges = { 'New': { bg: 'bg-blue-100', text: 'text-blue-800', icon: Plus },'Scheduled': { bg: 'bg-cyan-100', text: 'text-cyan-800', icon: Calendar },'Insurance': { bg: 'bg-indigo-100', text: 'text-indigo-800', icon: ShieldCheck },'Quoted': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: DollarSign }, 'Follow Up': { bg: 'bg-orange-100', text: 'text-orange-800', icon: Clock },'Closed Sold': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle }, 'Closed Lost': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle } };
         const badge = badges[status] || { bg: 'bg-gray-100', text: 'text-gray-800', icon: AlertCircle };
         const Icon = badge.icon;
         return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}><Icon className="w-3 h-3 mr-1" />{status}</span>;
@@ -150,20 +158,8 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
             (filterDisposition === 'All' || lead.disposition === filterDisposition) &&
             (filterSource === 'All' || lead.leadSource === filterSource)
         );
-
-        filtered.sort((a, b) => {
-            let aVal, bVal;
-            switch (sortBy) {
-                case 'name': aVal = a.customerName || ''; bVal = b.customerName || ''; break;
-                case 'quote': aVal = parseFloat(a.dabellaQuote?.replace(/[$,]/g, '')) || 0; bVal = parseFloat(b.dabellaQuote?.replace(/[$,]/g, '')) || 0; break;
-                default: aVal = new Date(a.createdDate || 0); bVal = new Date(b.createdDate || 0); break;
-            }
-            if (sortOrder === 'asc') return aVal > bVal ? 1 : -1;
-            return aVal < bVal ? 1 : -1;
-        });
-
-        return filtered;
-    }, [leads, searchTerm, filterDisposition, filterSource, sortBy, sortOrder]);
+        return filtered.sort((a, b) => new Date(b.createdDate || 0) - new Date(a.createdDate || 0));
+    }, [leads, searchTerm, filterDisposition, filterSource]);
 
     const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
 
@@ -187,7 +183,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                         <option value="All">All Dispositions</option>
                         {dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
-                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></select>
+                    <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option><option>Door Knock</option><option>Rime</option><option>DaBella</option><option>Adverta</option><option>Referral</option></select>
                 </div>
             </div>
 
@@ -196,17 +192,17 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lead Source</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {filteredAndSortedLeads.map((lead) => (
                             <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedLead(lead)}>
-                                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{lead.customerName || 'N/A'}</div><div className="text-sm text-gray-500">{lead.address}</div></td>
+                                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{lead.customerName || 'N/A'}</div></td>
                                 <td className="px-6 py-4 whitespace-nowrap"><a href={`tel:${lead.phoneNumber}`} onClick={(e) => e.stopPropagation()} className="hover:text-blue-600 text-sm text-gray-900">{formatPhone(lead.phoneNumber)}</a></td>
                                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{formatCurrency(lead.dabellaQuote)}</div></td>
                                 <td className="px-6 py-4 whitespace-nowrap">{lead.leadSource}</td>
@@ -247,66 +243,52 @@ function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEd
     const [formData, setFormData] = useState(initialData);
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     const handleSubmit = (e) => { e.preventDefault(); onSubmit(formData); };
-    
     const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
 
     return <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40"><div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"><div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-medium text-gray-900">{isEdit ? "Edit Lead" : "Add New Lead"}</h3><button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={24}/></button></div><div className="p-6 overflow-y-auto"><form onSubmit={handleSubmit}>
         <FormSection title="Customer Information"><FormField label="Full Name *"><TextInput name="customerName" value={formData.customerName} onChange={handleChange} required /></FormField><FormField label="Phone Number *"><TextInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required /></FormField><FormField label="Email"><TextInput name="email" type="email" value={formData.email} onChange={handleChange} /></FormField><FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} /></FormField></FormSection>
         <FormSection title="Lead Details">
-            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Referral</option><option>Online</option><option>Advertisement</option><option>Cold Call</option></SelectInput></FormField>
+            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>New</option><option>Scheduled</option><option>Insurance</option><option>Quoted</option><option>Follow Up</option><option>Closed Sold</option><option>Closed Lost</option>
+</SelectInput></FormField>
             <FormField label="Quality"><SelectInput name="quality" value={formData.quality} onChange={handleChange}><option>Hot</option><option>Warm</option><option>Cold</option></SelectInput></FormField>
-            <FormField label="Disposition">
-                <SelectInput name="disposition" value={formData.disposition} onChange={handleChange}>
-                    {dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </SelectInput>
-            </FormField>
+            <FormField label="Disposition"><SelectInput name="disposition" value={formData.disposition} onChange={handleChange}>{dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</SelectInput></FormField>
         </FormSection>
-        <FormSection title="Job & Quote Details"><FormField label="Roof Age"><TextInput name="roofAge" value={formData.roofAge} onChange={handleChange} /></FormField><FormField label="Roof Type"><SelectInput name="roofType" value={formData.roofType} onChange={handleChange}><option>Asphalt Shingle</option><option>Metal</option><option>TPO</option><option>Slate</option><option>Wood</option></SelectInput></FormField><FormField label="Quote Amount"><TextInput name="dabellaQuote" value={formData.dabellaQuote} onChange={handleChange} placeholder="$15,000" /></FormField></FormSection>
+        <FormSection title="Job & Quote Details"><FormField label="Roof Age"><TextInput name="roofAge" value={formData.roofAge} onChange={handleChange} /></FormField><FormField label="Roof Type"><SelectInput name="roofType" value={formData.roofType} onChange={handleChange}><option>Asphalt Shingle</option><option>Metal</option><option>Tile</option><option>Slate</option><option>Wood</option></SelectInput></FormField><FormField label="Quote Amount"><TextInput name="dabellaQuote" value={formData.dabellaQuote} onChange={handleChange} placeholder="$15,000" /></FormField></FormSection>
         <FormSection title="Notes"><FormField label="Notes" fullWidth><TextareaInput name="notes" value={formData.notes} onChange={handleChange} /></FormField></FormSection>
         <div className="flex justify-end space-x-3 pt-4 border-t mt-6"><button type="button" onClick={onCancel} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Cancel</button><button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">{isEdit ? "Update Lead" : "Add Lead"}</button></div>
     </form></div></div></div>;
 }
 
 function LoginScreen({ onLoginSuccess }) {
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    
-    // IMPORTANT: Change this password to a secure one!
-    const CORRECT_PASSWORD = 'IAMBRANDON';
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        if (password === CORRECT_PASSWORD) {
-            setError('');
+        setLoading(true);
+        setError('');
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
             onLoginSuccess();
-        } else {
-            setError('Incorrect password. Please try again.');
+        } catch (err) {
+            setError('Invalid credentials. Please try again.');
+            console.error("Firebase Auth Error:", err);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center">
             <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
-                <div className="text-center mb-6">
-                    <DollarSign className="h-12 w-12 text-blue-600 mx-auto" />
-                    <h1 className="text-2xl font-bold text-gray-900 mt-2">Bhotch CRM Login</h1>
-                </div>
+                <div className="text-center mb-6"><DollarSign className="h-12 w-12 text-blue-600 mx-auto" /><h1 className="text-2xl font-bold text-gray-900 mt-2">Bhotch CRM Login</h1></div>
                 <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input 
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                    </div>
+                    <div><label className="block text-sm font-medium text-gray-700">Email</label><TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+                    <div><label className="block text-sm font-medium text-gray-700">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" /></div>
                     {error && <p className="text-red-600 text-sm">{error}</p>}
-                    <div>
-                        <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            Login
-                        </button>
-                    </div>
+                    <div><button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{loading ? 'Logging in...' : 'Login'}</button></div>
                 </form>
             </div>
         </div>
@@ -317,8 +299,8 @@ function LoginScreen({ onLoginSuccess }) {
 // --- Main App Component ---
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [leads, setLeads] = useState([]);
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingLead, setEditingLead] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -328,9 +310,8 @@ function App() {
     const storedAuth = sessionStorage.getItem('isAuthenticated');
     if (storedAuth === 'true') {
         setIsAuthenticated(true);
-    } else {
-        setLoading(false);
     }
+    setLoading(false); 
   }, []);
 
   useEffect(() => {
@@ -434,11 +415,11 @@ function App() {
     setIsAuthenticated(true);
   };
 
+  if (loading) return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div><p className="text-gray-600">Loading Bhotch CRM...</p></div></div>;
+
   if (!isAuthenticated) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
-
-  if (loading) return <div className="min-h-screen bg-gray-100 flex items-center justify-center"><div className="text-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div><p className="text-gray-600">Loading Bhotch CRM...</p></div></div>;
 
   return (
     <div className="min-h-screen bg-gray-50">
