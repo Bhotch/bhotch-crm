@@ -99,7 +99,7 @@ function MapView({ leads }) {
         return `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${centerQuery}&zoom=${zoom}`;
     }, [leads, apiKey]);
 
-    if (!apiKey || apiKey === "AIzaSyA-IhqTEAOQMTU9DlEeUwt1_oM5yq3-sb4") {
+    if (!apiKey) {
         return (<div className="space-y-6"><h2 className="text-2xl font-bold text-gray-900">Lead Map</h2><div className="bg-white rounded-lg shadow h-[600px] flex items-center justify-center text-center p-4"><div><MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900">Map Unavailable</h3><p className="text-sm text-gray-500 mt-1">Google Maps API key is not configured.</p></div></div></div>);
     }
 
