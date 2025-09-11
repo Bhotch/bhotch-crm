@@ -48,7 +48,7 @@ function DashboardView({ stats, leads }) {
   );
 }
 
-const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads }) => {
+const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onRefreshLeads }) => {
     const [selectedLead, setSelectedLead] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDisposition, setFilterDisposition] = useState('All');
@@ -85,7 +85,31 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
 
     return (<div className="space-y-6"><div className="flex justify-between items-center"><h2 className="text-2xl font-bold text-gray-900">Lead Management</h2><div className="flex items-center space-x-3"><button onClick={onRefreshLeads} className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"><RefreshCw className="w-4 h-4 mr-2" /> Refresh</button><button onClick={onAddLead} className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-2" />Add Lead</button></div></div><div className="bg-white p-4 rounded-lg shadow"><div className="grid grid-cols-1 md:grid-cols-4 gap-4"><div className="relative md:col-span-2"><Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" /><input type="text" placeholder="Search by name, phone, or address..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" /></div><select value={filterDisposition} onChange={(e) => setFilterDisposition(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Dispositions</option>{dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select><select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option>{leadSourceOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select></div></div><div className="bg-white rounded-lg shadow overflow-x-auto"><table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredAndSortedLeads.map((lead) => (<tr key={lead.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => setSelectedLead(lead)}><td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{lead.customerName || 'N/A'}</div></td><td className="px-6 py-4 whitespace-nowrap"><a href={`tel:${lead.phoneNumber}`} onClick={(e) => e.stopPropagation()} className="hover:text-blue-600 text-sm text-gray-900">{formatPhone(lead.phoneNumber)}</a></td><td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{formatCurrency(lead.dabellaQuote)}</div></td><td className="px-6 py-4 whitespace-nowrap">{lead.leadSource}</td><td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(lead.disposition)}</td><td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><div className="flex items-center space-x-2"><button onClick={(e) => { e.stopPropagation(); setSelectedLead(lead); }} className="text-blue-600 hover:text-blue-900 p-1 rounded" title="View Details"><Eye className="w-4 h-4" /></button><button onClick={(e) => { e.stopPropagation(); onEditLead(lead); }} className="text-orange-600 hover:text-orange-900 p-1 rounded" title="Edit"><Edit2 className="w-4 h-4" /></button></div></td></tr>))}</tbody></table>{filteredAndSortedLeads.length === 0 && ( <div className="text-center py-12"><AlertCircle className="mx-auto h-12 w-12 text-gray-400" /><h3 className="mt-2 text-sm font-medium text-gray-900">No leads found</h3><p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria.</p></div>)}</div>{selectedLead && <LeadDetailModal lead={selectedLead} onClose={() => setSelectedLead(null)} onEdit={() => { onEditLead(selectedLead); setSelectedLead(null); }} onDelete={() => { onDeleteLead(selectedLead.id); setSelectedLead(null); }}/>}</div>);};
 
-function MapView({ leads }) { const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY; const firstLeadWithCoords = useMemo(() => leads.find(lead => lead.latitude && lead.longitude && !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude))), [leads]); const mapSrc = useMemo(() => { if (!apiKey) return null; let query = "USA"; if (firstLeadWithCoords) { query = `${firstLeadWithCoords.latitude},${firstLeadWithCoords.longitude}`; } return `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${query}&zoom=12`; }, [apiKey, firstLeadWithCoords]); if (!apiKey) { return (<div className="space-y-6"><h2 className="text-2xl font-bold text-gray-900">Lead Map</h2><div className="bg-white rounded-lg shadow h-[600px] flex items-center justify-center text-center p-4"><div><MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900">Map Unavailable</h3><p className="text-sm text-gray-500 mt-1">Google Maps API key is not configured.</p></div></div></div>); } return (<div className="space-y-6"><h2 className="text-2xl font-bold text-gray-900">Lead Map</h2><div className="bg-white rounded-lg shadow h-[600px] overflow-hidden"><iframe title="Lead Map" width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen src={mapSrc}></iframe></div><div className="bg-white p-4 rounded-lg shadow"><h3 className="text-lg font-medium text-gray-900 mb-2">Note</h3><p className="text-sm text-gray-600">This map is centered on the first available lead with coordinates. A future update will show all leads as interactive markers.</p></div></div>); }
+function MapView({ leads }) {
+    const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+    const firstLeadWithCoords = useMemo(() => 
+        leads.find(lead => lead.latitude && lead.longitude && !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude))), 
+    [leads]);
+
+    const mapSrc = useMemo(() => {
+        if (!apiKey) return null;
+        
+        // A specific, valid coordinate for the center of the USA.
+        let centerQuery = "39.8283,-98.5795"; 
+        
+        if (firstLeadWithCoords) {
+            centerQuery = `${firstLeadWithCoords.latitude},${firstLeadWithCoords.longitude}`;
+        }
+        
+        return `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${centerQuery}&zoom=12`;
+    }, [apiKey, firstLeadWithCoords]);
+
+    if (!apiKey) {
+        return (<div className="space-y-6"><h2 className="text-2xl font-bold text-gray-900">Lead Map</h2><div className="bg-white rounded-lg shadow h-[600px] flex items-center justify-center text-center p-4"><div><MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-medium text-gray-900">Map Unavailable</h3><p className="text-sm text-gray-500 mt-1">Google Maps API key is not configured.</p></div></div></div>);
+    }
+    
+    return (<div className="space-y-6"><h2 className="text-2xl font-bold text-gray-900">Lead Map</h2><div className="bg-white rounded-lg shadow h-[600px] overflow-hidden"><iframe title="Lead Map" width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen src={mapSrc}></iframe></div><div className="bg-white p-4 rounded-lg shadow"><h3 className="text-lg font-medium text-gray-900 mb-2">Note</h3><p className="text-sm text-gray-600">This map is centered on the first available lead with coordinates. A future update will show all leads as interactive markers.</p></div></div>);
+}
 function CalendarView() { return (<div className="space-y-6"><h2 className="text-2xl font-bold text-gray-900">Calendar</h2><div className="bg-white rounded-lg shadow h-[600px] flex items-center justify-center"><div className="text-center"><Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" /><p className="text-gray-600">Calendar integration coming soon.</p><p className="text-sm text-gray-500 mt-2">View appointments and follow-up dates here.</p></div></div></div>); }
 
 // --- Modals and Forms ---
@@ -129,18 +153,6 @@ function App() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if(isAuthenticated) {
-        loadLeadsData();
-    }
-  }, [isAuthenticated]);
-
-  const addNotification = (message, type = 'info') => {
-    const newNotification = { id: Date.now().toString(), message, type };
-    setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
-    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== newNotification.id)), 5000);
-  };
-
   const loadLeadsData = useCallback(async (isManualRefresh = false) => {
     try {
       if (!isManualRefresh) setLoading(true);
@@ -170,6 +182,18 @@ function App() {
       if (!isManualRefresh) setLoading(false);
     }
   },[leads]);
+
+  useEffect(() => {
+    if(isAuthenticated) {
+        loadLeadsData();
+    }
+  }, [isAuthenticated, loadLeadsData]);
+
+  const addNotification = (message, type = 'info') => {
+    const newNotification = { id: Date.now().toString(), message, type };
+    setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
+    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== newNotification.id)), 5000);
+  };
 
   const handleAddLead = async (leadData) => {
     try {
