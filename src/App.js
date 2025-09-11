@@ -48,7 +48,7 @@ function DashboardView({ stats, leads }) {
   );
 }
 
-const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onRefreshLeads }) => {
+const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads }) => {
     const [selectedLead, setSelectedLead] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDisposition, setFilterDisposition] = useState('All');
