@@ -1,15 +1,10 @@
-/**
- * Services file for connecting React CRM to Google Sheets
- * Save this as: src/services.js
- */
+// Emergency fix for src/services.js
+// Replace your existing GoogleSheetsService class with this:
 
-// Google Sheets Service Class
 class GoogleSheetsService {
   constructor() {
-    // Use the API route in production, direct URL in development
-    this.baseURL = process.env.NODE_ENV === 'production' 
-      ? '/api/sheets'  // This will use your Vercel function
-      : process.env.REACT_APP_GAS_WEB_APP_URL;
+    // Force direct URL for now - bypass the production routing issue
+    this.baseURL = 'https://script.google.com/macros/s/AKfycbw8r0tVUeFptoP0hdEQONuP8RR5NdYxBjPZwiXPZCLJLwduWAm28K23aVjqwzr4joejtA/exec';
     
     console.log('Google Sheets Service initialized');
     console.log('Using URL:', this.baseURL);
@@ -19,23 +14,40 @@ class GoogleSheetsService {
     try {
       console.log('Sending request:', data.action);
       
-      const response = await fetch(this.baseURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-      });
+      // Use GET for getLeads, POST for others
+      let response;
+      if (data.action === 'getLeads') {
+        const url = new URL(this.baseURL);
+        url.searchParams.append('action', 'getLeads');
+        url.searchParams.append('cacheBust', new Date().getTime());
+        
+        response = await fetch(url, {
+          method: 'GET',
+          mode: 'cors'
+        });
+      } else {
+        response = await fetch(this.baseURL, {
+          method: 'POST',
+          mode: 'cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8',
+          },
+          body: JSON.stringify(data)
+        });
+      }
       
-      // Now we can read the response!
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const result = await response.json();
       console.log('Response received:', result);
       
-      if (!result.success && result.error) {
-        throw new Error(result.error);
+      if (result.success === false) {
+        throw new Error(result.message || result.error);
       }
       
-      return result.data || result;
+      return result.data || result.leads || result;
       
     } catch (error) {
       console.error('Error communicating with Google Sheets:', error);
@@ -43,11 +55,38 @@ class GoogleSheetsService {
     }
   }
   
-  // Now this can actually work!
   async getLeads() {
     return this.makeRequest({ 
       action: 'getLeads'
     });
+  }
+
+  async addLead(lead) {
+    return this.makeRequest({ 
+      action: 'addLead',
+      lead: lead
+    });
+  }
+
+  async updateLead(lead) {
+    return this.makeRequest({ 
+      action: 'updateLead',
+      lead: lead
+    });
+  }
+
+  async deleteLead(leadId) {
+    return this.makeRequest({ 
+      action: 'deleteLead',
+      leadId: leadId
+    });
+  }
+}
+
+// Activity Logger class
+class ActivityLogger {
+  log(activity) {
+    console.log('Activity:', activity);
   }
 }
 
@@ -62,4 +101,3 @@ const services = {
 };
 
 export default services;
-
