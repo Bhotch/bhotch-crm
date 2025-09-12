@@ -3,31 +3,34 @@ import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, AlertCircle, CheckCi
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
-// Firebase Configuration
+// --- SECURITY FIX ---
+// API Keys are now loaded from environment variables
+// Create a .env file in your project's root directory
+// and add your keys there.
 const firebaseConfig = {
-  apiKey: "AIzaSyCa63Fy9PF-NV8C_z_5Qp7VWse5nRxRRJ8",
-  authDomain: "crmbackend-470221.firebaseapp.com",
-  projectId: "crmbackend-470221",
-  storageBucket: "crmbackend-470221.firebasestorage.app",
-  messagingSenderId: "874590395925",
-  appId: "1:874590395925:web:41fff249ed9a7b349af81c",
-  measurementId: "G-4BG7SZMK6K"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Google Maps API Key - IMPORTANT: Replace with your actual key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBe0zlEBVGQB5cNpiPhLH-RGKDvUQDV-zk'; // Replace this!
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 // Google Sheets Service
 class GoogleSheetsService {
+// ... existing code ...
   constructor() { 
     this.baseURL = 'https://script.google.com/macros/s/AKfycbw8r0tVUeFptoP0hdEQONuP8RR5NdYxBjPZwiXPZCLJLwduWAm28K23aVjqwzr4joejtA/exec';
   }
   
   async makeRequest(action, payload) { 
-    try { 
+// ... existing code ...
       const response = await fetch(this.baseURL, { 
         method: 'POST', 
         mode: 'cors',
@@ -53,7 +56,7 @@ class GoogleSheetsService {
   }
   
   async fetchLeads() { 
-    try { 
+// ... existing code ...
       const url = `${this.baseURL}?action=getLeads&cacheBust=${Date.now()}`;
       
       const response = await fetch(url, { 
@@ -104,6 +107,7 @@ const googleSheetsService = new GoogleSheetsService();
 
 // Login Component
 function LoginForm({ onLogin }) {
+// ... existing code ...
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -190,6 +194,7 @@ function LoginForm({ onLogin }) {
 
 // Interactive Map Component
 function InteractiveMapView({ leads }) {
+// ... existing code ...
   const [selectedLead, setSelectedLead] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(null);
@@ -198,51 +203,51 @@ function InteractiveMapView({ leads }) {
   const markersRef = useRef([]);
   const infoWindowRef = useRef(null);
 
-  // Initialize Google Maps
-  useEffect(() => {
-    const initMap = () => {
-      if (!window.google || !mapRef.current) return;
+  const initializeMap = useCallback(() => {
+    if (!window.google || !mapRef.current || mapInstanceRef.current) return;
 
-      const mapOptions = {
-        zoom: 11,
-        center: { lat: 39.7392, lng: -104.9903 }, // Denver, CO
-        mapTypeId: 'roadmap',
-        mapTypeControl: true,
-        streetViewControl: true,
-        fullscreenControl: true,
-        zoomControl: true
-      };
-
-      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
-      infoWindowRef.current = new window.google.maps.InfoWindow();
+    const mapOptions = {
+      zoom: 11,
+      center: { lat: 39.7392, lng: -104.9903 }, // Denver, CO
+      mapTypeId: 'roadmap',
+      mapTypeControl: true,
+      streetViewControl: true,
+      fullscreenControl: true,
+      zoomControl: true
     };
 
-    if (!window.google && !mapLoaded) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        setMapLoaded(true);
-        initMap();
-      };
-      
-      script.onerror = () => {
-        setMapError('Failed to load Google Maps. Please check your API key.');
-      };
-      
-      document.head.appendChild(script);
-    } else if (window.google && !mapInstanceRef.current) {
-      setMapLoaded(true);
-      initMap();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
+    infoWindowRef.current = new window.google.maps.InfoWindow();
+    setMapLoaded(true);
+  }, []);
 
-  // Update markers when leads change or map loads
+  // Initialize Google Maps script
   useEffect(() => {
-    if (!mapInstanceRef.current || !leads.length) return;
+    if (window.google) {
+      initializeMap();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeMap;
+    script.onerror = () => {
+      setMapError('Failed to load Google Maps. Please check your API key.');
+    };
+    
+    document.head.appendChild(script);
+
+    return () => {
+      // Clean up script tag if component unmounts before it loads
+      document.head.removeChild(script);
+    };
+  }, [initializeMap]);
+
+  // Update markers when leads or map state change
+  useEffect(() => {
+    if (!mapLoaded || !mapInstanceRef.current) return;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -270,22 +275,15 @@ function InteractiveMapView({ leads }) {
             animation: window.google.maps.Animation.DROP
           });
 
-          // Info window content
           const contentString = `
             <div style="padding: 12px; max-width: 350px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
               <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
                 ${lead.customerName}
               </h3>
               <div style="space-y: 6px;">
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;">
-                  <strong>📍 Address:</strong> ${lead.address || 'N/A'}
-                </p>
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;">
-                  <strong>📞 Phone:</strong> ${lead.phoneNumber || 'N/A'}
-                </p>
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;">
-                  <strong>✉️ Email:</strong> ${lead.email || 'N/A'}
-                </p>
+                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>📍 Address:</strong> ${lead.address || 'N/A'}</p>
+                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>📞 Phone:</strong> ${lead.phoneNumber || 'N/A'}</p>
+                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>✉️ Email:</strong> ${lead.email || 'N/A'}</p>
                 <p style="margin: 4px 0; color: #4b5563; font-size: 14px;">
                   <strong>🏷️ Status:</strong> 
                   <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background: ${
@@ -298,21 +296,6 @@ function InteractiveMapView({ leads }) {
                     ${lead.quality || 'Cold'}
                   </span>
                 </p>
-                ${lead.leadSource ? 
-                  `<p style="margin: 4px 0; color: #4b5563; font-size: 14px;">
-                    <strong>📌 Source:</strong> ${lead.leadSource}
-                  </p>` : ''
-                }
-                ${lead.dabellaQuote ? 
-                  `<p style="margin: 4px 0; color: #059669; font-size: 14px;">
-                    <strong>💰 Quote:</strong> $${parseFloat(lead.dabellaQuote).toLocaleString()}
-                  </p>` : ''
-                }
-                ${lead.notes ? 
-                  `<p style="margin: 8px 0 0 0; padding-top: 8px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px;">
-                    <strong>Notes:</strong> ${lead.notes.substring(0, 100)}${lead.notes.length > 100 ? '...' : ''}
-                  </p>` : ''
-                }
               </div>
             </div>
           `;
@@ -321,8 +304,6 @@ function InteractiveMapView({ leads }) {
             infoWindowRef.current.setContent(contentString);
             infoWindowRef.current.open(mapInstanceRef.current, marker);
             setSelectedLead(lead);
-            
-            // Zoom to marker
             mapInstanceRef.current.setZoom(15);
             mapInstanceRef.current.setCenter(marker.getPosition());
           });
@@ -334,22 +315,17 @@ function InteractiveMapView({ leads }) {
       }
     });
 
-    // Fit map to show all markers
     if (hasValidMarkers) {
       mapInstanceRef.current.fitBounds(bounds);
-      
-      // Don't zoom in too much for single marker
-      const listener = window.google.maps.event.addListener(mapInstanceRef.current, "idle", function() { 
-        if (mapInstanceRef.current.getZoom() > 16) {
-          mapInstanceRef.current.setZoom(16);
-        }
-        window.google.maps.event.removeListener(listener);
+      const listener = window.google.maps.event.addListenerOnce(mapInstanceRef.current, "idle", () => { 
+        if (mapInstanceRef.current.getZoom() > 16) mapInstanceRef.current.setZoom(16);
       });
     }
-  }, [leads, mapLoaded, setSelectedLead]); // Include all dependencies
+  }, [leads, mapLoaded]);
 
   return (
     <div className="h-full flex bg-gray-50">
+// ... existing code ...
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full"></div>
         
@@ -374,6 +350,7 @@ function InteractiveMapView({ leads }) {
         
         {/* Map Stats Overlay */}
         <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-4">
+// ... existing code ...
           <div className="flex items-center space-x-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-800">{leads.filter(l => l.latitude && l.longitude).length}</p>
@@ -389,6 +366,7 @@ function InteractiveMapView({ leads }) {
       
       {selectedLead && (
         <div className="w-96 bg-white shadow-xl overflow-y-auto">
+// ... existing code ...
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold text-gray-800">{selectedLead.customerName}</h3>
@@ -448,6 +426,7 @@ function InteractiveMapView({ leads }) {
 
 // Calendar View Component
 function CalendarView() {
+// ... existing code ...
   return (
     <div className="h-full bg-white">
       <div className="p-6 border-b bg-gray-50">
@@ -481,6 +460,7 @@ function CalendarView() {
 
 // Dashboard Component
 function Dashboard({ leads }) {
+// ... existing code ...
   const stats = useMemo(() => {
     const total = leads.length;
     const hot = leads.filter(l => l.quality === 'Hot').length;
@@ -621,6 +601,7 @@ function Dashboard({ leads }) {
 
 // Lead Form Component
 function LeadForm({ lead, onSubmit, onCancel }) {
+// ... existing code ...
   const [formData, setFormData] = useState({
     customerName: lead?.customerName || '',
     address: lead?.address || '',
@@ -843,8 +824,40 @@ function LeadForm({ lead, onSubmit, onCancel }) {
   );
 }
 
+// --- UX IMPROVEMENT ---
+// A custom confirmation modal to replace window.confirm
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
+        <div className="p-6 text-center">
+          <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Are you sure?</h3>
+          <p className="text-sm text-gray-600">{message}</p>
+        </div>
+        <div className="flex justify-center gap-4 p-4 bg-gray-50 rounded-b-lg">
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors w-full"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors w-full"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // Main App Component
 export default function App() {
+// ... existing code ...
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
@@ -855,6 +868,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterQuality, setFilterQuality] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingLeadId, setDeletingLeadId] = useState(null); // For confirmation modal
 
   const addNotification = useCallback((message, type = 'info') => {
     const newNotification = { 
@@ -869,13 +883,13 @@ export default function App() {
   }, []);
 
   const loadLeadsData = useCallback(async (isManualRefresh = false) => {
+// ... existing code ...
     try {
       if (!isManualRefresh) setLoading(true);
       else setRefreshing(true);
       
       const sheetsLeads = await googleSheetsService.fetchLeads();
       
-      // Remove duplicates
       const seenIds = new Set();
       const uniqueLeads = sheetsLeads.filter(lead => {
         if (!lead.id || seenIds.has(lead.id)) return false;
@@ -901,6 +915,7 @@ export default function App() {
   }, [addNotification]);
 
   useEffect(() => {
+// ... existing code ...
     const storedAuth = sessionStorage.getItem('isAuthenticated');
     if (storedAuth === 'true') {
       setIsAuthenticated(true);
@@ -909,6 +924,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+// ... existing code ...
     if (isAuthenticated) {
       loadLeadsData();
     }
@@ -917,8 +933,9 @@ export default function App() {
   const handleAddLead = async (leadData) => {
     try {
       const response = await googleSheetsService.addLead(leadData);
-      if (response.success) {
-        await loadLeadsData(true);
+      if (response.success && response.lead) {
+        // --- PERFORMANCE FIX: Update state locally instead of full refresh ---
+        setLeads(prevLeads => [response.lead, ...prevLeads]);
         addNotification(`Lead added: ${leadData.customerName}`, 'success');
         setShowAddForm(false);
       } else {
@@ -930,10 +947,12 @@ export default function App() {
   };
 
   const handleUpdateLead = async (leadData) => {
+// ... existing code ...
     try {
       const response = await googleSheetsService.updateLead(leadData);
       if (response.success) {
-        await loadLeadsData(true);
+        // --- PERFORMANCE FIX: Update state locally ---
+        setLeads(prevLeads => prevLeads.map(l => l.id === leadData.id ? leadData : l));
         addNotification(`Lead updated: ${leadData.customerName}`, 'success');
         setEditingLead(null);
       } else {
@@ -944,26 +963,29 @@ export default function App() {
     }
   };
 
-  const handleDeleteLead = async (leadId) => {
-    if (!window.confirm('Are you sure you want to delete this lead?')) return;
+  const confirmDeleteLead = async () => {
+    if (!deletingLeadId) return;
     
     try {
-      const response = await googleSheetsService.deleteLead(leadId);
+      const response = await googleSheetsService.deleteLead(deletingLeadId);
       if (response.success) {
-        await loadLeadsData(true);
+        // --- PERFORMANCE FIX: Update state locally ---
+        setLeads(prevLeads => prevLeads.filter(l => l.id !== deletingLeadId));
         addNotification('Lead deleted successfully', 'success');
       } else {
         throw new Error(response.message || 'Failed to delete lead');
       }
     } catch (error) {
       addNotification(`Error: ${error.message}`, 'error');
+    } finally {
+      setDeletingLeadId(null);
     }
   };
 
   const filteredLeads = useMemo(() => {
+// ... existing code ...
     let filtered = [...leads];
     
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(lead => 
         lead.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -973,7 +995,6 @@ export default function App() {
       );
     }
     
-    // Filter by quality
     if (filterQuality !== 'all') {
       filtered = filtered.filter(lead => lead.quality === filterQuality);
     }
@@ -982,6 +1003,7 @@ export default function App() {
   }, [leads, searchTerm, filterQuality]);
 
   const handleLogout = () => {
+// ... existing code ...
     sessionStorage.removeItem('isAuthenticated');
     setIsAuthenticated(false);
     setLeads([]);
@@ -992,6 +1014,7 @@ export default function App() {
   }
 
   if (loading) {
+// ... existing code ...
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
@@ -1006,6 +1029,7 @@ export default function App() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+// ... existing code ...
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
@@ -1096,7 +1120,7 @@ export default function App() {
         {notifications.map(notif => (
           <div 
             key={notif.id} 
-            className={`p-4 rounded-lg shadow-lg transition-all transform ${
+            className={`p-4 rounded-lg shadow-lg transition-all transform animate-slide-in-right ${
               notif.type === 'success' ? 'bg-green-500 text-white' :
               notif.type === 'error' ? 'bg-red-500 text-white' :
               'bg-blue-500 text-white'
@@ -1113,6 +1137,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="h-[calc(100vh-73px)]">
+// ... existing code ...
         {currentView === 'dashboard' && <Dashboard leads={filteredLeads} />}
         
         {currentView === 'leads' && (
@@ -1199,7 +1224,7 @@ export default function App() {
                               <Edit2 size={18} />
                             </button>
                             <button 
-                              onClick={() => handleDeleteLead(lead.id)} 
+                              onClick={() => setDeletingLeadId(lead.id)} 
                               className="text-red-600 hover:text-red-800 transition-colors"
                               title="Delete"
                             >
@@ -1228,7 +1253,7 @@ export default function App() {
         {currentView === 'calendar' && <CalendarView />}
       </main>
 
-      {/* Forms */}
+      {/* Forms & Modals */}
       {showAddForm && (
         <LeadForm onSubmit={handleAddLead} onCancel={() => setShowAddForm(false)} />
       )}
@@ -1236,6 +1261,31 @@ export default function App() {
       {editingLead && (
         <LeadForm lead={editingLead} onSubmit={handleUpdateLead} onCancel={() => setEditingLead(null)} />
       )}
+
+      {deletingLeadId && (
+        <ConfirmModal 
+          message="This action cannot be undone."
+          onConfirm={confirmDeleteLead}
+          onCancel={() => setDeletingLeadId(null)}
+        />
+      )}
+      
+      <style jsx>{`
+        @keyframes slide-in-right {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
