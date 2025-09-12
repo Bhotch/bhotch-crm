@@ -4,9 +4,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 // --- SECURITY FIX ---
-// API Keys are now loaded from environment variables
-// Create a .env file in your project's root directory
-// and add your keys there.
+// API Keys are now loaded from environment variables.
+// Ensure you have a .env file in your project's root directory with your keys.
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -24,13 +23,12 @@ const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
 // Google Sheets Service
 class GoogleSheetsService {
-// ... existing code ...
   constructor() { 
     this.baseURL = 'https://script.google.com/macros/s/AKfycbw8r0tVUeFptoP0hdEQONuP8RR5NdYxBjPZwiXPZCLJLwduWAm28K23aVjqwzr4joejtA/exec';
   }
   
   async makeRequest(action, payload) { 
-// ... existing code ...
+    try { 
       const response = await fetch(this.baseURL, { 
         method: 'POST', 
         mode: 'cors',
@@ -56,7 +54,7 @@ class GoogleSheetsService {
   }
   
   async fetchLeads() { 
-// ... existing code ...
+    try { 
       const url = `${this.baseURL}?action=getLeads&cacheBust=${Date.now()}`;
       
       const response = await fetch(url, { 
@@ -107,7 +105,6 @@ const googleSheetsService = new GoogleSheetsService();
 
 // Login Component
 function LoginForm({ onLogin }) {
-// ... existing code ...
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -194,7 +191,6 @@ function LoginForm({ onLogin }) {
 
 // Interactive Map Component
 function InteractiveMapView({ leads }) {
-// ... existing code ...
   const [selectedLead, setSelectedLead] = useState(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(null);
@@ -240,8 +236,10 @@ function InteractiveMapView({ leads }) {
     document.head.appendChild(script);
 
     return () => {
-      // Clean up script tag if component unmounts before it loads
-      document.head.removeChild(script);
+      // Clean up script tag if component unmounts
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
     };
   }, [initializeMap]);
 
@@ -249,7 +247,6 @@ function InteractiveMapView({ leads }) {
   useEffect(() => {
     if (!mapLoaded || !mapInstanceRef.current) return;
 
-    // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
@@ -277,28 +274,18 @@ function InteractiveMapView({ leads }) {
 
           const contentString = `
             <div style="padding: 12px; max-width: 350px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
-                ${lead.customerName}
-              </h3>
-              <div style="space-y: 6px;">
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>📍 Address:</strong> ${lead.address || 'N/A'}</p>
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>📞 Phone:</strong> ${lead.phoneNumber || 'N/A'}</p>
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>✉️ Email:</strong> ${lead.email || 'N/A'}</p>
-                <p style="margin: 4px 0; color: #4b5563; font-size: 14px;">
-                  <strong>🏷️ Status:</strong> 
-                  <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background: ${
-                    lead.quality === 'Hot' ? '#fee2e2' : 
-                    lead.quality === 'Warm' ? '#fef3c7' : '#f3f4f6'
-                  }; color: ${
-                    lead.quality === 'Hot' ? '#dc2626' : 
-                    lead.quality === 'Warm' ? '#d97706' : '#6b7280'
-                  };">
-                    ${lead.quality || 'Cold'}
-                  </span>
-                </p>
-              </div>
-            </div>
-          `;
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 18px; font-weight: 600;">${lead.customerName}</h3>
+              <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>📍 Address:</strong> ${lead.address || 'N/A'}</p>
+              <p style="margin: 4px 0; color: #4b5563; font-size: 14px;"><strong>Quality:</strong> 
+                <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background: ${
+                  lead.quality === 'Hot' ? '#fee2e2' : lead.quality === 'Warm' ? '#fef3c7' : '#f3f4f6'
+                }; color: ${
+                  lead.quality === 'Hot' ? '#dc2626' : lead.quality === 'Warm' ? '#d97706' : '#6b7280'
+                };">
+                  ${lead.quality || 'Cold'}
+                </span>
+              </p>
+            </div>`;
 
           marker.addListener('click', () => {
             infoWindowRef.current.setContent(contentString);
@@ -315,9 +302,9 @@ function InteractiveMapView({ leads }) {
       }
     });
 
-    if (hasValidMarkers) {
+    if (hasValidMarkers && leads.length > 0) {
       mapInstanceRef.current.fitBounds(bounds);
-      const listener = window.google.maps.event.addListenerOnce(mapInstanceRef.current, "idle", () => { 
+      window.google.maps.event.addListenerOnce(mapInstanceRef.current, "idle", () => { 
         if (mapInstanceRef.current.getZoom() > 16) mapInstanceRef.current.setZoom(16);
       });
     }
@@ -325,7 +312,6 @@ function InteractiveMapView({ leads }) {
 
   return (
     <div className="h-full flex bg-gray-50">
-// ... existing code ...
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full"></div>
         
@@ -348,9 +334,7 @@ function InteractiveMapView({ leads }) {
           </div>
         )}
         
-        {/* Map Stats Overlay */}
         <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-4">
-// ... existing code ...
           <div className="flex items-center space-x-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-800">{leads.filter(l => l.latitude && l.longitude).length}</p>
@@ -366,7 +350,6 @@ function InteractiveMapView({ leads }) {
       
       {selectedLead && (
         <div className="w-96 bg-white shadow-xl overflow-y-auto">
-// ... existing code ...
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold text-gray-800">{selectedLead.customerName}</h3>
@@ -426,7 +409,6 @@ function InteractiveMapView({ leads }) {
 
 // Calendar View Component
 function CalendarView() {
-// ... existing code ...
   return (
     <div className="h-full bg-white">
       <div className="p-6 border-b bg-gray-50">
@@ -460,7 +442,6 @@ function CalendarView() {
 
 // Dashboard Component
 function Dashboard({ leads }) {
-// ... existing code ...
   const stats = useMemo(() => {
     const total = leads.length;
     const hot = leads.filter(l => l.quality === 'Hot').length;
@@ -601,7 +582,6 @@ function Dashboard({ leads }) {
 
 // Lead Form Component
 function LeadForm({ lead, onSubmit, onCancel }) {
-// ... existing code ...
   const [formData, setFormData] = useState({
     customerName: lead?.customerName || '',
     address: lead?.address || '',
@@ -824,8 +804,7 @@ function LeadForm({ lead, onSubmit, onCancel }) {
   );
 }
 
-// --- UX IMPROVEMENT ---
-// A custom confirmation modal to replace window.confirm
+// Custom confirmation modal to replace window.confirm
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
@@ -854,10 +833,8 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
   );
 }
 
-
 // Main App Component
 export default function App() {
-// ... existing code ...
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
@@ -868,7 +845,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterQuality, setFilterQuality] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
-  const [deletingLeadId, setDeletingLeadId] = useState(null); // For confirmation modal
+  const [deletingLeadId, setDeletingLeadId] = useState(null);
 
   const addNotification = useCallback((message, type = 'info') => {
     const newNotification = { 
@@ -883,7 +860,6 @@ export default function App() {
   }, []);
 
   const loadLeadsData = useCallback(async (isManualRefresh = false) => {
-// ... existing code ...
     try {
       if (!isManualRefresh) setLoading(true);
       else setRefreshing(true);
@@ -915,7 +891,6 @@ export default function App() {
   }, [addNotification]);
 
   useEffect(() => {
-// ... existing code ...
     const storedAuth = sessionStorage.getItem('isAuthenticated');
     if (storedAuth === 'true') {
       setIsAuthenticated(true);
@@ -924,7 +899,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-// ... existing code ...
     if (isAuthenticated) {
       loadLeadsData();
     }
@@ -934,7 +908,6 @@ export default function App() {
     try {
       const response = await googleSheetsService.addLead(leadData);
       if (response.success && response.lead) {
-        // --- PERFORMANCE FIX: Update state locally instead of full refresh ---
         setLeads(prevLeads => [response.lead, ...prevLeads]);
         addNotification(`Lead added: ${leadData.customerName}`, 'success');
         setShowAddForm(false);
@@ -947,11 +920,9 @@ export default function App() {
   };
 
   const handleUpdateLead = async (leadData) => {
-// ... existing code ...
     try {
       const response = await googleSheetsService.updateLead(leadData);
       if (response.success) {
-        // --- PERFORMANCE FIX: Update state locally ---
         setLeads(prevLeads => prevLeads.map(l => l.id === leadData.id ? leadData : l));
         addNotification(`Lead updated: ${leadData.customerName}`, 'success');
         setEditingLead(null);
@@ -969,7 +940,6 @@ export default function App() {
     try {
       const response = await googleSheetsService.deleteLead(deletingLeadId);
       if (response.success) {
-        // --- PERFORMANCE FIX: Update state locally ---
         setLeads(prevLeads => prevLeads.filter(l => l.id !== deletingLeadId));
         addNotification('Lead deleted successfully', 'success');
       } else {
@@ -983,7 +953,6 @@ export default function App() {
   };
 
   const filteredLeads = useMemo(() => {
-// ... existing code ...
     let filtered = [...leads];
     
     if (searchTerm) {
@@ -1003,7 +972,6 @@ export default function App() {
   }, [leads, searchTerm, filterQuality]);
 
   const handleLogout = () => {
-// ... existing code ...
     sessionStorage.removeItem('isAuthenticated');
     setIsAuthenticated(false);
     setLeads([]);
@@ -1014,7 +982,6 @@ export default function App() {
   }
 
   if (loading) {
-// ... existing code ...
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
@@ -1027,9 +994,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-40">
-// ... existing code ...
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
@@ -1044,9 +1009,7 @@ export default function App() {
                 <button 
                   onClick={() => setCurrentView('dashboard')} 
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    currentView === 'dashboard' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-600 hover:bg-gray-100'
+                    currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <BarChart3 size={20} className="inline mr-2" />
@@ -1055,9 +1018,7 @@ export default function App() {
                 <button 
                   onClick={() => setCurrentView('leads')} 
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    currentView === 'leads' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-600 hover:bg-gray-100'
+                    currentView === 'leads' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Users size={20} className="inline mr-2" />
@@ -1066,9 +1027,7 @@ export default function App() {
                 <button 
                   onClick={() => setCurrentView('map')} 
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    currentView === 'map' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-600 hover:bg-gray-100'
+                    currentView === 'map' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <MapPin size={20} className="inline mr-2" />
@@ -1077,9 +1036,7 @@ export default function App() {
                 <button 
                   onClick={() => setCurrentView('calendar')} 
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    currentView === 'calendar' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'text-gray-600 hover:bg-gray-100'
+                    currentView === 'calendar' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Calendar size={20} className="inline mr-2" />
@@ -1115,7 +1072,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Notifications */}
       <div className="fixed top-20 right-4 z-50 space-y-2">
         {notifications.map(notif => (
           <div 
@@ -1135,9 +1091,7 @@ export default function App() {
         ))}
       </div>
 
-      {/* Main Content */}
       <main className="h-[calc(100vh-73px)]">
-// ... existing code ...
         {currentView === 'dashboard' && <Dashboard leads={filteredLeads} />}
         
         {currentView === 'leads' && (
@@ -1253,7 +1207,6 @@ export default function App() {
         {currentView === 'calendar' && <CalendarView />}
       </main>
 
-      {/* Forms & Modals */}
       {showAddForm && (
         <LeadForm onSubmit={handleAddLead} onCancel={() => setShowAddForm(false)} />
       )}
@@ -1289,3 +1242,4 @@ export default function App() {
     </div>
   );
 }
+
