@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail, RefreshCw, X, User, Tag, Briefcase, Search, TrendingUp, MessageSquare, Eye, XCircle, ShieldCheck, Navigation, Users, BarChart3, Activity, Loader2, Map, Filter } from 'lucide-react';
+import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, AlertCircle, CheckCircle, Home, RefreshCw, X, XCircle, Users, BarChart3, Activity, Loader2 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
@@ -237,6 +237,7 @@ function InteractiveMapView({ leads }) {
       setMapLoaded(true);
       initMap();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
 
   // Update markers when leads change or map loads
@@ -304,7 +305,7 @@ function InteractiveMapView({ leads }) {
                 }
                 ${lead.dabellaQuote ? 
                   `<p style="margin: 4px 0; color: #059669; font-size: 14px;">
-                    <strong>💰 Quote:</strong> ${parseFloat(lead.dabellaQuote).toLocaleString()}
+                    <strong>💰 Quote:</strong> $${parseFloat(lead.dabellaQuote).toLocaleString()}
                   </p>` : ''
                 }
                 ${lead.notes ? 
@@ -1095,7 +1096,7 @@ export default function App() {
         {notifications.map(notif => (
           <div 
             key={notif.id} 
-            className={`p-4 rounded-lg shadow-lg transition-all transform animate-slide-in-right ${
+            className={`p-4 rounded-lg shadow-lg transition-all transform ${
               notif.type === 'success' ? 'bg-green-500 text-white' :
               notif.type === 'error' ? 'bg-red-500 text-white' :
               'bg-blue-500 text-white'
@@ -1235,23 +1236,6 @@ export default function App() {
       {editingLead && (
         <LeadForm lead={editingLead} onSubmit={handleUpdateLead} onCancel={() => setEditingLead(null)} />
       )}
-      
-      <style jsx>{`
-        @keyframes slide-in-right {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        
-        .animate-slide-in-right {
-          animation: slide-in-right 0.3s ease-out;
-        }
-      `}</style>
     </div>
   );
 }
