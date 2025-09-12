@@ -18,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // Google Maps API Key - IMPORTANT: Replace with your actual key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCYOh4HFEZNMvFbWpYgVHGcOj2rpVHPp2Y'; // Replace this!
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBe0zlEBVGQB5cNpiPhLH-RGKDvUQDV-zk'; // Replace this!
 
 // Google Sheets Service
 class GoogleSheetsService {
@@ -200,6 +200,23 @@ function InteractiveMapView({ leads }) {
 
   // Initialize Google Maps
   useEffect(() => {
+    const initMap = () => {
+      if (!window.google || !mapRef.current) return;
+
+      const mapOptions = {
+        zoom: 11,
+        center: { lat: 39.7392, lng: -104.9903 }, // Denver, CO
+        mapTypeId: 'roadmap',
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+        zoomControl: true
+      };
+
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
+      infoWindowRef.current = new window.google.maps.InfoWindow();
+    };
+
     if (!window.google && !mapLoaded) {
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
@@ -208,7 +225,7 @@ function InteractiveMapView({ leads }) {
       
       script.onload = () => {
         setMapLoaded(true);
-        initializeMap();
+        initMap();
       };
       
       script.onerror = () => {
@@ -218,38 +235,13 @@ function InteractiveMapView({ leads }) {
       document.head.appendChild(script);
     } else if (window.google && !mapInstanceRef.current) {
       setMapLoaded(true);
-      initializeMap();
+      initMap();
     }
-  }, []);
+  }, []); // Run only once on mount
 
-  // Update markers when leads change
+  // Update markers when leads change or map loads
   useEffect(() => {
-    if (mapInstanceRef.current && leads.length > 0) {
-      updateMarkers();
-    }
-  }, [leads, mapLoaded]);
-
-  const initializeMap = () => {
-    if (!window.google || !mapRef.current) return;
-
-    const mapOptions = {
-      zoom: 11,
-      center: { lat: 39.7392, lng: -104.9903 }, // Denver, CO
-      mapTypeId: 'roadmap',
-      mapTypeControl: true,
-      streetViewControl: true,
-      fullscreenControl: true,
-      zoomControl: true
-    };
-
-    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, mapOptions);
-    infoWindowRef.current = new window.google.maps.InfoWindow();
-    
-    updateMarkers();
-  };
-
-  const updateMarkers = () => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !leads.length) return;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -312,7 +304,7 @@ function InteractiveMapView({ leads }) {
                 }
                 ${lead.dabellaQuote ? 
                   `<p style="margin: 4px 0; color: #059669; font-size: 14px;">
-                    <strong>💰 Quote:</strong> $${parseFloat(lead.dabellaQuote).toLocaleString()}
+                    <strong>💰 Quote:</strong> ${parseFloat(lead.dabellaQuote).toLocaleString()}
                   </p>` : ''
                 }
                 ${lead.notes ? 
@@ -353,7 +345,7 @@ function InteractiveMapView({ leads }) {
         window.google.maps.event.removeListener(listener);
       });
     }
-  };
+  }, [leads, mapLoaded, setSelectedLead]); // Include all dependencies
 
   return (
     <div className="h-full flex bg-gray-50">
