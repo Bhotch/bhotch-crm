@@ -15,6 +15,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "chmod +x ./node_modules/.bin/react-scripts",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -46,3 +47,4 @@
     "node": "22.x"
   }
 }
+
