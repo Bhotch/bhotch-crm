@@ -1,3 +1,9 @@
+import DebugMap from './components/DebugMap'; // or './DebugMap' if no components folder
+
+function App() {
+  return (
+    <div className="App">
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { MapPin, Calendar, Plus, Edit2, Trash2, DollarSign, ClipboardList, AlertCircle, CheckCircle, Clock, Home, Phone, Mail, RefreshCw, X, User, Tag, Briefcase, Search, TrendingUp, MessageSquare, Eye, XCircle, ShieldCheck } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
@@ -294,6 +300,26 @@ function App() {
       {editingLead && <LeadFormModal initialData={editingLead} onSubmit={handleUpdateLead} onCancel={() => setEditingLead(null)} isEdit={true} />}
     </div>
   );
+  <div style={{ marginTop: '2rem', padding: '1rem', border: '2px solid red' }}>
+        <h2>🔧 TEMPORARY DEBUG SECTION - REMOVE AFTER TESTING</h2>
+        <DebugMap />
+      </div>
+    </div>
+  );
+  
 }
+
+export default App;
+This will show ONLY the debug component so you can test everything.
+Summary of what you're doing:
+
+Create src/components/DebugMap.jsx (or src/DebugMap.jsx)
+Paste the Debug Map Component code into that file
+Import it in your main app file
+Add it as a temporary tab/section/component
+Run npm start and click "Run All Tests"
+
+After testing and fixing issues, you'll remove the debug component and add the real interactive map.
+Which scenario matches your current setup? If you're unsure, just use the "foolproof method" above to temporarily replace your App.jsx!RetryClaude can make mistakes. Please double-check responses.
 export default App;
 
