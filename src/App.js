@@ -6,7 +6,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 // --- Environment Variables & Firebase Initialization ---
 let app;
 let auth;
-let firebaseError = null;
+let configError = null;
 
 try {
   const firebaseConfig = {
@@ -19,14 +19,20 @@ try {
   };
 
   if (!firebaseConfig.apiKey || !firebaseConfig.authDomain) {
-    throw new Error("Firebase config is missing. Check your Vercel environment variables.");
+    throw new Error("Firebase config is missing. Ensure `REACT_APP_FIREBASE_*` variables are set in Vercel.");
+  }
+  if (!process.env.REACT_APP_GAS_WEB_APP_URL) {
+    throw new Error("Google Apps Script URL is missing. Ensure `REACT_APP_GAS_WEB_APP_URL` is set in Vercel.");
+  }
+  if (!process.env.REACT_APP_GOOGLE_MAPS_API_KEY) {
+    throw new Error("Google Maps API Key is missing. Ensure `REACT_APP_GOOGLE_MAPS_API_KEY` is set in Vercel.");
   }
 
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
 } catch (error) {
-  console.error("CRITICAL: Firebase initialization failed.", error);
-  firebaseError = error.message;
+  console.error("CRITICAL: Configuration failed.", error);
+  configError = error.message;
 }
 
 const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GAS_WEB_APP_URL;
@@ -44,11 +50,14 @@ class GoogleSheetsService {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action, ...payload })
       });
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
       const text = await response.text();
       try { return JSON.parse(text); }
-      catch { return { success: false, message: 'Invalid server response.', rawResponse: text }; }
+      catch { return { success: false, message: 'Invalid server response. The backend may have crashed.', rawResponse: text }; }
     } catch (error) {
-      return { success: false, message: 'Network error. Could not connect to the server.' };
+      return { success: false, message: `Network error: ${error.message}` };
     }
   }
     
@@ -85,7 +94,7 @@ const loadGoogleMaps = () => {
     };
         
     script.onerror = () => {
-      reject(new Error('Failed to load Google Maps'));
+      reject(new Error('Failed to load Google Maps script. Check API key and network.'));
     };
         
     document.head.appendChild(script);
@@ -93,15 +102,15 @@ const loadGoogleMaps = () => {
 };
 
 // --- UI Components ---
-function FirebaseErrorDisplay({ error }) {
+function ConfigErrorDisplay({ error }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
       <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg">
         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Application Error</h2>
-        <p className="text-gray-600 mb-4">Could not start due to a configuration issue.</p>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Application Configuration Error</h2>
+        <p className="text-gray-600 mb-4">The application could not start because a required configuration variable is missing.</p>
         <div className="bg-red-100 text-red-700 text-left p-3 rounded-md text-sm"><strong>Details:</strong> {error}</div>
-        <p className="text-gray-500 mt-4 text-sm">Ensure `REACT_APP_FIREBASE_*` variables are set in Vercel.</p>
+        <p className="text-gray-500 mt-4 text-sm">Please ensure all `REACT_APP_*` variables are set correctly in your Vercel project settings.</p>
       </div>
     </div>
   );
@@ -121,7 +130,7 @@ function LoginForm({ onLogin }) {
       sessionStorage.setItem('isAuthenticated', 'true');
       onLogin();
     } catch (err) {
-      setError('Login failed. Please check credentials.');
+      setError('Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -165,8 +174,6 @@ const FormField = ({ label, children, fullWidth = false }) => <div className={fu
 const TextInput = (props) => <input {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
 const SelectInput = ({ children, ...props }) => <select {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">{children}</select>;
 const TextareaInput = (props) => <textarea {...props} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
-
-// --- Other Components (Dashboard, Map, Calendar, etc.) ---
 
 function DashboardView({ stats, leads }) {
   const recentLeads = leads.slice(0, 5);
@@ -216,13 +223,11 @@ function GoogleMapComponent({ leads, onLeadClick }) {
         if (!GOOGLE_MAPS_API_KEY) throw new Error('Google Maps API key is not configured');
         const google = await loadGoogleMaps();
         if (!mapRef.current) return;
-
         const mapInstance = new google.maps.Map(mapRef.current, {
           center: { lat: 39.7392, lng: -104.9903 },
           zoom: 10,
           styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
         });
-        
         infoWindowRef.current = new google.maps.InfoWindow();
         setMap(mapInstance);
       } catch (err) {
@@ -235,60 +240,39 @@ function GoogleMapComponent({ leads, onLeadClick }) {
   }, []);
 
   useEffect(() => {
-    if (!map || !window.google) return;
-    
-    // This effect is for global handlers, which should be managed carefully.
     window.viewLeadDetails = (leadId) => {
       const lead = leads.find(l => l.id === leadId);
       if (lead && onLeadClick) onLeadClick(lead);
     };
-
-    return () => { // Cleanup function
-      window.viewLeadDetails = null;
-    };
-  }, [map, leads, onLeadClick]);
-
+    return () => { window.viewLeadDetails = null; };
+  }, [leads, onLeadClick]);
 
   useEffect(() => {
     if (!map) return;
-    
-    // Create markers
     const markers = [];
     const bounds = new window.google.maps.LatLngBounds();
     const leadsWithCoords = leads.filter(lead => 
         lead.latitude && lead.longitude &&
         !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude))
     );
-
     leadsWithCoords.forEach(lead => {
         const position = { lat: parseFloat(lead.latitude), lng: parseFloat(lead.longitude) };
         const marker = new window.google.maps.Marker({
-            position,
-            map,
-            title: lead.customerName,
+            position, map, title: lead.customerName,
             icon: {
                 url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="#ffffff"/></svg>`),
                 scaledSize: new window.google.maps.Size(32, 32),
                 anchor: new window.google.maps.Point(16, 16)
             }
         });
-
         marker.addListener('click', () => {
-            const content = `
-              <div style="max-width: 250px; padding: 8px;">
-                <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${lead.customerName || ''}</h3>
-                <p><strong>Phone:</strong> ${lead.phoneNumber || 'N/A'}</p>
-                <p><strong>Address:</strong> ${lead.address || 'N/A'}</p>
-                <p><button onclick="window.viewLeadDetails('${lead.id}')" style="background:#3b82f6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">View Details</button></p>
-              </div>`;
+            const content = `<div style="padding: 8px;"><h3 style="margin:0 0 8px 0;">${lead.customerName || ''}</h3><p><strong>Phone:</strong> ${lead.phoneNumber||'N/A'}</p><p><button onclick="window.viewLeadDetails('${lead.id}')" style="background:#3b82f6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">View Details</button></p></div>`;
             infoWindowRef.current.setContent(content);
             infoWindowRef.current.open(map, marker);
         });
-
         markers.push(marker);
         bounds.extend(position);
     });
-
     if (leadsWithCoords.length > 0) {
       if (leadsWithCoords.length === 1) {
         map.setCenter(bounds.getCenter());
@@ -297,12 +281,8 @@ function GoogleMapComponent({ leads, onLeadClick }) {
         map.fitBounds(bounds);
       }
     }
-
-    // Cleanup markers on re-render
     return () => markers.forEach(marker => marker.setMap(null));
-    
-  }, [map, leads]); // Only re-run when map or leads change
-
+  }, [map, leads]);
 
   if (loading) return <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-blue-600"/></div>;
   if (error) return <div className="h-96 bg-red-50 rounded-lg flex items-center justify-center text-center"><AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" /><p className="text-red-600 font-medium">{error}</p></div>;
@@ -372,12 +352,11 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     };
 
     const filteredAndSortedLeads = useMemo(() => {
-        let filtered = leads.filter(lead =>
+        return leads.filter(lead =>
             (lead.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || lead.phoneNumber?.toString().includes(searchTerm) || lead.address?.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (filterDisposition === 'All' || lead.disposition === filterDisposition) &&
             (filterSource === 'All' || lead.leadSource === filterSource)
         );
-        return filtered.sort((a, b) => new Date(b.createdDate || 0) - new Date(a.createdDate || 0));
     }, [leads, searchTerm, filterDisposition, filterSource]);
 
     const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
@@ -781,7 +760,7 @@ export default function App() {
     setIsAuthenticated(false);
   };
   
-  if (firebaseError) return <FirebaseErrorDisplay error={firebaseError} />;
+  if (configError) return <ConfigErrorDisplay error={configError} />;
   
   if (authLoading) {
     return (
@@ -795,4 +774,5 @@ export default function App() {
 
   return <CrmApplication onLogout={handleLogout} />;
 }
+" and I want to fix some errors in my code. How should I proceed? I'm getting a 405 error, but I've updated the REACT_APP_GAS_WEB_APP_URL. What could be the issue?
 
