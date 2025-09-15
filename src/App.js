@@ -774,5 +774,3 @@ export default function App() {
 
   return <CrmApplication onLogout={handleLogout} />;
 }
-" and I want to fix some errors in my code. How should I proceed? I'm getting a 405 error, but I've updated the REACT_APP_GAS_WEB_APP_URL. What could be the issue?
-
