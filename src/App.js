@@ -70,11 +70,7 @@ const googleSheetsService = new GoogleSheetsService(GOOGLE_SCRIPT_URL);
 
 // --- Google Maps Integration ---
 
-  return new Promise((resolve, reject) => {
-    if (googleMapsLoaded && window.google?.maps) {
-      resolve(window.google);
-      return;
-    }
+  
     const scriptId = 'google-maps-script';
     if (document.getElementById(scriptId)) {
         const existingScript = document.getElementById(scriptId);
