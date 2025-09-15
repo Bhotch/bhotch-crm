@@ -6,7 +6,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 // --- Environment Variables & Firebase Initialization ---
 let app;
 let auth;
-let configError = null;
+let firebaseError = null;
 
 try {
   const firebaseConfig = {
@@ -19,20 +19,14 @@ try {
   };
 
   if (!firebaseConfig.apiKey || !firebaseConfig.authDomain) {
-    throw new Error("Firebase config is missing. Ensure `REACT_APP_FIREBASE_*` variables are set in Vercel.");
-  }
-  if (!process.env.REACT_APP_GAS_WEB_APP_URL) {
-    throw new Error("Google Apps Script URL is missing. Ensure `REACT_APP_GAS_WEB_APP_URL` is set in Vercel.");
-  }
-  if (!process.env.REACT_APP_GOOGLE_MAPS_API_KEY) {
-    throw new Error("Google Maps API Key is missing. Ensure `REACT_APP_GOOGLE_MAPS_API_KEY` is set in Vercel.");
+    throw new Error("Firebase config is missing. Check your Vercel environment variables.");
   }
 
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
 } catch (error) {
-  console.error("CRITICAL: Configuration failed.", error);
-  configError = error.message;
+  console.error("CRITICAL: Firebase initialization failed.", error);
+  firebaseError = error.message;
 }
 
 const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GAS_WEB_APP_URL;
@@ -41,26 +35,45 @@ const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 // --- API Service ---
 class GoogleSheetsService {
   constructor(baseURL) { this.baseURL = baseURL; }
-    
+  
   async makeRequest(action, payload) {
-    if (!this.baseURL) return { success: false, message: 'API endpoint is not configured.' };
+    if (!this.baseURL) {
+      return { success: false, message: 'API endpoint is not configured.' };
+    }
+    
     try {
       const response = await fetch(this.baseURL, {
-        method: 'POST', mode: 'cors', credentials: 'omit',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        method: 'POST',
+        redirect: 'follow', // Important for Google Apps Script redirects
+        headers: { 
+          'Content-Type': 'text/plain;charset=utf-8' // Use text/plain to avoid CORS preflight
+        },
         body: JSON.stringify({ action, ...payload })
       });
+      
       if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const text = await response.text();
-      try { return JSON.parse(text); }
-      catch { return { success: false, message: 'Invalid server response. The backend may have crashed.', rawResponse: text }; }
+      
+      try { 
+        const result = JSON.parse(text);
+        // Handle both success/error patterns
+        if (result.success === false && result.error) {
+          return { success: false, message: result.error };
+        }
+        return result;
+      } catch (parseError) { 
+        console.error('Failed to parse response:', text);
+        return { success: false, message: 'Invalid server response.', rawResponse: text }; 
+      }
     } catch (error) {
+      console.error('Network error:', error);
       return { success: false, message: `Network error: ${error.message}` };
     }
   }
-    
+  
   fetchLeads() { return this.makeRequest('getLeads', {}); }
   addLead(lead) { return this.makeRequest('addLead', { lead }); }
   updateLead(lead) { return this.makeRequest('updateLead', { lead }); }
@@ -68,49 +81,54 @@ class GoogleSheetsService {
   testConnection() { return this.makeRequest('testConnection', {}); }
   geocodeAddress(address) { return this.makeRequest('geocodeAddress', { address }); }
 }
+
 const googleSheetsService = new GoogleSheetsService(GOOGLE_SCRIPT_URL);
 
 // --- Google Maps Integration ---
 let googleMapsLoaded = false;
+
 const loadGoogleMaps = () => {
   return new Promise((resolve, reject) => {
-    if (googleMapsLoaded && window.google && window.google.maps) {
+    if (googleMapsLoaded) {
       resolve(window.google);
       return;
     }
+
     if (window.google && window.google.maps) {
       googleMapsLoaded = true;
       resolve(window.google);
       return;
     }
+
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places`;
     script.async = true;
     script.defer = true;
-        
+    
     script.onload = () => {
       googleMapsLoaded = true;
       resolve(window.google);
     };
-        
+    
     script.onerror = () => {
-      reject(new Error('Failed to load Google Maps script. Check API key and network.'));
+      reject(new Error('Failed to load Google Maps'));
     };
-        
+    
     document.head.appendChild(script);
   });
 };
 
 // --- UI Components ---
-function ConfigErrorDisplay({ error }) {
+
+function FirebaseErrorDisplay({ error }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
       <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg">
         <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Application Configuration Error</h2>
-        <p className="text-gray-600 mb-4">The application could not start because a required configuration variable is missing.</p>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Application Error</h2>
+        <p className="text-gray-600 mb-4">Could not start due to a configuration issue.</p>
         <div className="bg-red-100 text-red-700 text-left p-3 rounded-md text-sm"><strong>Details:</strong> {error}</div>
-        <p className="text-gray-500 mt-4 text-sm">Please ensure all `REACT_APP_*` variables are set correctly in your Vercel project settings.</p>
+        <p className="text-gray-500 mt-4 text-sm">Ensure `REACT_APP_FIREBASE_*` variables are set in Vercel.</p>
       </div>
     </div>
   );
@@ -130,7 +148,7 @@ function LoginForm({ onLogin }) {
       sessionStorage.setItem('isAuthenticated', 'true');
       onLogin();
     } catch (err) {
-      setError('Login failed. Please check your credentials.');
+      setError('Login failed. Please check credentials.');
     } finally {
       setLoading(false);
     }
@@ -157,6 +175,7 @@ function LoginForm({ onLogin }) {
   );
 }
 
+// --- Reusable UI Components ---
 const StatCard = ({ title, value, icon, color }) => {
     const colors = { blue: 'bg-blue-100 text-blue-800', red: 'bg-red-100 text-red-800', green: 'bg-green-100 text-green-800', purple: 'bg-purple-100 text-purple-800' };
     return <div className="bg-white rounded-lg shadow p-5"><div className="flex items-center"><div className={`p-3 rounded-full ${colors[color]}`}>{icon}</div><div className="ml-4"><p className="text-sm font-medium text-gray-500 truncate">{title}</p><p className="text-2xl font-semibold text-gray-900">{value}</p></div></div></div>
@@ -175,8 +194,9 @@ const TextInput = (props) => <input {...props} className="mt-1 block w-full bord
 const SelectInput = ({ children, ...props }) => <select {...props} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">{children}</select>;
 const TextareaInput = (props) => <textarea {...props} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
 
+// --- Dashboard View Component ---
 function DashboardView({ stats, leads }) {
-  const recentLeads = leads.slice(0, 5);
+  const recentLeads = leads.slice(-5).reverse();
   return (
     <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -210,69 +230,121 @@ function DashboardView({ stats, leads }) {
   );
 }
 
+// --- Google Maps Component ---
 function GoogleMapComponent({ leads, onLeadClick }) {
   const mapRef = useRef(null);
-  const infoWindowRef = useRef(null);
   const [map, setMap] = useState(null);
+  const [markers, setMarkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const initializeMap = async () => {
       try {
-        if (!GOOGLE_MAPS_API_KEY) throw new Error('Google Maps API key is not configured');
+        if (!GOOGLE_MAPS_API_KEY) {
+          throw new Error('Google Maps API key is not configured');
+        }
+
         const google = await loadGoogleMaps();
+        
         if (!mapRef.current) return;
-        const mapInstance = new google.maps.Map(mapRef.current, {
-          center: { lat: 39.7392, lng: -104.9903 },
+
+        const mapOptions = {
+          center: { lat: 39.7392, lng: -104.9903 }, // Denver, CO default
           zoom: 10,
-          styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
-        });
-        infoWindowRef.current = new google.maps.InfoWindow();
-        setMap(mapInstance);
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
+        };
+
+        const newMap = new google.maps.Map(mapRef.current, mapOptions);
+        setMap(newMap);
+        setLoading(false);
       } catch (err) {
+        console.error('Failed to initialize Google Maps:', err);
         setError(err.message);
-      } finally {
         setLoading(false);
       }
     };
+
     initializeMap();
   }, []);
 
   useEffect(() => {
-    window.viewLeadDetails = (leadId) => {
-      const lead = leads.find(l => l.id === leadId);
-      if (lead && onLeadClick) onLeadClick(lead);
-    };
-    return () => { window.viewLeadDetails = null; };
-  }, [leads, onLeadClick]);
+    if (!map || !window.google) return;
 
-  useEffect(() => {
-    if (!map) return;
-    const markers = [];
+    // Clear existing markers
+    markers.forEach(marker => marker.setMap(null));
+    
+    const newMarkers = [];
     const bounds = new window.google.maps.LatLngBounds();
+
+    // Filter leads that have coordinates
     const leadsWithCoords = leads.filter(lead => 
-        lead.latitude && lead.longitude &&
-        !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude))
+      lead.latitude && lead.longitude && 
+      !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude))
     );
+
     leadsWithCoords.forEach(lead => {
-        const position = { lat: parseFloat(lead.latitude), lng: parseFloat(lead.longitude) };
-        const marker = new window.google.maps.Marker({
-            position, map, title: lead.customerName,
-            icon: {
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="#ffffff"/></svg>`),
-                scaledSize: new window.google.maps.Size(32, 32),
-                anchor: new window.google.maps.Point(16, 16)
-            }
-        });
-        marker.addListener('click', () => {
-            const content = `<div style="padding: 8px;"><h3 style="margin:0 0 8px 0;">${lead.customerName || ''}</h3><p><strong>Phone:</strong> ${lead.phoneNumber||'N/A'}</p><p><button onclick="window.viewLeadDetails('${lead.id}')" style="background:#3b82f6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">View Details</button></p></div>`;
-            infoWindowRef.current.setContent(content);
-            infoWindowRef.current.open(map, marker);
-        });
-        markers.push(marker);
-        bounds.extend(position);
+      const position = {
+        lat: parseFloat(lead.latitude),
+        lng: parseFloat(lead.longitude)
+      };
+
+      const marker = new window.google.maps.Marker({
+        position: position,
+        map: map,
+        title: lead.customerName,
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+            <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="12" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="16" cy="16" r="4" fill="#ffffff"/>
+            </svg>
+          `),
+          scaledSize: new window.google.maps.Size(32, 32),
+          anchor: new window.google.maps.Point(16, 16)
+        }
+      });
+
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="max-width: 250px; padding: 8px;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+              ${lead.customerName || 'Unknown Customer'}
+            </h3>
+            <div style="color: #6b7280; font-size: 14px; line-height: 1.4;">
+              <p style="margin: 4px 0;"><strong>Phone:</strong> ${lead.phoneNumber || 'N/A'}</p>
+              <p style="margin: 4px 0;"><strong>Address:</strong> ${lead.address || 'N/A'}</p>
+              <p style="margin: 4px 0;"><strong>Status:</strong> ${lead.disposition || 'N/A'}</p>
+              <p style="margin: 4px 0;"><strong>Quote:</strong> ${lead.dabellaQuote || 'No Quote'}</p>
+              <p style="margin: 8px 0 4px 0;">
+                <button onclick="window.viewLeadDetails('${lead.id}')" 
+                        style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                  View Details
+                </button>
+              </p>
+            </div>
+          </div>
+        `
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(map, marker);
+      });
+
+      newMarkers.push(marker);
+      bounds.extend(position);
     });
+
+    setMarkers(newMarkers);
+
+    // Fit map to show all markers
     if (leadsWithCoords.length > 0) {
       if (leadsWithCoords.length === 1) {
         map.setCenter(bounds.getCenter());
@@ -281,35 +353,118 @@ function GoogleMapComponent({ leads, onLeadClick }) {
         map.fitBounds(bounds);
       }
     }
-    return () => markers.forEach(marker => marker.setMap(null));
-  }, [map, leads]);
 
-  if (loading) return <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-blue-600"/></div>;
-  if (error) return <div className="h-96 bg-red-50 rounded-lg flex items-center justify-center text-center"><AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" /><p className="text-red-600 font-medium">{error}</p></div>;
-  
-  return <div ref={mapRef} className="h-96 w-full rounded-lg overflow-hidden border border-gray-300" />;
-}
+    // Global function for info window buttons
+    window.viewLeadDetails = (leadId) => {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead && onLeadClick) {
+        onLeadClick(lead);
+      }
+    };
 
-function MapView({ leads, onLeadClick }) {
-  const leadsWithCoords = leads.filter(lead => lead.latitude && lead.longitude);
+    return () => {
+      window.viewLeadDetails = null;
+    };
+  }, [map, leads, onLeadClick, markers]);
+
+  if (loading) {
+    return (
+      <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-2" />
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-96 bg-red-50 rounded-lg flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+          <p className="text-red-600 font-medium">Failed to load map</p>
+          <p className="text-red-500 text-sm mt-1">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center"><Map className="w-8 h-8 mr-3 text-blue-600" /> Customer Locations</h2>
-        <div className="text-sm text-gray-600">Showing {leadsWithCoords.length} of {leads.length} customers</div>
-      </div>
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <GoogleMapComponent leads={leads} onLeadClick={onLeadClick} />
-      </div>
+    <div className="h-96 w-full rounded-lg overflow-hidden border border-gray-300">
+      <div ref={mapRef} className="w-full h-full" />
     </div>
   );
 }
 
+// --- Map View Component ---
+function MapView({ leads, onLeadClick }) {
+  const leadsWithCoords = leads.filter(lead => 
+    lead.latitude && lead.longitude && 
+    !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude))
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+          <Map className="w-8 h-8 mr-3 text-blue-600" />
+          Customer Locations
+        </h2>
+        <div className="text-sm text-gray-600">
+          Showing {leadsWithCoords.length} of {leads.length} customers with addresses
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <GoogleMapComponent leads={leads} onLeadClick={onLeadClick} />
+        
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Map Legend</h3>
+          <div className="flex items-center space-x-4 text-xs text-gray-600">
+            <div className="flex items-center">
+              <div className="w-4 h-4 bg-red-600 rounded-full mr-2"></div>
+              Customer Location
+            </div>
+            <div className="text-gray-500">
+              Click on pins to view customer details
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {leadsWithCoords.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <MapPin className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No locations to display</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Add addresses to your leads to see them on the map
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Calendar View Component ---
 function CalendarView() {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 flex items-center"><Calendar className="w-8 h-8 mr-3 text-blue-600" /> Appointment Calendar</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+          <Calendar className="w-8 h-8 mr-3 text-blue-600" />
+          Appointment Calendar
+        </h2>
+      </div>
+
       <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Your Schedule</h3>
+          <p className="text-sm text-gray-600">
+            Manage your appointments and schedule new ones with customers.
+          </p>
+        </div>
+        
         <div className="border border-gray-300 rounded-lg overflow-hidden">
           <iframe 
             src="https://calendar.google.com/calendar/embed?height=600&wkst=1&ctz=America%2FDenver&showPrint=0&title=Bhotch%20Appointment&src=YnJhbmRvbkByaW1laHEubmV0&src=YnJhbmRvbi5ob3RjaGtpc3NAZ21haWwuY29t&color=%23addf00&color=%233f51b5" 
@@ -319,11 +474,22 @@ function CalendarView() {
             title="Bhotch CRM Calendar"
           />
         </div>
+        
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 mb-2">Calendar Features</h4>
+          <ul className="text-xs text-blue-800 space-y-1">
+            <li>• Schedule appointments directly from lead details</li>
+            <li>• Sync with your existing Google Calendar</li>
+            <li>• Set reminders for follow-ups</li>
+            <li>• Track appointment history</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
 }
 
+// --- Professional Leads View Component ---
 const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads }) => {
     const [selectedLead, setSelectedLead] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -352,11 +518,12 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     };
 
     const filteredAndSortedLeads = useMemo(() => {
-        return leads.filter(lead =>
+        let filtered = leads.filter(lead =>
             (lead.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || lead.phoneNumber?.toString().includes(searchTerm) || lead.address?.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (filterDisposition === 'All' || lead.disposition === filterDisposition) &&
             (filterSource === 'All' || lead.leadSource === filterSource)
         );
+        return filtered.sort((a, b) => new Date(b.createdDate || 0) - new Date(a.createdDate || 0));
     }, [leads, searchTerm, filterDisposition, filterSource]);
 
     const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
@@ -370,6 +537,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                     <button onClick={onAddLead} className="inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"><Plus className="w-4 h-4 mr-2" />Add Lead</button>
                 </div>
             </div>
+
             <div className="bg-white p-4 rounded-lg shadow">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="relative md:col-span-2">
@@ -383,6 +551,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
                     <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="All">All Sources</option><option>Door Knock</option><option>Rime</option><option>Adverta</option><option>Referral</option><option>Cold Call</option></select>
                 </div>
             </div>
+
             <div className="bg-white rounded-lg shadow overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -420,6 +589,7 @@ const ProfessionalLeadsView = ({ leads, onAddLead, onEditLead, onDeleteLead, onR
     );
 };
 
+// --- Lead Detail Modal ---
 function LeadDetailModal({ lead, onClose, onEdit, onDelete }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40 animate-fade-in">
@@ -432,38 +602,39 @@ function LeadDetailModal({ lead, onClose, onEdit, onDelete }) {
   );
 }
 
+// --- Lead Form Modal ---
 const initialFormData = { customerName: '', address: '', phoneNumber: '', email: '', dabellaQuote: '', quality: 'Cold', notes: '', disposition: 'New', leadSource: 'Door Knock', roofAge: '', roofType: 'Asphalt Shingle', inspectionStatus: 'Not Scheduled', appointmentDate: '', date: '', followupDate: '', leadStatus: '' };
+
 function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEdit = false }) {
     const [formData, setFormData] = useState(initialData);
     const [isGeocoding, setIsGeocoding] = useState(false);
     
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
     
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e) => { 
+        e.preventDefault(); 
         
-        const dataToSubmit = { ...formData };
-
-        if (dataToSubmit.address && (!dataToSubmit.latitude || !dataToSubmit.longitude)) {
+        // Try to geocode address if it's provided and we don't have coordinates
+        if (formData.address && (!formData.latitude || !formData.longitude)) {
             setIsGeocoding(true);
             try {
-                const geocodeResult = await googleSheetsService.geocodeAddress(dataToSubmit.address);
+                const geocodeResult = await googleSheetsService.geocodeAddress(formData.address);
                 if (geocodeResult.success) {
-                    dataToSubmit.latitude = geocodeResult.latitude;
-                    dataToSubmit.longitude = geocodeResult.longitude;
+                    formData.latitude = geocodeResult.latitude;
+                    formData.longitude = geocodeResult.longitude;
                 }
             } catch (error) {
-                console.warn('Geocoding failed during form submission:', error);
+                console.warn('Geocoding failed:', error);
             } finally {
                 setIsGeocoding(false);
             }
         }
         
-        onSubmit(dataToSubmit);
+        onSubmit(formData); 
     };
-
-    const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
     
+    const dispositionOptions = ['New', 'Scheduled', 'Insurance', 'Quoted', 'Follow Up', 'Closed Sold', 'Closed Lost'];
+
     return <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40"><div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col"><div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-medium text-gray-900">{isEdit ? "Edit Lead" : "Add New Lead"}</h3><button onClick={onCancel} className="text-gray-400 hover:text-gray-600"><X size={24}/></button></div><div className="p-6 overflow-y-auto"><form onSubmit={handleSubmit}>
         <FormSection title="Customer Information"><FormField label="Full Name *"><TextInput name="customerName" value={formData.customerName} onChange={handleChange} required /></FormField><FormField label="Phone Number *"><TextInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} required /></FormField><FormField label="Email"><TextInput name="email" type="email" value={formData.email} onChange={handleChange} /></FormField><FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} placeholder="Full address for map location" /></FormField></FormSection>
         <FormSection title="Lead Details">
@@ -477,9 +648,11 @@ function LeadFormModal({ initialData = initialFormData, onSubmit, onCancel, isEd
     </form></div></div></div>;
 }
 
+// --- Connection Status Component ---
 function ConnectionStatus({ onTestConnection }) {
   const [status, setStatus] = useState(null);
   const [testing, setTesting] = useState(false);
+
   const testConnection = async () => {
     setTesting(true);
     try {
@@ -491,6 +664,7 @@ function ConnectionStatus({ onTestConnection }) {
       setTesting(false);
     }
   };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow mb-6">
       <div className="flex items-center justify-between">
@@ -517,7 +691,7 @@ function ConnectionStatus({ onTestConnection }) {
       {status && (
         <div className="mt-2 text-sm text-gray-600">
           {status.message}
-          {status.success && status.rowCount && ` (${status.rowCount} rows)`}
+          {status.success && status.lastRow && ` (${status.lastRow} rows)`}
         </div>
       )}
     </div>
@@ -545,12 +719,13 @@ function CrmApplication({ onLogout }) {
       if (!isManualRefresh) setLoading(true);
       const response = await googleSheetsService.fetchLeads();
       if(response.success) {
-        const processedLeads = (response.leads || []).map(lead => ({
+        // Process leads to ensure customerName is set
+        const processedLeads = response.leads.map(lead => ({
           ...lead,
           customerName: lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Customer'
-        })).sort((a, b) => new Date(b.createdDate || 0) - new Date(a.createdDate || 0));
+        }));
         setLeads(processedLeads);
-        if (isManualRefresh) addNotification('Leads refreshed successfully.', 'success');
+         if (isManualRefresh) addNotification('Leads refreshed successfully.', 'success');
       } else {
         throw new Error(response.message);
       }
@@ -560,7 +735,7 @@ function CrmApplication({ onLogout }) {
       setLoading(false);
     }
   }, [addNotification]);
-    
+  
   useEffect(() => {
     loadLeadsData();
   }, [loadLeadsData]);
@@ -568,12 +743,12 @@ function CrmApplication({ onLogout }) {
   const handleAddLead = async (leadData) => {
       try {
         const response = await googleSheetsService.addLead(leadData);
-        if (response.success && response.lead) {
+        if (response.success) {
           setLeads(prev => [response.lead, ...prev]);
-          addNotification(`Lead added: ${response.lead.customerName}`, 'success');
+          addNotification(`Lead added: ${leadData.customerName}`, 'success');
           setShowAddForm(false);
         } else {
-          throw new Error(response.message || "Failed to add lead.");
+          addNotification(`Error adding lead: ${response.message}`, 'error');
         }
       } catch (error) {
         addNotification(`Error adding lead: ${error.message}`, 'error');
@@ -583,12 +758,12 @@ function CrmApplication({ onLogout }) {
   const handleUpdateLead = async (updatedLead) => {
       try {
         const response = await googleSheetsService.updateLead(updatedLead);
-        if (response.success && response.lead) {
-          setLeads(leads.map(lead => (lead.id === response.lead.id ? response.lead : lead)));
-          addNotification(`Lead updated: ${response.lead.customerName}`, 'info');
+        if (response.success) {
+          setLeads(leads.map(lead => (lead.id === updatedLead.id ? updatedLead : lead)));
+          addNotification(`Lead updated: ${updatedLead.customerName}`, 'info');
           setEditingLead(null);
         } else {
-          throw new Error(response.message || "Failed to update lead.");
+          addNotification(`Error updating lead: ${response.message}`, 'error');
         }
       } catch (error) {
         addNotification(`Error updating lead: ${error.message}`, 'error');
@@ -604,14 +779,14 @@ function CrmApplication({ onLogout }) {
             setLeads(leads.filter(l => l.id !== leadId));
             addNotification(`Lead deleted: ${leadToDelete?.customerName}`, 'warning');
           } else {
-            throw new Error(response.message || "Failed to delete lead.");
+            addNotification(`Error deleting lead: ${response.message}`, 'error');
           }
         } catch (error) {
           addNotification(`Error deleting lead: ${error.message}`, 'error');
         }
     }
   };
-
+  
   const getDashboardStats = () => ({
     totalLeads: leads.length,
     hotLeads: leads.filter(l => l.quality === 'Hot').length,
@@ -666,14 +841,14 @@ function CrmApplication({ onLogout }) {
         </div>
       </header>
       
-      <div className="fixed top-20 right-5 w-80 z-50">
+      <div className="fixed top-5 right-5 w-80 z-50">
         {notifications.map(n => (
           <div key={n.id} className={`p-3 rounded-md mb-2 shadow-lg animate-fade-in-right flex items-start ${ 
-             n.type === 'success' ? 'bg-green-100 text-green-800' : 
-             n.type === 'warning' ? 'bg-yellow-100 text-yellow-800' : 
-             n.type === 'error' ? 'bg-red-100 text-red-800' : 
-             'bg-blue-100 text-blue-800' 
-           }`}>
+            n.type === 'success' ? 'bg-green-100 text-green-800' : 
+            n.type === 'warning' ? 'bg-yellow-100 text-yellow-800' : 
+            n.type === 'error' ? 'bg-red-100 text-red-800' : 
+            'bg-blue-100 text-blue-800' 
+          }`}>
             {n.type === 'success' && <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />}
             {n.type === 'warning' && <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />}
             {n.type === 'error' && <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />}
@@ -744,15 +919,11 @@ function CrmApplication({ onLogout }) {
 
 // --- Main App Component ---
 export default function App() {
-  const [authLoading, setAuthLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
     const storedAuth = sessionStorage.getItem('isAuthenticated');
-    if (storedAuth) {
-      setIsAuthenticated(true);
-    }
-    setAuthLoading(false);
+    if (storedAuth) setIsAuthenticated(true);
   }, []);
 
   const handleLogout = () => {
@@ -760,17 +931,7 @@ export default function App() {
     setIsAuthenticated(false);
   };
   
-  if (configError) return <ConfigErrorDisplay error={configError} />;
-  
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin h-10 w-10 text-blue-600" />
-      </div>
-    );
-  }
-
+  if (firebaseError) return <FirebaseErrorDisplay error={firebaseError} />;
   if (!isAuthenticated) return <LoginForm onLogin={() => setIsAuthenticated(true)} />;
-
   return <CrmApplication onLogout={handleLogout} />;
 }
