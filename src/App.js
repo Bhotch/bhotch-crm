@@ -71,32 +71,6 @@ const googleSheetsService = new GoogleSheetsService(GOOGLE_SCRIPT_URL);
 // --- Google Maps Integration ---
 
   
-    const scriptId = 'google-maps-script';
-    if (document.getElementById(scriptId)) {
-        const existingScript = document.getElementById(scriptId);
-        if (existingScript.hasAttribute('data-loaded')) {
-            resolve(window.google);
-        } else {
-            existingScript.addEventListener('load', () => resolve(window.google));
-            existingScript.addEventListener('error', () => reject(new Error('Failed to load Google Maps script.')));
-        }
-        return;
-    }
-
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => { 
-        googleMapsLoaded = true; 
-        script.setAttribute('data-loaded', 'true');
-        resolve(window.google); 
-    };
-    script.onerror = () => reject(new Error('Failed to load Google Maps script.'));
-    document.head.appendChild(script);
-  });
-};
 
 // --- UI Components ---
 function ConfigErrorDisplay({ error }) {
