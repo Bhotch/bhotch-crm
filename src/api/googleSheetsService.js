@@ -1,43 +1,35 @@
-// src/api/googleSheetsService.js
+const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GAS_WEB_APP_URL;
 
-// IMPORTANT: It's best practice to store this URL in a .env file.
-// For now, we'll define it here for simplicity.
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweOri4v6JDVEsMnU2KbxiQ2_MicbaltR49-cqYwwT2J8YE1dbLhd_Klc5AuUThJjpNZA/exec';
-
-/**
- * A centralized method for making all POST requests to your Google Script.
- * @param {string} action - The function to call in your Google Apps Script (e.g., 'getLeads').
- * @param {object} payload - The data to send with the request.
- * @returns {Promise<object>} - The JSON response from the server.
- */
-async function makeRequest(action, payload = {}) {
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: JSON.stringify({ action, ...payload }),
-      redirect: 'follow', // Crucial for handling Google Script responses correctly.
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+class GoogleSheetsService {
+  constructor(baseURL) { this.baseURL = baseURL; }
+    
+  async makeRequest(action, payload) {
+    if (!this.baseURL) return { success: false, message: 'API endpoint is not configured.' };
+    try {
+      const response = await fetch(this.baseURL, {
+        method: 'POST', mode: 'cors', credentials: 'omit',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      if (!response.ok) throw new Error(`Server responded with status: ${response.status}`);
+      const text = await response.text();
+      try { 
+        const result = JSON.parse(text);
+        if (result.success === false) throw new Error(result.message || 'An unknown backend error occurred.');
+        return result;
+      }
+      catch { throw new Error('Invalid server response. The backend may have crashed.'); }
+    } catch (error) {
+      return { success: false, message: `Network error: ${error.message}` };
     }
-
-    const data = await response.json();
-    console.log(`✅ API [${action}]:`, data);
-    return data;
-
-  } catch (error) {
-    console.error(`❌ API [${action}] Failed:`, error);
-    // Re-throw the error so the component can handle it (e.g., show an error message).
-    throw new Error(`Google Sheets API Error: ${error.message}`);
   }
+    
+  fetchLeads() { return this.makeRequest('getLeads', {}); }
+  addLead(lead) { return this.makeRequest('addLead', { lead }); }
+  updateLead(lead) { return this.makeRequest('updateLead', { lead }); }
+  deleteLead(leadId) { return this.makeRequest('deleteLead', { leadId }); }
+  testConnection() { return this.makeRequest('testConnection', {}); }
+  geocodeAddress(address) { return this.makeRequest('geocodeAddress', { address }); }
 }
 
-// Export individual functions for each API action.
-export const fetchLeads = () => makeRequest('getLeads');
-export const addLead = (lead) => makeRequest('addLead', { lead });
-export const updateLead = (lead) => makeRequest('updateLead', { lead });
-export const deleteLead = (leadId) => makeRequest('deleteLead', { leadId });
+export const googleSheetsService = new GoogleSheetsService(GOOGLE_SCRIPT_URL);
