@@ -8,6 +8,7 @@ export function useLeads(addNotification) {
   const loadLeadsData = useCallback(async (isManualRefresh = false) => {
     if (!isManualRefresh) setLoading(true);
     const response = await googleSheetsService.fetchLeads();
+    console.log('API Response:', response);
     if (response.success) {
       const processedLeads = (response.leads || [])
         .map(lead => ({
@@ -15,8 +16,10 @@ export function useLeads(addNotification) {
           customerName: lead.customerName || `${lead.firstName||''} ${lead.lastName||''}`.trim() || 'Unknown'
         }))
         .sort((a, b) => new Date(b.createdDate || 0) - new Date(a.createdDate || 0));
+      console.log('Processed leads:', processedLeads);
       setLeads(processedLeads);
-      if (isManualRefresh) addNotification('Leads refreshed.', 'success');
+      if (isManualRefresh) addNotification(`Leads refreshed. Found ${processedLeads.length} leads.`, 'success');
+      else addNotification(`Leads loaded. Found ${processedLeads.length} leads.`, 'success');
     } else {
       addNotification(`Error fetching leads: ${response.message}`, 'error');
     }
