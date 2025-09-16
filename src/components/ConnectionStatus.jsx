@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { googleSheetsService } from '../api/googleSheetsService';
 
@@ -6,13 +6,13 @@ export function ConnectionStatus() {
   const [status, setStatus] = useState(null);
   const [testing, setTesting] = useState(false);
 
-  const testConnection = useCallback(async () => {
+  const testConnection = async () => {
     setTesting(true);
     setStatus(null);
     const result = await googleSheetsService.testConnection();
     setStatus(result);
     setTesting(false);
-  }, []);
+  };
 
   return (
     <div className="bg-white p-4 rounded-lg shadow mb-6">

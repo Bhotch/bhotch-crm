@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Home, Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
@@ -8,7 +8,7 @@ export function LoginForm({ onLogin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const handleSubmit = useCallback(async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -21,7 +21,7 @@ export function LoginForm({ onLogin }) {
     } finally {
       setLoading(false);
     }
-  }, [credentials, onLogin]);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">

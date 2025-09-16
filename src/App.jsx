@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Home, ClipboardList, Map, Calendar, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 // Import hooks

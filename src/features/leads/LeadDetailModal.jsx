@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { User, X, Edit2, Trash2, Phone, Mail, DollarSign, Tag, ClipboardList, Briefcase, Calendar, MapPin } from 'lucide-react';
 
 const DetailItem = React.memo(({ icon, label, value }) => (

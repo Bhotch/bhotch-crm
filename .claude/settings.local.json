@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(cat:*)",
       "Bash(pkill:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

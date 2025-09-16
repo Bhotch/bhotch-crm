@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { ClipboardList, AlertCircle, DollarSign, Briefcase } from 'lucide-react';
 
 export const StatCard = React.memo(({ title, value, color, icon: Icon }) => {
     const colors = useMemo(() => ({ blue: 'bg-blue-100 text-blue-800', red: 'bg-red-100 text-red-800', green: 'bg-green-100 text-green-800', purple: 'bg-purple-100 text-purple-800' }), []);
