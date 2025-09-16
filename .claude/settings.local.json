@@ -4,7 +4,9 @@
       "Bash(/init)",
       "Bash(npm start)",
       "Bash(npm install:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []
