@@ -37,10 +37,16 @@ function GoogleMapComponent({ leads, onLeadClick }) {
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
     const bounds = new window.google.maps.LatLngBounds();
-    const leadsWithCoords = leads.filter(lead => lead.latitude && lead.longitude && !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude)));
+    const leadsWithCoords = leads.filter(lead => {
+      const lat = lead.latitude || lead.lat || lead.geocoded_lat;
+      const lng = lead.longitude || lead.lng || lead.geocoded_lng;
+      return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
+    });
     
     leadsWithCoords.forEach(lead => {
-        const position = { lat: parseFloat(lead.latitude), lng: parseFloat(lead.longitude) };
+        const lat = lead.latitude || lead.lat || lead.geocoded_lat;
+        const lng = lead.longitude || lead.lng || lead.geocoded_lng;
+        const position = { lat: parseFloat(lat), lng: parseFloat(lng) };
         const marker = new window.google.maps.Marker({ position, map, title: lead.customerName, icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="#ffffff"/></svg>`), scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 16) }});
         marker.addListener('click', () => {
             const content = `<div style="padding: 8px;"><h3 style="margin:0 0 8px 0;">${lead.customerName || ''}</h3><p><strong>Phone:</strong> ${lead.phoneNumber||'N/A'}</p><p><button onclick="window.viewLeadDetails('${lead.id}')" style="background:#3b82f6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">View Details</button></p></div>`;
@@ -62,16 +68,42 @@ function GoogleMapComponent({ leads, onLeadClick }) {
 
 
 export function MapView({ leads, onLeadClick }) {
-  const leadsWithCoords = useMemo(() => leads.filter(lead => lead.latitude && lead.longitude), [leads]);
+  const leadsWithCoords = useMemo(() => leads.filter(lead => 
+    (lead.latitude && lead.longitude) || 
+    (lead.lat && lead.lng) || 
+    (lead.geocoded_lat && lead.geocoded_lng)
+  ), [leads]);
+  
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center"><Map className="w-8 h-8 mr-3 text-blue-600" /> Customer Locations</h2>
-        <div className="text-sm text-gray-600">Showing {leadsWithCoords.length} of {leads.length} customers on map</div>
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+          <Map className="w-8 h-8 mr-3 text-blue-600" /> Customer Locations
+        </h2>
+        <div className="text-sm text-gray-600">
+          Showing {leadsWithCoords.length} of {leads.length} customers on map
+        </div>
       </div>
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <GoogleMapComponent leads={leads} onLeadClick={onLeadClick} />
-      </div>
+      
+      {leadsWithCoords.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="text-center py-12">
+            <Map className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Geocoded Locations</h3>
+            <p className="text-gray-600 mb-4">
+              Your leads don't have location coordinates yet.
+            </p>
+            <p className="text-sm text-gray-500">
+              Location data will appear here once addresses are geocoded.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <GoogleMapComponent leads={leads} onLeadClick={onLeadClick} />
+        </div>
+      )}
     </div>
   );
 }
