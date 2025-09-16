@@ -1,82 +1,113 @@
-// src/App.jsx
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Home, ClipboardList, Map, Calendar, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
-import { useState } from 'react';
-import { Plus, RefreshCw, AlertCircle } from 'lucide-react';
-
-// Import our structured code
+// Import hooks
 import { useLeads } from './hooks/useLeads';
-import { Dashboard } from './features/Dashboard/Dashboard';
-import { Modal } from './components/Modal';
-import { LeadForm } from './components/LeadForm';
+import { useNotifications } from './hooks/useNotifications';
 
-// Simple components that can live here or be moved to /components
-const LoadingSpinner = () => (
-  <div className="flex h-screen items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-  </div>
-);
+// Import features and components
+import { LoginForm } from './features/auth/LoginForm';
+import { DashboardView } from './features/dashboard/DashboardView';
+import { LeadsView } from './features/leads/LeadsView';
+import { MapView } from './features/map/MapView';
+import { CalendarView } from './features/calendar/CalendarView';
+import { LeadFormModal } from './features/leads/LeadFormModal';
+import { LeadDetailModal } from './features/leads/LeadDetailModal';
+import { ConnectionStatus } from './components/ConnectionStatus';
+import { ConfigErrorDisplay } from './components/ConfigErrorDisplay';
 
-const ErrorState = ({ error, onRetry }) => (
-  <div className="flex h-screen items-center justify-center bg-gray-50 p-4">
-    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg text-center">
-      <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-      <h3 className="mt-4 text-lg font-semibold text-gray-900">Application Error</h3>
-      <p className="mt-2 text-sm text-gray-600">{error}</p>
-      <button onClick={onRetry} className="mt-6 w-full inline-flex justify-center items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-        <RefreshCw className="w-4 h-4 mr-2" /> Try Again
-      </button>
-    </div>
-  </div>
-);
+function CrmApplication({ onLogout }) {
+  const { notifications, addNotification } = useNotifications();
+  const { leads, loading, refreshLeads, addLead, updateLead, deleteLead } = useLeads(addNotification);
+  
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [editingLead, setEditingLead] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedDetailLead, setSelectedDetailLead] = useState(null);
 
-function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const { leads, isLoading, error, refetch, addLead } = useLeads();
+  const dashboardStats = useMemo(() => ({
+    totalLeads: leads.length,
+    hotLeads: leads.filter(l => l.quality === 'Hot').length,
+    quotedLeads: leads.filter(l => l.disposition === 'Quoted').length,
+    totalQuoteValue: leads.reduce((sum, lead) => sum + (parseFloat(String(lead.dabellaQuote).replace(/[$,]/g, '')) || 0), 0)
+  }), [leads]);
 
-  const handleAddLead = async (leadData) => {
-    try {
-      const response = await addLead(leadData);
-      if (response.success) {
-        setIsModalOpen(false); // Close modal on success!
-        // You could add a success notification here
-      } else {
-        throw new Error(response.message || 'An unknown error occurred.');
-      }
-    } catch (err) {
-      alert(`Error: ${err.message}`); // Simple error feedback
-    }
+  const handleAddSubmit = async (leadData) => {
+    await addLead(leadData);
+    setShowAddForm(false);
+  };
+  
+  const handleUpdateSubmit = async (leadData) => {
+    await updateLead(leadData);
+    setEditingLead(null);
   };
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorState error={error} onRetry={refetch} />;
+  if (loading) return (<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-12 w-12 text-blue-600"/></div>);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Modal title="Add New Lead" isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <LeadForm onSubmit={handleAddLead} onCancel={() => setIsModalOpen(false)} />
-      </Modal>
-
-      <header className="bg-white shadow">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Bhotch CRM</h1>
-            <div className="flex items-center space-x-4">
-              <button onClick={refetch} className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm text-gray-600 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-              </button>
-              <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" /> Add Lead
-              </button>
+      <header className="bg-white shadow-sm border-b sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+                <div className="flex items-center">
+                    <DollarSign className="h-8 w-8 text-blue-600 mr-3" />
+                    <h1 className="text-2xl font-bold text-gray-900">Bhotch CRM</h1>
+                </div>
+                <nav className="flex space-x-1 sm:space-x-2">
+                    <button onClick={() => setCurrentView('dashboard')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Home className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Dashboard</span></button>
+                    <button onClick={() => setCurrentView('leads')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'leads' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><ClipboardList className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Leads</span></button>
+                    <button onClick={() => setCurrentView('map')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'map' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Map className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Map</span></button>
+                    <button onClick={() => setCurrentView('calendar')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'calendar' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Calendar className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Calendar</span></button>
+                    <button onClick={onLogout} className="p-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200"><XCircle className="w-5 h-5"/></button>
+                </nav>
             </div>
-          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-        <Dashboard leads={leads} />
+      {/* Notification Panel */}
+      <div className="fixed top-20 right-5 w-80 z-50">
+        {notifications.map(n => (
+          <div key={n.id} className={`p-3 rounded-md mb-2 shadow-lg animate-fade-in-right flex items-start ${n.type==='success'?'bg-green-100 text-green-800':n.type==='error'?'bg-red-100 text-red-800':'bg-blue-100 text-blue-800'}`}>
+            {n.type==='success' && <CheckCircle className="w-5 h-5 mr-2 mt-0.5 shrink-0"/>}
+            {n.type==='error' && <AlertCircle className="w-5 h-5 mr-2 mt-0.5 shrink-0"/>}
+            {n.type==='info' && <Clock className="w-5 h-5 mr-2 mt-0.5 shrink-0"/>}
+            <span className="text-sm">{n.message}</span>
+          </div>
+        ))}
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {currentView === 'dashboard' && <><ConnectionStatus /><DashboardView stats={dashboardStats} leads={leads} /></>}
+        {currentView === 'leads' && <LeadsView leads={leads} onAddLead={()=>setShowAddForm(true)} onEditLead={setEditingLead} onDeleteLead={deleteLead} onRefreshLeads={refreshLeads} onSelectLead={setSelectedDetailLead} />}
+        {currentView === 'map' && <MapView leads={leads} onLeadClick={setSelectedDetailLead}/>}
+        {currentView === 'calendar' && <CalendarView />}
       </main>
+
+      {/* Modals */}
+      {showAddForm && <LeadFormModal onSubmit={handleAddSubmit} onCancel={()=>setShowAddForm(false)}/>}
+      {editingLead && <LeadFormModal initialData={editingLead} onSubmit={handleUpdateSubmit} onCancel={()=>setEditingLead(null)} isEdit={true}/>}
+      {selectedDetailLead && <LeadDetailModal lead={selectedDetailLead} onClose={()=>setSelectedDetailLead(null)} onEdit={()=>{setEditingLead(selectedDetailLead);setSelectedDetailLead(null);}} onDelete={()=>{deleteLead(selectedDetailLead.id);setSelectedDetailLead(null);}}/>}
     </div>
   );
 }
 
-export default App;
+// --- Main App Component ---
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(!!sessionStorage.getItem('isAuthenticated'));
+  
+  const configError = [
+      process.env.REACT_APP_FIREBASE_API_KEY,
+      process.env.REACT_APP_GAS_WEB_APP_URL,
+      process.env.REACT_APP_GOOGLE_MAPS_API_KEY
+  ].some(key => !key) ? "One or more critical environment variables (Firebase, GAS URL, Maps API) are not set." : null;
+
+  if (configError) {
+    return <ConfigErrorDisplay error={configError} />;
+  }
+  
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  return <CrmApplication onLogout={() => { sessionStorage.removeItem('isAuthenticated'); setIsAuthenticated(false); }} />;
+}

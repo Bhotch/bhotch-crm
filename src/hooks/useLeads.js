@@ -1,56 +1,68 @@
-// src/hooks/useLeads.js
-
 import { useState, useEffect, useCallback } from 'react';
-import { fetchLeads as apiFetchLeads, addLead as apiAddLead } from '../api/googleSheetsService';
+import { googleSheetsService } from '../api/googleSheetsService';
 
-/**
- * A custom hook to manage all state and logic for leads.
- * @returns {object} - The leads state and functions to interact with it.
- */
-export function useLeads() {
+export function useLeads(addNotification) {
   const [leads, setLeads] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const processLeads = (rawLeads) => {
-    // Ensure data is always an array and has consistent properties.
-    return (rawLeads || []).map(lead => ({
-      ...lead,
-      id: lead.id || `temp_${Math.random()}`,
-      customerName: lead.customerName?.trim() || 'Unknown Customer',
-      createdDate: lead.createdDate || new Date().toISOString(),
-      status: lead.status || 'new',
-    }));
-  };
-
-  const getLeads = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await apiFetchLeads();
-      if (result.success === false) {
-        throw new Error(result.message || 'The script returned an error.');
-      }
-      setLeads(processLeads(result.data));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+  const loadLeadsData = useCallback(async (isManualRefresh = false) => {
+    if (!isManualRefresh) setLoading(true);
+    const response = await googleSheetsService.fetchLeads();
+    if (response.success) {
+      const processedLeads = (response.leads || [])
+        .map(lead => ({
+          ...lead,
+          customerName: lead.customerName || `${lead.firstName||''} ${lead.lastName||''}`.trim() || 'Unknown'
+        }))
+        .sort((a, b) => new Date(b.createdDate || 0) - new Date(a.createdDate || 0));
+      setLeads(processedLeads);
+      if (isManualRefresh) addNotification('Leads refreshed.', 'success');
+    } else {
+      addNotification(`Error fetching leads: ${response.message}`, 'error');
     }
-  }, []);
+    if (!isManualRefresh) setLoading(false);
+  }, [addNotification]);
 
   useEffect(() => {
-    getLeads(); // Fetch leads on initial component mount.
-  }, [getLeads]);
-  
-  const addLead = useCallback(async (leadData) => {
-    const response = await apiAddLead(leadData);
-    if (response.success) {
-      await getLeads(); // Refresh the list after adding.
-    }
-    // The component will handle the response (e.g., show success/error message).
-    return response;
-  }, [getLeads]);
+    loadLeadsData();
+  }, [loadLeadsData]);
 
-  return { leads, isLoading, error, refetch: getLeads, addLead };
+  const addLead = useCallback(async (leadData) => {
+    const response = await googleSheetsService.addLead(leadData);
+    if (response.success && response.lead) {
+      setLeads(prev => [response.lead, ...prev].sort((a,b) => new Date(b.createdDate||0)-new Date(a.createdDate||0)));
+      addNotification(`Lead added: ${response.lead.customerName}`, 'success');
+    } else {
+      addNotification(`Error adding lead: ${response.message}`, 'error');
+    }
+    return response;
+  }, [addNotification]);
+
+  const updateLead = useCallback(async (updatedLead) => {
+    const response = await googleSheetsService.updateLead(updatedLead);
+    if (response.success && response.lead) {
+      setLeads(prev => prev.map(l => (l.id === response.lead.id ? response.lead : l)));
+      addNotification(`Lead updated: ${response.lead.customerName}`, 'info');
+    } else {
+      addNotification(`Error updating lead: ${response.message}`, 'error');
+    }
+    return response;
+  }, [addNotification]);
+  
+  const deleteLead = useCallback(async (leadId) => {
+    const leadToDelete = leads.find(l => l.id === leadId);
+    if (!leadToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete ${leadToDelete.customerName}?`)) {
+      const response = await googleSheetsService.deleteLead(leadId);
+      if (response.success) {
+        setLeads(currentLeads => currentLeads.filter(l => l.id !== leadId));
+        addNotification(`Lead deleted: ${leadToDelete.customerName}`, 'warning');
+      } else {
+        addNotification(`Error deleting lead: ${response.message}`, 'error');
+      }
+    }
+  }, [leads, addNotification]);
+
+  return { leads, loading, refreshLeads: () => loadLeadsData(true), addLead, updateLead, deleteLead };
 }

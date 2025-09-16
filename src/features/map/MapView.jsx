@@ -1,0 +1,77 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Loader2, AlertCircle, Map } from 'lucide-react';
+import { loadGoogleMaps } from '../../services/googleMapsService';
+
+function GoogleMapComponent({ leads, onLeadClick }) {
+  const mapRef = useRef(null);
+  const markersRef = useRef([]);
+  const infoWindowRef = useRef(null);
+  const [map, setMap] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const initializeMap = async () => {
+      try {
+        const google = await loadGoogleMaps();
+        if (!mapRef.current) return;
+        const mapInstance = new google.maps.Map(mapRef.current, { center: { lat: 41.1617, lng: -112.0377 }, zoom: 10, styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }] });
+        infoWindowRef.current = new google.maps.InfoWindow();
+        setMap(mapInstance);
+      } catch (err) { setError(err.message); } 
+      finally { setLoading(false); }
+    };
+    initializeMap();
+  }, []);
+
+  useEffect(() => {
+    window.viewLeadDetails = (leadId) => {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead && onLeadClick) onLeadClick(lead);
+    };
+    return () => { window.viewLeadDetails = null; };
+  }, [leads, onLeadClick]);
+
+  useEffect(() => {
+    if (!map || !window.google) return;
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+    const bounds = new window.google.maps.LatLngBounds();
+    const leadsWithCoords = leads.filter(lead => lead.latitude && lead.longitude && !isNaN(parseFloat(lead.latitude)) && !isNaN(parseFloat(lead.longitude)));
+    
+    leadsWithCoords.forEach(lead => {
+        const position = { lat: parseFloat(lead.latitude), lng: parseFloat(lead.longitude) };
+        const marker = new window.google.maps.Marker({ position, map, title: lead.customerName, icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="#ffffff"/></svg>`), scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 16) }});
+        marker.addListener('click', () => {
+            const content = `<div style="padding: 8px;"><h3 style="margin:0 0 8px 0;">${lead.customerName || ''}</h3><p><strong>Phone:</strong> ${lead.phoneNumber||'N/A'}</p><p><button onclick="window.viewLeadDetails('${lead.id}')" style="background:#3b82f6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">View Details</button></p></div>`;
+            infoWindowRef.current.setContent(content);
+            infoWindowRef.current.open(map, marker);
+        });
+        markersRef.current.push(marker);
+        bounds.extend(position);
+    });
+
+    if (leadsWithCoords.length > 0) map.fitBounds(bounds);
+
+  }, [map, leads]);
+
+  if (loading) return <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-blue-600"/></div>;
+  if (error) return <div className="h-96 bg-red-50 rounded-lg flex items-center justify-center text-center"><AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" /><p className="text-red-600 font-medium">{error}</p></div>;
+  return <div ref={mapRef} className="h-[60vh] w-full rounded-lg overflow-hidden border border-gray-300" />;
+}
+
+
+export function MapView({ leads, onLeadClick }) {
+  const leadsWithCoords = useMemo(() => leads.filter(lead => lead.latitude && lead.longitude), [leads]);
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center"><Map className="w-8 h-8 mr-3 text-blue-600" /> Customer Locations</h2>
+        <div className="text-sm text-gray-600">Showing {leadsWithCoords.length} of {leads.length} customers on map</div>
+      </div>
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <GoogleMapComponent leads={leads} onLeadClick={onLeadClick} />
+      </div>
+    </div>
+  );
+}
