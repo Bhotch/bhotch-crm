@@ -79,9 +79,6 @@ function GoogleMapComponent({ leads, onLeadClick }) {
           <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
           <p className="text-red-600 mb-2">Failed to load Google Maps</p>
           <p className="text-sm text-gray-600">{error}</p>
-          <div className="mt-4 text-xs text-gray-500">
-            <p>API Key: {process.env.REACT_APP_GOOGLE_MAPS_API_KEY ? 'Set' : 'Not configured'}</p>
-          </div>
         </div>
       </div>
     );
