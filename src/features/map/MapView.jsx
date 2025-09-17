@@ -61,8 +61,32 @@ function GoogleMapComponent({ leads, onLeadClick }) {
 
   }, [map, leads]);
 
-  if (loading) return <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-blue-600"/></div>;
-  if (error) return <div className="h-96 bg-red-50 rounded-lg flex items-center justify-center text-center"><AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" /><p className="text-red-600 font-medium">{error}</p></div>;
+  if (loading) {
+    return (
+      <div className="h-[60vh] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-2" />
+          <p className="text-gray-600">Loading Google Maps...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-[60vh] w-full rounded-lg border border-red-300 flex items-center justify-center bg-red-50">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+          <p className="text-red-600 mb-2">Failed to load Google Maps</p>
+          <p className="text-sm text-gray-600">{error}</p>
+          <div className="mt-4 text-xs text-gray-500">
+            <p>API Key: {process.env.REACT_APP_GOOGLE_MAPS_API_KEY ? 'Set' : 'Not configured'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <div ref={mapRef} className="h-[60vh] w-full rounded-lg overflow-hidden border border-gray-300" />;
 }
 
