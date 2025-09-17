@@ -13,7 +13,9 @@
       "Bash(git commit:*)",
       "Bash(git mv:*)",
       "Bash(npm test:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(git pull:*)",
+      "Bash(git ls-tree:*)"
     ],
     "deny": [],
     "ask": []
