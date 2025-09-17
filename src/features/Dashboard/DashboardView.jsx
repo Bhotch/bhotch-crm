@@ -2,7 +2,7 @@ import React from 'react';
 import { StatCard } from '../../components/StatCard';
 import { DollarSign, Users, Target, TrendingUp } from 'lucide-react';
 
-export function DashboardView({ stats, leads }) {
+function DashboardView({ stats, leads }) {
   const recentLeads = leads.slice(0, 5);
 
   const formatCurrency = (value) => {
@@ -85,3 +85,5 @@ export function DashboardView({ stats, leads }) {
     </div>
   );
 }
+
+export default DashboardView;

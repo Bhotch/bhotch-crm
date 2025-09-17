@@ -67,7 +67,7 @@ function GoogleMapComponent({ leads, onLeadClick }) {
 }
 
 
-export function MapView({ leads, onLeadClick }) {
+function MapView({ leads, onLeadClick }) {
   const leadsWithCoords = useMemo(() => leads.filter(lead => 
     (lead.latitude && lead.longitude) || 
     (lead.lat && lead.lng) || 
@@ -107,3 +107,5 @@ export function MapView({ leads, onLeadClick }) {
     </div>
   );
 }
+
+export default MapView;

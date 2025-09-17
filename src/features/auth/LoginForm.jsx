@@ -3,7 +3,7 @@ import { Home, Loader2 } from 'lucide-react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 
-export function LoginForm({ onLogin }) {
+function LoginForm({ onLogin }) {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,3 +43,5 @@ export function LoginForm({ onLogin }) {
     </div>
   );
 }
+
+export default LoginForm;

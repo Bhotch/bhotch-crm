@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
-export function ConfigErrorDisplay({ error }) {
+function ConfigErrorDisplay({ error }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-red-50 p-4">
       <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-lg">
@@ -16,3 +16,5 @@ export function ConfigErrorDisplay({ error }) {
     </div>
   );
 }
+
+export default ConfigErrorDisplay;

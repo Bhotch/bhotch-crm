@@ -8,7 +8,7 @@ const DetailItem = React.memo(({ icon, label, value }) => (
     </div>
 ));
 
-export function LeadDetailModal({ lead, onEdit, onDelete, onClose }) {
+function LeadDetailModal({ lead, onEdit, onDelete, onClose }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40 animate-fade-in">
         <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
@@ -48,3 +48,5 @@ export function LeadDetailModal({ lead, onEdit, onDelete, onClose }) {
     </div>
   );
 }
+
+export default LeadDetailModal;

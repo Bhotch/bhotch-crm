@@ -11,7 +11,7 @@ const TextareaInput = (props) => <textarea {...props} rows={4} className="mt-1 b
 
 const initialFormData = { customerName: '', address: '', phoneNumber: '', email: '', dabellaQuote: '', quality: 'Cold', notes: '', disposition: 'New', leadSource: 'Door Knock', roofAge: '', roofType: 'Asphalt Shingle' };
 
-export function LeadFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
+function LeadFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
     const [formData, setFormData] = useState(() => initialData || initialFormData);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -76,3 +76,5 @@ export function LeadFormModal({ initialData, onSubmit, onCancel, isEdit = false 
         </div>
     );
 }
+
+export default LeadFormModal;

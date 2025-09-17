@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit2, Eye, RefreshCw, XCircle, CheckCircle, Clock, AlertCircle, DollarSign, ShieldCheck, Search, Calendar } from 'lucide-react';
 
-export function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads, onSelectLead }) {
+function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads, onSelectLead }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDisposition, setFilterDisposition] = useState('All');
     const [filterSource, setFilterSource] = useState('All');
@@ -102,4 +102,6 @@ export function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefres
             </div>
         </div>
     );
-};
+}
+
+export default LeadsView;

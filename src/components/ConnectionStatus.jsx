@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { RefreshCw, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { googleSheetsService } from '../api/googleSheetsService';
 
-export function ConnectionStatus() {
+function ConnectionStatus() {
   const [status, setStatus] = useState(null);
   const [testing, setTesting] = useState(false);
 
@@ -29,3 +29,5 @@ export function ConnectionStatus() {
     </div>
   );
 }
+
+export default ConnectionStatus;
