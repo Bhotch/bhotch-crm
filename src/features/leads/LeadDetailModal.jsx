@@ -8,7 +8,7 @@ const DetailItem = React.memo(({ icon, label, value }) => (
     </div>
 ));
 
-function LeadDetailModal({ lead, onEdit, onDelete, onClose }) {
+function LeadDetailModal({ lead, onEdit, onDelete, onClose, onNavigateToTab }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40 animate-fade-in">
         <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
@@ -31,9 +31,45 @@ function LeadDetailModal({ lead, onEdit, onDelete, onClose }) {
                     <DetailItem icon={<Briefcase size={14} className="mr-2" />} label="Lead Source" value={lead.leadSource} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 pb-6 border-b">
-                    <div className="bg-gray-50 p-4 rounded-lg text-center"><Calendar size={24} className="mx-auto text-gray-400 mb-2"/><h4 className="font-semibold text-sm">Appointments</h4><p className="text-xs text-gray-500">Click calendar tab</p></div>
-                    <div className="bg-gray-50 p-4 rounded-lg text-center"><Mail size={24} className="mx-auto text-gray-400 mb-2"/><h4 className="font-semibold text-sm">Communications</h4><p className="text-xs text-gray-500">Coming soon</p></div>
-                    <div className="bg-gray-50 p-4 rounded-lg text-center"><MapPin size={24} className="mx-auto text-gray-400 mb-2"/><h4 className="font-semibold text-sm">Location</h4><p className="text-xs text-gray-500">View on map tab</p></div>
+                    <div
+                        className="bg-gray-50 p-4 rounded-lg text-center cursor-pointer hover:bg-blue-50 transition-colors"
+                        onClick={() => onNavigateToTab('calendar')}
+                    >
+                        <Calendar size={24} className="mx-auto text-blue-600 mb-2"/>
+                        <h4 className="font-semibold text-sm">Appointments</h4>
+                        <p className="text-xs text-gray-500">Click to view calendar</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-sm mb-3 text-center">Communications</h4>
+                        <div className="space-y-2">
+                            <button
+                                onClick={() => window.open(`mailto:${lead.email}?from=brandon@rimehq.net&subject=Follow up - ${lead.customerName}`)}
+                                className="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center justify-center"
+                            >
+                                <Mail size={12} className="mr-1"/>Email
+                            </button>
+                            <button
+                                onClick={() => window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${lead.phoneNumber?.replace(/\D/g, '')}`)}
+                                className="w-full px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center justify-center"
+                            >
+                                <Phone size={12} className="mr-1"/>Call
+                            </button>
+                            <button
+                                onClick={() => window.open(`https://voice.google.com/u/0/messages?contact=%2B1${lead.phoneNumber?.replace(/\D/g, '')}`)}
+                                className="w-full px-3 py-2 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 flex items-center justify-center"
+                            >
+                                <Mail size={12} className="mr-1"/>SMS
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        className="bg-gray-50 p-4 rounded-lg text-center cursor-pointer hover:bg-green-50 transition-colors"
+                        onClick={() => onNavigateToTab('map', lead.address)}
+                    >
+                        <MapPin size={24} className="mx-auto text-green-600 mb-2"/>
+                        <h4 className="font-semibold text-sm">Location</h4>
+                        <p className="text-xs text-gray-500">View on map</p>
+                    </div>
                 </div>
                 <div>
                     <h4 className="text-md font-semibold text-gray-800 mb-2">Notes</h4>

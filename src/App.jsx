@@ -24,6 +24,7 @@ function CrmApplication({ onLogout }) {
   const [editingLead, setEditingLead] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedDetailLead, setSelectedDetailLead] = useState(null);
+  const [mapSearchAddress, setMapSearchAddress] = useState('');
 
   const dashboardStats = useMemo(() => ({
     totalLeads: leads.length,
@@ -40,6 +41,14 @@ function CrmApplication({ onLogout }) {
   const handleUpdateSubmit = async (leadData) => {
     await updateLead(leadData);
     setEditingLead(null);
+  };
+
+  const handleNavigateToTab = (tab, address = '') => {
+    setCurrentView(tab);
+    if (tab === 'map' && address) {
+      setMapSearchAddress(address);
+    }
+    setSelectedDetailLead(null);
   };
 
   if (loading) return (<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-12 w-12 text-blue-600"/></div>);
@@ -79,14 +88,14 @@ function CrmApplication({ onLogout }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'dashboard' && <><ConnectionStatus /><DashboardView stats={dashboardStats} leads={leads} /></>}
         {currentView === 'leads' && <LeadsView leads={leads} onAddLead={()=>setShowAddForm(true)} onEditLead={setEditingLead} onDeleteLead={deleteLead} onRefreshLeads={refreshLeads} onSelectLead={setSelectedDetailLead} />}
-        {currentView === 'map' && <MapView leads={leads} onLeadClick={setSelectedDetailLead}/>}
+        {currentView === 'map' && <MapView leads={leads} onLeadClick={setSelectedDetailLead} searchAddress={mapSearchAddress} onSearchComplete={() => setMapSearchAddress('')} />}
         {currentView === 'calendar' && <CalendarView />}
       </main>
 
       {/* Modals */}
       {showAddForm && <LeadFormModal onSubmit={handleAddSubmit} onCancel={()=>setShowAddForm(false)}/>}
       {editingLead && <LeadFormModal initialData={editingLead} onSubmit={handleUpdateSubmit} onCancel={()=>setEditingLead(null)} isEdit={true}/>}
-      {selectedDetailLead && <LeadDetailModal lead={selectedDetailLead} onClose={()=>setSelectedDetailLead(null)} onEdit={()=>{setEditingLead(selectedDetailLead);setSelectedDetailLead(null);}} onDelete={()=>{deleteLead(selectedDetailLead.id);setSelectedDetailLead(null);}}/>}
+      {selectedDetailLead && <LeadDetailModal lead={selectedDetailLead} onClose={()=>setSelectedDetailLead(null)} onEdit={()=>{setEditingLead(selectedDetailLead);setSelectedDetailLead(null);}} onDelete={()=>{deleteLead(selectedDetailLead.id);setSelectedDetailLead(null);}} onNavigateToTab={handleNavigateToTab} />}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Loader2, AlertCircle, Map, MapPin, Navigation, Layers, Search } from 'lucide-react';
 import { loadGoogleMaps } from '../../services/googleMapsService';
 
-function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic }) {
+function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic, searchAddress, onSearchComplete }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const infoWindowRef = useRef(null);
@@ -105,6 +105,37 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
       trafficLayerRef.current.setMap(showTraffic ? map : null);
     }
   }, [showTraffic, map]);
+
+  // Handle address search when searchAddress changes
+  useEffect(() => {
+    if (!map || !window.google || !searchAddress) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address: searchAddress }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location;
+        map.setCenter(location);
+        map.setZoom(15);
+
+        // Add a marker for the searched address
+        new window.google.maps.Marker({
+          position: location,
+          map,
+          title: searchAddress,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#4F46E5',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          }
+        });
+      }
+      // Clear the search address after processing
+      if (onSearchComplete) onSearchComplete();
+    });
+  }, [map, searchAddress, onSearchComplete]);
 
   useEffect(() => {
     window.viewLeadDetails = (leadId) => {
@@ -238,7 +269,7 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
 }
 
 
-function MapView({ leads, onLeadClick }) {
+function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
   const [showDemoData, setShowDemoData] = useState(false);
   const [mapType, setMapType] = useState('roadmap');
   const [showTraffic, setShowTraffic] = useState(false);
@@ -445,6 +476,8 @@ function MapView({ leads, onLeadClick }) {
             showDemoData={showDemoData}
             mapType={mapType}
             showTraffic={showTraffic}
+            searchAddress={searchAddress}
+            onSearchComplete={onSearchComplete}
           />
         </div>
       )}
