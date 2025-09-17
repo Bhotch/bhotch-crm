@@ -1,11 +1,11 @@
 // ============================================================================
 // Bhotch CRM - Google Apps Script Backend (Code.gs)
-// UPDATED VERSION - Now includes Job Count functionality
+// CLEAN VERSION - Complete Job Count & Lead Management System
 // ============================================================================
 
 /**
- * @fileoverview This script acts as the backend API for a CRM application,
- * interfacing with Google Sheets to perform CRUD operations on leads and job counts.
+ * @fileoverview Clean, production-ready backend API for CRM application
+ * with complete CRUD operations for both leads and job counts.
  */
 
 // --- CONFIGURATION ---
@@ -33,8 +33,21 @@ function logMessage(message, level = 'INFO') {
   console.log(`[${new Date().toISOString()}] [${level}] ${message}`);
 }
 
+function getSheetSafely(sheetName) {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      throw new Error(`Sheet "${sheetName}" not found in spreadsheet`);
+    }
+    return sheet;
+  } catch (error) {
+    throw new Error(`Failed to access sheet "${sheetName}": ${error.message}`);
+  }
+}
+
 // ============================================================================
-// WEB APP ENTRY POINTS (doGet / doPost)
+// WEB APP ENTRY POINTS
 // ============================================================================
 
 function doGet(e) {
@@ -58,7 +71,7 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  logMessage('POST request received.');
+  logMessage('POST request received');
   try {
     const requestData = JSON.parse(e.postData.contents);
     const action = requestData.action;
@@ -102,7 +115,7 @@ function doPost(e) {
 }
 
 // ============================================================================
-// API CORE FUNCTIONS - UTILITY
+// UTILITY OPERATIONS
 // ============================================================================
 
 function testConnection() {
@@ -112,16 +125,22 @@ function testConnection() {
     const leadsSheet = spreadsheet.getSheetByName(LEADS_SHEET_NAME);
     const jobCountSheet = spreadsheet.getSheetByName(JOB_COUNT_SHEET_NAME);
 
-    if (!leadsSheet) throw new Error(`Sheet "${LEADS_SHEET_NAME}" not found.`);
-    if (!jobCountSheet) throw new Error(`Sheet "${JOB_COUNT_SHEET_NAME}" not found.`);
+    const connectionStatus = {
+      spreadsheetId: SPREADSHEET_ID,
+      leadsSheet: {
+        exists: !!leadsSheet,
+        name: LEADS_SHEET_NAME,
+        rowCount: leadsSheet ? leadsSheet.getLastRow() : 0
+      },
+      jobCountSheet: {
+        exists: !!jobCountSheet,
+        name: JOB_COUNT_SHEET_NAME,
+        rowCount: jobCountSheet ? jobCountSheet.getLastRow() : 0
+      }
+    };
 
-    const leadsRowCount = leadsSheet.getLastRow();
-    const jobCountRowCount = jobCountSheet.getLastRow();
-
-    return createResponse({
-      leadsRowCount: leadsRowCount,
-      jobCountRowCount: jobCountRowCount
-    }, true, 'Connection successful');
+    logMessage(`Connection test successful: ${JSON.stringify(connectionStatus)}`);
+    return createResponse(connectionStatus, true, 'Connection successful');
   } catch (error) {
     logMessage(`Connection test failed: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Connection failed: ${error.message}`);
@@ -130,8 +149,9 @@ function testConnection() {
 
 function geocodeAddress(address) {
   if (!address) {
-    return createResponse({}, false, 'Address parameter is required.');
+    return createResponse({}, false, 'Address parameter is required');
   }
+
   logMessage(`Geocoding address: ${address}`);
   try {
     const geocoder = Maps.newGeocoder().setRegion('US');
@@ -143,9 +163,9 @@ function geocodeAddress(address) {
 
     const location = response.results[0].geometry.location;
     const coords = { latitude: location.lat, longitude: location.lng };
-    logMessage(`Geocoding successful: ${JSON.stringify(coords)}`);
-    return createResponse(coords, true, 'Address geocoded successfully.');
 
+    logMessage(`Geocoding successful: ${JSON.stringify(coords)}`);
+    return createResponse(coords, true, 'Address geocoded successfully');
   } catch (error) {
     logMessage(`Geocoding Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to geocode address: ${error.message}`);
@@ -153,22 +173,21 @@ function geocodeAddress(address) {
 }
 
 // ============================================================================
-// API CORE FUNCTIONS - LEADS
+// LEAD OPERATIONS
 // ============================================================================
 
 function getLeads() {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(LEADS_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${LEADS_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(LEADS_SHEET_NAME);
     const lastRow = sheet.getLastRow();
+
     if (lastRow <= 1) {
-      return createResponse({ data: [], count: 0 }, true, 'No leads found.');
+      return createResponse({ data: [], count: 0 }, true, 'No leads found');
     }
 
     const range = sheet.getDataRange();
     const values = range.getValues();
-    const headers = values[0].map(h => h.trim());
+    const headers = values[0].map(h => String(h).trim());
     const dataRows = values.slice(1);
 
     const leads = dataRows.map(row => {
@@ -182,9 +201,8 @@ function getLeads() {
       return lead;
     });
 
-    logMessage(`Successfully retrieved ${leads.length} leads.`);
-    return createResponse({ data: leads, count: leads.length }, true, `Retrieved ${leads.length} leads.`);
-
+    logMessage(`Successfully retrieved ${leads.length} leads`);
+    return createResponse({ data: leads, count: leads.length }, true, `Retrieved ${leads.length} leads`);
   } catch (error) {
     logMessage(`getLeads Error: ${error.toString()}`, 'ERROR');
     return createResponse({ data: [] }, false, `Failed to fetch leads: ${error.message}`);
@@ -193,11 +211,11 @@ function getLeads() {
 
 function addLead(leadData) {
   try {
-    if (!leadData || typeof leadData !== 'object') throw new Error('Invalid lead data provided.');
+    if (!leadData || typeof leadData !== 'object') {
+      throw new Error('Invalid lead data provided');
+    }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(LEADS_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${LEADS_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(LEADS_SHEET_NAME);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
     // Add metadata
@@ -209,8 +227,7 @@ function addLead(leadData) {
     sheet.appendRow(rowData);
 
     logMessage(`Successfully added lead ID: ${leadData.id}`);
-    return createResponse({ lead: leadData }, true, 'Lead added successfully.');
-
+    return createResponse({ lead: leadData }, true, 'Lead added successfully');
   } catch (error) {
     logMessage(`addLead Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to add lead: ${error.message}`);
@@ -219,28 +236,34 @@ function addLead(leadData) {
 
 function updateLead(leadData) {
   try {
-    if (!leadData || !leadData.id) throw new Error('Lead data with a valid ID is required for updates.');
+    if (!leadData || !leadData.id) {
+      throw new Error('Lead data with valid ID is required for updates');
+    }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(LEADS_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${LEADS_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(LEADS_SHEET_NAME);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
     const idColumnIndex = headers.indexOf('id');
-    if (idColumnIndex === -1) throw new Error("'id' column not found in the sheet.");
+
+    if (idColumnIndex === -1) {
+      throw new Error("'id' column not found in sheet");
+    }
 
     const rowIndex = data.slice(1).findIndex(row => row[idColumnIndex] == leadData.id) + 2;
-    if (rowIndex < 2) throw new Error(`Lead with ID ${leadData.id} not found.`);
+    if (rowIndex < 2) {
+      throw new Error(`Lead with ID ${leadData.id} not found`);
+    }
 
-    // Add modified date
     leadData.modifiedDate = new Date().toISOString();
+    const rowData = headers.map(header =>
+      leadData[header] !== undefined ? leadData[header] :
+      sheet.getRange(rowIndex, headers.indexOf(header) + 1).getValue()
+    );
 
-    const rowData = headers.map(header => leadData[header] !== undefined ? leadData[header] : sheet.getRange(rowIndex, headers.indexOf(header) + 1).getValue());
     sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
 
     logMessage(`Successfully updated lead ID: ${leadData.id}`);
-    return createResponse({ lead: leadData }, true, 'Lead updated successfully.');
-
+    return createResponse({ lead: leadData }, true, 'Lead updated successfully');
   } catch (error) {
     logMessage(`updateLead Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to update lead: ${error.message}`);
@@ -249,24 +272,28 @@ function updateLead(leadData) {
 
 function deleteLead(leadId) {
   try {
-    if (!leadId) throw new Error('Lead ID is required for deletion.');
+    if (!leadId) {
+      throw new Error('Lead ID is required for deletion');
+    }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(LEADS_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${LEADS_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(LEADS_SHEET_NAME);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
     const idColumnIndex = headers.indexOf('id');
-    if (idColumnIndex === -1) throw new Error("'id' column not found in the sheet.");
+
+    if (idColumnIndex === -1) {
+      throw new Error("'id' column not found in sheet");
+    }
 
     const rowIndex = data.slice(1).findIndex(row => row[idColumnIndex] == leadId) + 2;
-    if (rowIndex < 2) throw new Error(`Lead with ID ${leadId} not found.`);
+    if (rowIndex < 2) {
+      throw new Error(`Lead with ID ${leadId} not found`);
+    }
 
     sheet.deleteRow(rowIndex);
 
     logMessage(`Successfully deleted lead ID: ${leadId}`);
-    return createResponse({ deletedId: leadId }, true, 'Lead deleted successfully.');
-
+    return createResponse({ deletedId: leadId }, true, 'Lead deleted successfully');
   } catch (error) {
     logMessage(`deleteLead Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to delete lead: ${error.message}`);
@@ -274,22 +301,21 @@ function deleteLead(leadId) {
 }
 
 // ============================================================================
-// API CORE FUNCTIONS - JOB COUNTS
+// JOB COUNT OPERATIONS
 // ============================================================================
 
 function getJobCounts() {
   try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(JOB_COUNT_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${JOB_COUNT_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
     const lastRow = sheet.getLastRow();
+
     if (lastRow <= 1) {
-      return createResponse({ data: [], count: 0 }, true, 'No job counts found.');
+      return createResponse({ data: [], count: 0 }, true, 'No job counts found');
     }
 
     const range = sheet.getDataRange();
     const values = range.getValues();
-    const headers = values[0].map(h => h.trim());
+    const headers = values[0].map(h => String(h).trim());
     const dataRows = values.slice(1);
 
     const jobCounts = dataRows.map((row, index) => {
@@ -297,7 +323,6 @@ function getJobCounts() {
       headers.forEach((header, columnIndex) => {
         if (header) {
           const value = row[columnIndex];
-          // Convert header names to camelCase for frontend compatibility
           const camelCaseHeader = convertToCamelCase(header);
           jobCount[camelCaseHeader] = value instanceof Date ? value.toISOString() : value;
         }
@@ -311,9 +336,8 @@ function getJobCounts() {
       return jobCount;
     });
 
-    logMessage(`Successfully retrieved ${jobCounts.length} job counts.`);
-    return createResponse({ data: jobCounts, count: jobCounts.length }, true, `Retrieved ${jobCounts.length} job counts.`);
-
+    logMessage(`Successfully retrieved ${jobCounts.length} job counts`);
+    return createResponse({ data: jobCounts, count: jobCounts.length }, true, `Retrieved ${jobCounts.length} job counts`);
   } catch (error) {
     logMessage(`getJobCounts Error: ${error.toString()}`, 'ERROR');
     return createResponse({ data: [] }, false, `Failed to fetch job counts: ${error.message}`);
@@ -322,11 +346,11 @@ function getJobCounts() {
 
 function addJobCount(jobCountData) {
   try {
-    if (!jobCountData || typeof jobCountData !== 'object') throw new Error('Invalid job count data provided.');
+    if (!jobCountData || typeof jobCountData !== 'object') {
+      throw new Error('Invalid job count data provided');
+    }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(JOB_COUNT_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${JOB_COUNT_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
     // Add metadata
@@ -342,8 +366,7 @@ function addJobCount(jobCountData) {
     sheet.appendRow(rowData);
 
     logMessage(`Successfully added job count ID: ${jobCountData.id}`);
-    return createResponse({ jobCount: jobCountData }, true, 'Job count added successfully.');
-
+    return createResponse({ jobCount: jobCountData }, true, 'Job count added successfully');
   } catch (error) {
     logMessage(`addJobCount Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to add job count: ${error.message}`);
@@ -352,62 +375,53 @@ function addJobCount(jobCountData) {
 
 function updateJobCount(jobCountData) {
   try {
-    if (!jobCountData || !jobCountData.id) throw new Error('Job count data with a valid ID is required for updates.');
+    if (!jobCountData || !jobCountData.id) {
+      throw new Error('Job count data with valid ID is required for updates');
+    }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(JOB_COUNT_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${JOB_COUNT_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
 
-    // Find ID column (could be 'id' or 'ID')
+    // Find ID column or use name/date combination
     let idColumnIndex = headers.findIndex(h => h.toLowerCase().trim() === 'id');
-    if (idColumnIndex === -1) {
-      // If no ID column exists, try to find the row by firstName, lastName, and date
+    let rowIndex;
+
+    if (idColumnIndex !== -1) {
+      rowIndex = data.slice(1).findIndex(row => row[idColumnIndex] == jobCountData.id) + 2;
+    } else {
+      // Fallback to firstname/lastname/date matching
       const firstNameIndex = headers.findIndex(h => h.toLowerCase().includes('first'));
       const lastNameIndex = headers.findIndex(h => h.toLowerCase().includes('last'));
       const dateIndex = headers.findIndex(h => h.toLowerCase().includes('date'));
 
-      if (firstNameIndex !== -1 && lastNameIndex !== -1 && dateIndex !== -1) {
-        const rowIndex = data.slice(1).findIndex(row =>
+      if (firstNameIndex !== -1 && dateIndex !== -1) {
+        rowIndex = data.slice(1).findIndex(row =>
           row[firstNameIndex] == jobCountData.firstName &&
-          row[lastNameIndex] == jobCountData.lastName &&
-          (row[dateIndex] == jobCountData.date || new Date(row[dateIndex]).toISOString().split('T')[0] == jobCountData.date)
+          (row[lastNameIndex] == jobCountData.lastName || !jobCountData.lastName) &&
+          (row[dateIndex] == jobCountData.date ||
+           new Date(row[dateIndex]).toISOString().split('T')[0] == jobCountData.date)
         ) + 2;
-
-        if (rowIndex < 2) throw new Error(`Job count not found.`);
-
-        // Add modified date
-        jobCountData.modifiedDate = new Date().toISOString();
-
-        const rowData = headers.map(header => {
-          const camelCaseHeader = convertToCamelCase(header);
-          return jobCountData[camelCaseHeader] !== undefined ? jobCountData[camelCaseHeader] : sheet.getRange(rowIndex, headers.indexOf(header) + 1).getValue();
-        });
-
-        sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
-        logMessage(`Successfully updated job count for: ${jobCountData.firstName} ${jobCountData.lastName}`);
-        return createResponse({ jobCount: jobCountData }, true, 'Job count updated successfully.');
-      } else {
-        throw new Error("Unable to locate job count for update - no ID column or identifying fields found.");
       }
-    } else {
-      const rowIndex = data.slice(1).findIndex(row => row[idColumnIndex] == jobCountData.id) + 2;
-      if (rowIndex < 2) throw new Error(`Job count with ID ${jobCountData.id} not found.`);
-
-      // Add modified date
-      jobCountData.modifiedDate = new Date().toISOString();
-
-      const rowData = headers.map(header => {
-        const camelCaseHeader = convertToCamelCase(header);
-        return jobCountData[camelCaseHeader] !== undefined ? jobCountData[camelCaseHeader] : sheet.getRange(rowIndex, headers.indexOf(header) + 1).getValue();
-      });
-
-      sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
-      logMessage(`Successfully updated job count ID: ${jobCountData.id}`);
-      return createResponse({ jobCount: jobCountData }, true, 'Job count updated successfully.');
     }
 
+    if (!rowIndex || rowIndex < 2) {
+      throw new Error('Job count not found for update');
+    }
+
+    jobCountData.modifiedDate = new Date().toISOString();
+
+    const rowData = headers.map(header => {
+      const camelCaseHeader = convertToCamelCase(header);
+      return jobCountData[camelCaseHeader] !== undefined ?
+        jobCountData[camelCaseHeader] :
+        sheet.getRange(rowIndex, headers.indexOf(header) + 1).getValue();
+    });
+
+    sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
+
+    logMessage(`Successfully updated job count ID: ${jobCountData.id}`);
+    return createResponse({ jobCount: jobCountData }, true, 'Job count updated successfully');
   } catch (error) {
     logMessage(`updateJobCount Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to update job count: ${error.message}`);
@@ -416,29 +430,28 @@ function updateJobCount(jobCountData) {
 
 function deleteJobCount(jobCountId) {
   try {
-    if (!jobCountId) throw new Error('Job count ID is required for deletion.');
+    if (!jobCountId) {
+      throw new Error('Job count ID is required for deletion');
+    }
 
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(JOB_COUNT_SHEET_NAME);
-    if (!sheet) throw new Error(`Sheet "${JOB_COUNT_SHEET_NAME}" not found.`);
-
+    const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
 
-    // Find ID column
-    let idColumnIndex = headers.findIndex(h => h.toLowerCase().trim() === 'id');
+    const idColumnIndex = headers.findIndex(h => h.toLowerCase().trim() === 'id');
     if (idColumnIndex === -1) {
-      // If no ID column, we'll need to identify by other means
-      throw new Error("'id' column not found in the sheet.");
+      throw new Error("'id' column not found in job count sheet");
     }
 
     const rowIndex = data.slice(1).findIndex(row => row[idColumnIndex] == jobCountId) + 2;
-    if (rowIndex < 2) throw new Error(`Job count with ID ${jobCountId} not found.`);
+    if (rowIndex < 2) {
+      throw new Error(`Job count with ID ${jobCountId} not found`);
+    }
 
     sheet.deleteRow(rowIndex);
 
     logMessage(`Successfully deleted job count ID: ${jobCountId}`);
-    return createResponse({ deletedId: jobCountId }, true, 'Job count deleted successfully.');
-
+    return createResponse({ deletedId: jobCountId }, true, 'Job count deleted successfully');
   } catch (error) {
     logMessage(`deleteJobCount Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to delete job count: ${error.message}`);
@@ -451,15 +464,10 @@ function deleteJobCount(jobCountId) {
 
 /**
  * Converts sheet header names to camelCase for frontend compatibility
- * Examples:
- * "First Name" -> "firstName"
- * "SQ FT" -> "sqFt"
- * "Pipes [1 1/2"]" -> "pipes1Half"
  */
 function convertToCamelCase(headerName) {
   if (!headerName) return '';
 
-  // Handle special cases first
   const specialCases = {
     // Customer Information
     'First Name': 'firstName',
@@ -471,7 +479,7 @@ function convertToCamelCase(headerName) {
     'Email': 'email',
     'Address': 'address',
 
-    // Lead Information
+    // Job Information
     'Lead Source': 'leadSource',
     'Quality': 'quality',
     'Disposition': 'disposition',
@@ -481,7 +489,7 @@ function convertToCamelCase(headerName) {
     'DaBella Quote': 'dabellaQuote',
     'Notes': 'notes',
 
-    // Job Count Specific
+    // Job Count Measurements
     'Date': 'date',
     'SQ FT': 'sqFt',
     'Ridge LF': 'ridgeLf',
@@ -514,18 +522,11 @@ function convertToCamelCase(headerName) {
     'Modified Date': 'modifiedDate'
   };
 
-  if (specialCases[headerName]) {
-    return specialCases[headerName];
-  }
-
-  // General conversion for any other headers
-  return headerName
-    .replace(/[\[\]"']/g, '') // Remove brackets and quotes
-    .split(/\s+/) // Split on whitespace
+  return specialCases[headerName] || headerName
+    .replace(/[\[\]"']/g, '')
+    .split(/\s+/)
     .map((word, index) => {
-      if (index === 0) {
-        return word.toLowerCase();
-      }
+      if (index === 0) return word.toLowerCase();
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     })
     .join('');
