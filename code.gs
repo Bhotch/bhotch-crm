@@ -461,8 +461,27 @@ function convertToCamelCase(headerName) {
 
   // Handle special cases first
   const specialCases = {
+    // Customer Information
     'First Name': 'firstName',
     'Last Name': 'lastName',
+    'Customer Name': 'customerName',
+    'Full Name': 'customerName',
+    'Phone Number': 'phoneNumber',
+    'Phone': 'phoneNumber',
+    'Email': 'email',
+    'Address': 'address',
+
+    // Lead Information
+    'Lead Source': 'leadSource',
+    'Quality': 'quality',
+    'Disposition': 'disposition',
+    'Roof Age': 'roofAge',
+    'Roof Type': 'roofType',
+    'Quote Amount': 'dabellaQuote',
+    'DaBella Quote': 'dabellaQuote',
+    'Notes': 'notes',
+
+    // Job Count Specific
     'Date': 'date',
     'SQ FT': 'sqFt',
     'Ridge LF': 'ridgeLf',
@@ -487,7 +506,12 @@ function convertToCamelCase(headerName) {
     'Gutters LF': 'guttersLf',
     'Downspouts': 'downspouts',
     'Gutter Guard LF': 'gutterGuardLf',
-    'Permanent Lighting': 'permanentLighting'
+    'Permanent Lighting': 'permanentLighting',
+
+    // System fields
+    'ID': 'id',
+    'Created Date': 'createdDate',
+    'Modified Date': 'modifiedDate'
   };
 
   if (specialCases[headerName]) {

@@ -76,11 +76,25 @@ function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete }) {
                 </div>
 
                 <div className="p-6 overflow-y-auto">
-                    {/* Basic Information */}
-                    <DetailSection title="Basic Information" icon={User}>
+                    {/* Customer Information */}
+                    <DetailSection title="Customer Information" icon={User}>
                         <DetailField label="First Name" value={jobCount.firstName} />
                         <DetailField label="Last Name" value={jobCount.lastName} />
+                        <DetailField label="Full Name" value={jobCount.customerName} />
+                        <DetailField label="Phone Number" value={jobCount.phoneNumber} />
+                        <DetailField label="Email" value={jobCount.email} />
+                        <DetailField label="Address" value={jobCount.address} fullWidth />
+                    </DetailSection>
+
+                    {/* Job Information */}
+                    <DetailSection title="Job Information" icon={Calculator}>
                         <DetailField label="Date" value={formatDate(jobCount.date)} />
+                        <DetailField label="Lead Source" value={jobCount.leadSource} />
+                        <DetailField label="Quality" value={jobCount.quality} />
+                        <DetailField label="Disposition" value={jobCount.disposition} />
+                        <DetailField label="Roof Age" value={jobCount.roofAge} />
+                        <DetailField label="Roof Type" value={jobCount.roofType} />
+                        <DetailField label="Quote Amount" value={jobCount.dabellaQuote} />
                     </DetailSection>
 
                     {/* Primary Measurements */}
@@ -129,6 +143,13 @@ function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete }) {
                         <DetailField label="Gutter Guard LF" value={jobCount.gutterGuardLf} />
                         <DetailField label="Permanent Lighting" value={jobCount.permanentLighting} />
                     </DetailSection>
+
+                    {/* Notes */}
+                    {jobCount.notes && (
+                        <DetailSection title="Notes" icon={Calculator}>
+                            <DetailField label="Notes" value={jobCount.notes} fullWidth />
+                        </DetailSection>
+                    )}
                 </div>
             </div>
         </div>

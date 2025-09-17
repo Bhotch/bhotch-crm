@@ -46,9 +46,42 @@ const DateInput = (props) => (
     />
 );
 
+const SelectInput = ({ children, ...props }) => (
+    <select
+        {...props}
+        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+    >
+        {children}
+    </select>
+);
+
+const TextareaInput = (props) => (
+    <textarea
+        {...props}
+        rows={4}
+        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+    />
+);
+
 const initialFormData = {
+    // Customer Information
     firstName: '',
     lastName: '',
+    customerName: '',
+    phoneNumber: '',
+    email: '',
+    address: '',
+
+    // Lead Information
+    leadSource: 'Door Knock',
+    quality: 'Cold',
+    disposition: 'New',
+    roofAge: '',
+    roofType: 'Asphalt Shingle',
+    dabellaQuote: '',
+    notes: '',
+
+    // Job Count Specific
     date: new Date().toISOString().split('T')[0], // Today's date
     sqFt: '',
     ridgeLf: '',
@@ -123,8 +156,8 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) 
 
                 <div className="p-6 overflow-y-auto">
                     <form onSubmit={handleSubmit}>
-                        {/* Basic Information */}
-                        <FormSection title="Basic Information">
+                        {/* Customer Information */}
+                        <FormSection title="Customer Information">
                             <FormField label="First Name" required>
                                 <TextInput
                                     name="firstName"
@@ -140,12 +173,116 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) 
                                     onChange={handleChange}
                                 />
                             </FormField>
+                            <FormField label="Full Name">
+                                <TextInput
+                                    name="customerName"
+                                    value={formData.customerName}
+                                    onChange={handleChange}
+                                    placeholder="Or use separate first/last name"
+                                />
+                            </FormField>
+                            <FormField label="Phone Number">
+                                <TextInput
+                                    name="phoneNumber"
+                                    value={formData.phoneNumber}
+                                    onChange={handleChange}
+                                    placeholder="(555) 123-4567"
+                                />
+                            </FormField>
+                            <FormField label="Email">
+                                <TextInput
+                                    name="email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                />
+                            </FormField>
+                            <FormField label="Address" fullWidth>
+                                <TextInput
+                                    name="address"
+                                    value={formData.address}
+                                    onChange={handleChange}
+                                    placeholder="Full address for job location"
+                                />
+                            </FormField>
+                        </FormSection>
+
+                        {/* Job Information */}
+                        <FormSection title="Job Information">
                             <FormField label="Date" required>
                                 <DateInput
                                     name="date"
                                     value={formData.date}
                                     onChange={handleChange}
                                     required
+                                />
+                            </FormField>
+                            <FormField label="Lead Source">
+                                <SelectInput
+                                    name="leadSource"
+                                    value={formData.leadSource}
+                                    onChange={handleChange}
+                                >
+                                    <option>Door Knock</option>
+                                    <option>Rime</option>
+                                    <option>Adverta</option>
+                                    <option>Referral</option>
+                                    <option>DaBella</option>
+                                </SelectInput>
+                            </FormField>
+                            <FormField label="Quality">
+                                <SelectInput
+                                    name="quality"
+                                    value={formData.quality}
+                                    onChange={handleChange}
+                                >
+                                    <option>Hot</option>
+                                    <option>Warm</option>
+                                    <option>Cold</option>
+                                </SelectInput>
+                            </FormField>
+                            <FormField label="Disposition">
+                                <SelectInput
+                                    name="disposition"
+                                    value={formData.disposition}
+                                    onChange={handleChange}
+                                >
+                                    <option>New</option>
+                                    <option>Scheduled</option>
+                                    <option>Insurance</option>
+                                    <option>Quoted</option>
+                                    <option>Follow Up</option>
+                                    <option>Closed Sold</option>
+                                    <option>Closed Lost</option>
+                                </SelectInput>
+                            </FormField>
+                            <FormField label="Roof Age">
+                                <TextInput
+                                    name="roofAge"
+                                    value={formData.roofAge}
+                                    onChange={handleChange}
+                                    placeholder="10 years"
+                                />
+                            </FormField>
+                            <FormField label="Roof Type">
+                                <SelectInput
+                                    name="roofType"
+                                    value={formData.roofType}
+                                    onChange={handleChange}
+                                >
+                                    <option>Asphalt Shingle</option>
+                                    <option>Metal</option>
+                                    <option>Tile</option>
+                                    <option>TPO</option>
+                                    <option>Wood</option>
+                                </SelectInput>
+                            </FormField>
+                            <FormField label="Quote Amount">
+                                <TextInput
+                                    name="dabellaQuote"
+                                    value={formData.dabellaQuote}
+                                    onChange={handleChange}
+                                    placeholder="$15,000"
                                 />
                             </FormField>
                         </FormSection>
@@ -335,6 +472,18 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) 
                                     name="permanentLighting"
                                     value={formData.permanentLighting}
                                     onChange={handleChange}
+                                />
+                            </FormField>
+                        </FormSection>
+
+                        {/* Notes */}
+                        <FormSection title="Notes">
+                            <FormField label="Notes" fullWidth>
+                                <TextareaInput
+                                    name="notes"
+                                    value={formData.notes}
+                                    onChange={handleChange}
+                                    placeholder="Additional notes about this job count..."
                                 />
                             </FormField>
                         </FormSection>
