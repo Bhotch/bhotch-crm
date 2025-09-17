@@ -52,7 +52,7 @@ function LeadFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
                             <FormField label="Address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} placeholder="Full address for map location" /></FormField>
                         </FormSection>
                         <FormSection title="Lead Details">
-                            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Rime</option><option>Adverta</option><option>Referral</option><option>Cold Call</option></SelectInput></FormField>
+                            <FormField label="Lead Source"><SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}><option>Door Knock</option><option>Rime</option><option>Adverta</option><option>Referral</option><option>DaBella</option></SelectInput></FormField>
                             <FormField label="Quality"><SelectInput name="quality" value={formData.quality} onChange={handleChange}><option>Hot</option><option>Warm</option><option>Cold</option></SelectInput></FormField>
                             <FormField label="Disposition"><SelectInput name="disposition" value={formData.disposition} onChange={handleChange}>{dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}</SelectInput></FormField>
                         </FormSection>

@@ -57,8 +57,8 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                         {dispositionOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                     <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="All">All Sources</option>
-                        <option>Door Knock</option><option>Rime</option><option>Adverta</option><option>Referral</option><option>Cold Call</option>
+                        <option value="All">Lead Source</option>
+                        <option>Door Knock</option><option>Rime</option><option>Adverta</option><option>Referral</option><option>DaBella</option>
                     </select>
                 </div>
             </div>

@@ -53,17 +53,16 @@ function DashboardView({ stats, leads }) {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-2 px-4 font-medium text-gray-700">Name</th>
-                  <th className="text-left py-2 px-4 font-medium text-gray-700">Company</th>
                   <th className="text-left py-2 px-4 font-medium text-gray-700">Quality</th>
                   <th className="text-left py-2 px-4 font-medium text-gray-700">Disposition</th>
                   <th className="text-left py-2 px-4 font-medium text-gray-700">Quote</th>
+                  <th className="text-left py-2 px-4 font-medium text-gray-700">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {recentLeads.map((lead, index) => (
                   <tr key={lead.id || index} className="border-b border-gray-100">
-                    <td className="py-2 px-4 text-gray-900">{lead.firstName} {lead.lastName}</td>
-                    <td className="py-2 px-4 text-gray-600">{lead.company || 'N/A'}</td>
+                    <td className="py-2 px-4 text-gray-900">{lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'}</td>
                     <td className="py-2 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         lead.quality === 'Hot' ? 'bg-red-100 text-red-800' :
@@ -75,6 +74,7 @@ function DashboardView({ stats, leads }) {
                     </td>
                     <td className="py-2 px-4 text-gray-600">{lead.disposition || 'New'}</td>
                     <td className="py-2 px-4 text-gray-900">{lead.dabellaQuote || 'N/A'}</td>
+                    <td className="py-2 px-4 text-gray-600 max-w-xs truncate">{lead.notes || 'No notes'}</td>
                   </tr>
                 ))}
               </tbody>

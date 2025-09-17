@@ -20,7 +20,21 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     { id: 'demo5', customerName: 'Chris Brown', phoneNumber: '555-0654', address: '654 Cedar Ln, Layton, UT', quality: 'Warm', latitude: 41.0602, longitude: -111.9711 }
   ], []);
 
+  // Use demo data if showDemoData is true, otherwise use all leads (with and without coords)
   const dataToShow = showDemoData ? demoLeads : leads;
+
+  // Separate leads with and without coordinates
+  const leadsWithCoords = dataToShow.filter(lead => {
+    const lat = lead.latitude || lead.lat || lead.geocoded_lat;
+    const lng = lead.longitude || lead.lng || lead.geocoded_lng;
+    return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
+  });
+
+  const leadsWithoutCoords = dataToShow.filter(lead => {
+    const lat = lead.latitude || lead.lat || lead.geocoded_lat;
+    const lng = lead.longitude || lead.lng || lead.geocoded_lng;
+    return !lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng));
+  });
 
   const getMarkerColor = useCallback((quality) => {
     switch (quality) {
@@ -108,11 +122,6 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     markersRef.current = [];
 
     const bounds = new window.google.maps.LatLngBounds();
-    const leadsWithCoords = dataToShow.filter(lead => {
-      const lat = lead.latitude || lead.lat || lead.geocoded_lat;
-      const lng = lead.longitude || lead.lng || lead.geocoded_lng;
-      return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
-    });
 
     leadsWithCoords.forEach(lead => {
       const lat = lead.latitude || lead.lat || lead.geocoded_lat;
@@ -167,7 +176,7 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
         if (map.getZoom() > 15) map.setZoom(15);
       });
     }
-  }, [map, dataToShow, createMarkerIcon, getMarkerColor, onLeadClick]);
+  }, [map, leadsWithCoords, createMarkerIcon, getMarkerColor, onLeadClick]);
 
   if (loading) {
     return (
@@ -196,7 +205,36 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     );
   }
 
-  return <div ref={mapRef} className="h-[70vh] w-full rounded-lg overflow-hidden border border-gray-300 shadow-sm" />;
+  return (
+    <div>
+      <div ref={mapRef} className="h-[70vh] w-full rounded-lg overflow-hidden border border-gray-300 shadow-sm" />
+
+      {/* Show leads without coordinates if any exist */}
+      {!showDemoData && leadsWithoutCoords.length > 0 && (
+        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-yellow-800 mb-3 flex items-center">
+            <AlertCircle className="w-4 h-4 mr-2" />
+            Leads Without Location Data ({leadsWithoutCoords.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {leadsWithoutCoords.slice(0, 4).map(lead => (
+              <div key={lead.id} className="bg-white p-3 rounded border border-yellow-200 hover:shadow-sm transition-shadow cursor-pointer"
+                   onClick={() => onLeadClick && onLeadClick(lead)}>
+                <div className="font-medium text-gray-900">{lead.customerName || 'Unknown'}</div>
+                <div className="text-sm text-gray-600">{lead.phoneNumber || 'No phone'}</div>
+                <div className="text-xs text-gray-500">{lead.address || 'No address provided'}</div>
+              </div>
+            ))}
+          </div>
+          {leadsWithoutCoords.length > 4 && (
+            <div className="mt-3 text-sm text-yellow-700">
+              And {leadsWithoutCoords.length - 4} more leads without coordinates...
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 
@@ -216,15 +254,16 @@ function MapView({ leads, onLeadClick }) {
   const qualityStats = useMemo(() => {
     const dataToAnalyze = showDemoData ? [
       { quality: 'Hot' }, { quality: 'Hot' }, { quality: 'Warm' }, { quality: 'Warm' }, { quality: 'Cold' }
-    ] : leadsWithCoords;
+    ] : leads;
 
     return {
       hot: dataToAnalyze.filter(l => l.quality === 'Hot').length,
       warm: dataToAnalyze.filter(l => l.quality === 'Warm').length,
       cold: dataToAnalyze.filter(l => l.quality === 'Cold').length,
-      total: dataToAnalyze.length
+      total: dataToAnalyze.length,
+      mapped: leadsWithCoords.length
     };
-  }, [leadsWithCoords, showDemoData]);
+  }, [leads, leadsWithCoords, showDemoData]);
 
   return (
     <div className="space-y-6">
@@ -249,7 +288,7 @@ function MapView({ leads, onLeadClick }) {
                 !showDemoData ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Real Data ({leadsWithCoords.length})
+              Real Data ({leads.length})
             </button>
             <button
               onClick={() => setShowDemoData(true)}
@@ -341,7 +380,7 @@ function MapView({ leads, onLeadClick }) {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Total Mapped</p>
-              <p className="text-2xl font-semibold text-gray-900">{qualityStats.total}</p>
+              <p className="text-2xl font-semibold text-gray-900">{showDemoData ? 5 : qualityStats.mapped}</p>
             </div>
           </div>
         </div>
