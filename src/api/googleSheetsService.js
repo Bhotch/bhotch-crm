@@ -1,4 +1,15 @@
-const GOOGLE_SCRIPT_URL = process.env.REACT_APP_GAS_WEB_APP_URL;
+// Fix for deployment environment variable parsing issue
+let GOOGLE_SCRIPT_URL = process.env.REACT_APP_GAS_WEB_APP_URL;
+
+// Handle case where environment variable includes the variable name
+if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.includes('REACT_APP_GAS_WEB_APP_URL=')) {
+  GOOGLE_SCRIPT_URL = GOOGLE_SCRIPT_URL.split('REACT_APP_GAS_WEB_APP_URL=')[1];
+}
+
+// Ensure URL has proper protocol
+if (GOOGLE_SCRIPT_URL && !GOOGLE_SCRIPT_URL.startsWith('http')) {
+  GOOGLE_SCRIPT_URL = 'https://' + GOOGLE_SCRIPT_URL.replace(/^\/+/, '');
+}
 
 class GoogleSheetsService {
   constructor(baseURL) { this.baseURL = baseURL; }
@@ -8,7 +19,8 @@ class GoogleSheetsService {
 
     // Debug logging for URL issues
     console.log('Making request to:', this.baseURL);
-    console.log('Environment variable:', process.env.REACT_APP_GAS_WEB_APP_URL);
+    console.log('Raw environment variable:', process.env.REACT_APP_GAS_WEB_APP_URL);
+    console.log('Cleaned URL:', GOOGLE_SCRIPT_URL);
 
     try {
       const response = await fetch(this.baseURL, {
