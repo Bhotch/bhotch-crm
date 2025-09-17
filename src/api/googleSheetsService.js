@@ -5,6 +5,11 @@ class GoogleSheetsService {
     
   async makeRequest(action, payload) {
     if (!this.baseURL) return { success: false, message: 'API endpoint is not configured.' };
+
+    // Debug logging for URL issues
+    console.log('Making request to:', this.baseURL);
+    console.log('Environment variable:', process.env.REACT_APP_GAS_WEB_APP_URL);
+
     try {
       const response = await fetch(this.baseURL, {
         method: 'POST', mode: 'cors', credentials: 'omit',

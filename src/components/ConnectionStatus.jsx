@@ -26,6 +26,10 @@ function ConnectionStatus() {
         </button>
       </div>
       {status && (<div className="mt-2 text-sm text-gray-600">{status.message}{status.success && status.rowCount && ` (${status.rowCount} rows)`}</div>)}
+      <div className="mt-2 text-xs text-gray-500">
+        <div>URL: {process.env.REACT_APP_GAS_WEB_APP_URL || 'Not configured'}</div>
+        <div>Environment: {process.env.NODE_ENV}</div>
+      </div>
     </div>
   );
 }
