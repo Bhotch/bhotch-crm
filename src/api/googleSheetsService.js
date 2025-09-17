@@ -38,10 +38,19 @@ class GoogleSheetsService {
     }
   }
     
+  // Lead operations
   fetchLeads() { return this.makeRequest('getLeads', {}); }
   addLead(lead) { return this.makeRequest('addLead', { lead }); }
   updateLead(lead) { return this.makeRequest('updateLead', { lead }); }
   deleteLead(leadId) { return this.makeRequest('deleteLead', { leadId }); }
+
+  // Job Count operations
+  fetchJobCounts() { return this.makeRequest('getJobCounts', {}); }
+  addJobCount(jobCount) { return this.makeRequest('addJobCount', { jobCount }); }
+  updateJobCount(jobCount) { return this.makeRequest('updateJobCount', { jobCount }); }
+  deleteJobCount(jobCountId) { return this.makeRequest('deleteJobCount', { jobCountId }); }
+
+  // Utility operations
   testConnection() { return this.makeRequest('testConnection', {}); }
   geocodeAddress(address) { return this.makeRequest('geocodeAddress', { address }); }
 }

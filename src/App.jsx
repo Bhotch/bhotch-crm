@@ -1,30 +1,40 @@
 import React, { useState, useMemo } from 'react';
-import { Home, ClipboardList, Map, Calendar, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 // Import hooks
 import { useLeads } from './hooks/useLeads';
+import { useJobCounts } from './hooks/useJobCounts';
 import { useNotifications } from './hooks/useNotifications';
 
 // Import features and components
 import LoginForm from './features/auth/LoginForm';
 import DashboardView from './features/dashboard/DashboardView';
 import LeadsView from './features/leads/LeadsView';
+import JobCountView from './features/jobcount/JobCountView';
 import MapView from './features/map/MapView';
 import CalendarView from './features/calendar/CalendarView';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
+import JobCountFormModal from './features/jobcount/JobCountFormModal';
+import JobCountDetailModal from './features/jobcount/JobCountDetailModal';
 import ConnectionStatus from './components/ConnectionStatus';
 import ConfigErrorDisplay from './components/ConfigErrorDisplay';
 
 function CrmApplication({ onLogout }) {
   const { notifications, addNotification } = useNotifications();
   const { leads, loading, refreshLeads, addLead, updateLead, deleteLead } = useLeads(addNotification);
+  const { jobCounts, loading: jobCountsLoading, refreshJobCounts, addJobCount, updateJobCount, deleteJobCount } = useJobCounts(addNotification);
   
   const [currentView, setCurrentView] = useState('dashboard');
   const [editingLead, setEditingLead] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedDetailLead, setSelectedDetailLead] = useState(null);
   const [mapSearchAddress, setMapSearchAddress] = useState('');
+
+  // Job Count state
+  const [editingJobCount, setEditingJobCount] = useState(null);
+  const [showAddJobCountForm, setShowAddJobCountForm] = useState(false);
+  const [selectedDetailJobCount, setSelectedDetailJobCount] = useState(null);
 
   const dashboardStats = useMemo(() => ({
     totalLeads: leads.length,
@@ -37,10 +47,21 @@ function CrmApplication({ onLogout }) {
     await addLead(leadData);
     setShowAddForm(false);
   };
-  
+
   const handleUpdateSubmit = async (leadData) => {
     await updateLead(leadData);
     setEditingLead(null);
+  };
+
+  // Job Count handlers
+  const handleAddJobCountSubmit = async (jobCountData) => {
+    await addJobCount(jobCountData);
+    setShowAddJobCountForm(false);
+  };
+
+  const handleUpdateJobCountSubmit = async (jobCountData) => {
+    await updateJobCount(jobCountData);
+    setEditingJobCount(null);
   };
 
   const handleNavigateToTab = (tab, address = '') => {
@@ -51,7 +72,7 @@ function CrmApplication({ onLogout }) {
     setSelectedDetailLead(null);
   };
 
-  if (loading) return (<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-12 w-12 text-blue-600"/></div>);
+  if (loading || jobCountsLoading) return (<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-12 w-12 text-blue-600"/></div>);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -65,6 +86,7 @@ function CrmApplication({ onLogout }) {
                 <nav className="flex space-x-1 sm:space-x-2">
                     <button onClick={() => setCurrentView('dashboard')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Home className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Dashboard</span></button>
                     <button onClick={() => setCurrentView('leads')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'leads' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><ClipboardList className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Leads</span></button>
+                    <button onClick={() => setCurrentView('jobcount')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'jobcount' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Calculator className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Job Count</span></button>
                     <button onClick={() => setCurrentView('map')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'map' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Map className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Map</span></button>
                     <button onClick={() => setCurrentView('calendar')} className={`px-3 py-2 rounded-md text-sm font-medium flex items-center ${currentView === 'calendar' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'}`}><Calendar className="w-4 h-4 mr-1" /><span className="hidden sm:inline">Calendar</span></button>
                     <button onClick={onLogout} className="p-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200"><XCircle className="w-5 h-5"/></button>
@@ -88,14 +110,20 @@ function CrmApplication({ onLogout }) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'dashboard' && <><ConnectionStatus /><DashboardView stats={dashboardStats} leads={leads} /></>}
         {currentView === 'leads' && <LeadsView leads={leads} onAddLead={()=>setShowAddForm(true)} onEditLead={setEditingLead} onDeleteLead={deleteLead} onRefreshLeads={refreshLeads} onSelectLead={setSelectedDetailLead} />}
+        {currentView === 'jobcount' && <JobCountView jobCounts={jobCounts} onAddJobCount={()=>setShowAddJobCountForm(true)} onEditJobCount={setEditingJobCount} onDeleteJobCount={deleteJobCount} onRefreshJobCounts={refreshJobCounts} onSelectJobCount={setSelectedDetailJobCount} />}
         {currentView === 'map' && <MapView leads={leads} onLeadClick={setSelectedDetailLead} searchAddress={mapSearchAddress} onSearchComplete={() => setMapSearchAddress('')} />}
         {currentView === 'calendar' && <CalendarView />}
       </main>
 
-      {/* Modals */}
+      {/* Lead Modals */}
       {showAddForm && <LeadFormModal onSubmit={handleAddSubmit} onCancel={()=>setShowAddForm(false)}/>}
       {editingLead && <LeadFormModal initialData={editingLead} onSubmit={handleUpdateSubmit} onCancel={()=>setEditingLead(null)} isEdit={true}/>}
       {selectedDetailLead && <LeadDetailModal lead={selectedDetailLead} onClose={()=>setSelectedDetailLead(null)} onEdit={()=>{setEditingLead(selectedDetailLead);setSelectedDetailLead(null);}} onDelete={()=>{deleteLead(selectedDetailLead.id);setSelectedDetailLead(null);}} onNavigateToTab={handleNavigateToTab} />}
+
+      {/* Job Count Modals */}
+      {showAddJobCountForm && <JobCountFormModal onSubmit={handleAddJobCountSubmit} onCancel={()=>setShowAddJobCountForm(false)}/>}
+      {editingJobCount && <JobCountFormModal initialData={editingJobCount} onSubmit={handleUpdateJobCountSubmit} onCancel={()=>setEditingJobCount(null)} isEdit={true}/>}
+      {selectedDetailJobCount && <JobCountDetailModal jobCount={selectedDetailJobCount} onClose={()=>setSelectedDetailJobCount(null)} onEdit={()=>{setEditingJobCount(selectedDetailJobCount);setSelectedDetailJobCount(null);}} onDelete={()=>{deleteJobCount(selectedDetailJobCount.id);setSelectedDetailJobCount(null);}} />}
     </div>
   );
 }
