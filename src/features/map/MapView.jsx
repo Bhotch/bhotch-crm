@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Loader2, AlertCircle, Map, MapPin, Navigation, Layers, Search } from 'lucide-react';
+import { Loader2, AlertCircle, Map, MapPin, Navigation, Layers, Search, ChevronDown } from 'lucide-react';
 import { loadGoogleMaps } from '../../services/googleMapsService';
 
-function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic, searchAddress, onSearchComplete }) {
+function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic, searchAddress, onSearchComplete, selectedCustomer, onCustomerLocated }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const infoWindowRef = useRef(null);
@@ -10,8 +10,6 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
   const [map, setMap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [geocodedLeads, setGeocodedLeads] = useState([]);
-  const [geocodingProgress, setGeocodingProgress] = useState(0);
 
   // Demo data for when no real leads exist
   const demoLeads = useMemo(() => [
@@ -26,7 +24,6 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
   const dataToShow = showDemoData ? demoLeads : leads;
 
   // Separate leads with valid addresses for geocoding
-  const leadsWithAddresses = dataToShow.filter(lead => lead.address && lead.address.trim() !== '');
   const leadsWithoutAddresses = dataToShow.filter(lead => !lead.address || lead.address.trim() === '');
 
   const getMarkerColor = useCallback((quality) => {
@@ -138,107 +135,91 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     return () => { window.viewLeadDetails = null; };
   }, [dataToShow, onLeadClick]);
 
-  // Geocode leads with addresses
-  useEffect(() => {
-    if (!map || !window.google || leadsWithAddresses.length === 0) return;
+  // Function to geocode a single address on demand
+  const geocodeSingleAddress = useCallback((address, callback) => {
+    if (!map || !window.google) return;
 
     const geocoder = new window.google.maps.Geocoder();
-    const geocodeLeads = async () => {
-      setGeocodingProgress(0);
-      const geocoded = [];
-
-      for (let i = 0; i < leadsWithAddresses.length; i++) {
-        const lead = leadsWithAddresses[i];
-
-        try {
-          await new Promise((resolve) => {
-            geocoder.geocode({ address: lead.address }, (results, status) => {
-              if (status === 'OK' && results[0]) {
-                const location = results[0].geometry.location;
-                geocoded.push({
-                  ...lead,
-                  geocoded_lat: location.lat(),
-                  geocoded_lng: location.lng()
-                });
-              }
-              setGeocodingProgress(((i + 1) / leadsWithAddresses.length) * 100);
-              // Add a small delay to avoid hitting rate limits
-              setTimeout(resolve, 100);
-            });
-          });
-        } catch (error) {
-          console.warn('Geocoding failed for lead:', lead.customerName, error);
-        }
+    geocoder.geocode({ address }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location;
+        callback({
+          lat: location.lat(),
+          lng: location.lng(),
+          success: true
+        });
+      } else {
+        callback({ success: false, error: status });
       }
-
-      setGeocodedLeads(geocoded);
-    };
-
-    geocodeLeads();
-  }, [map, leadsWithAddresses]);
-
-  // Create markers for geocoded leads
-  useEffect(() => {
-    if (!map || !window.google || geocodedLeads.length === 0) return;
-
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-
-    const bounds = new window.google.maps.LatLngBounds();
-
-    geocodedLeads.forEach(lead => {
-      const position = { lat: lead.geocoded_lat, lng: lead.geocoded_lng };
-
-      const marker = new window.google.maps.Marker({
-        position,
-        map,
-        title: lead.customerName,
-        icon: createMarkerIcon(lead.quality),
-        animation: window.google.maps.Animation.DROP
-      });
-
-      marker.addListener('click', () => {
-        const content = `
-          <div style="padding: 12px; min-width: 200px;">
-            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
-              ${lead.customerName || 'Unknown'}
-            </h3>
-            <div style="margin-bottom: 8px;">
-              <strong style="color: #374151;">Phone:</strong>
-              <a href="tel:${lead.phoneNumber}" style="color: #3b82f6; text-decoration: none;">
-                ${lead.phoneNumber || 'N/A'}
-              </a>
-            </div>
-            <div style="margin-bottom: 8px;">
-              <strong style="color: #374151;">Quality:</strong>
-              <span style="background: ${getMarkerColor(lead.quality)}20; color: ${getMarkerColor(lead.quality)}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
-                ${lead.quality}
-              </span>
-            </div>
-            ${lead.address ? `<div style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">${lead.address}</div>` : ''}
-            <button onclick="window.viewLeadDetails('${lead.id}')"
-                    style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
-              View Details
-            </button>
-          </div>
-        `;
-        infoWindowRef.current.setContent(content);
-        infoWindowRef.current.open(map, marker);
-      });
-
-      markersRef.current.push(marker);
-      bounds.extend(position);
     });
+  }, [map]);
 
-    if (geocodedLeads.length > 0) {
-      map.fitBounds(bounds);
-      // Ensure reasonable zoom level
-      window.google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
-        if (map.getZoom() > 15) map.setZoom(15);
-      });
-    }
-  }, [map, geocodedLeads, createMarkerIcon, getMarkerColor, onLeadClick]);
+  // Handle selected customer geocoding and map focusing
+  useEffect(() => {
+    if (!selectedCustomer || !map || !window.google) return;
+
+    geocodeSingleAddress(selectedCustomer.address, (result) => {
+      if (result.success) {
+        const position = { lat: result.lat, lng: result.lng };
+
+        // Clear existing markers
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
+
+        // Center map on customer location
+        map.setCenter(position);
+        map.setZoom(15);
+
+        // Add marker for selected customer
+        const marker = new window.google.maps.Marker({
+          position,
+          map,
+          title: selectedCustomer.customerName,
+          icon: createMarkerIcon(selectedCustomer.quality),
+          animation: window.google.maps.Animation.DROP
+        });
+
+        // Add info window
+        marker.addListener('click', () => {
+          const content = `
+            <div style="padding: 12px; min-width: 200px;">
+              <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+                ${selectedCustomer.customerName || 'Unknown'}
+              </h3>
+              <div style="margin-bottom: 8px;">
+                <strong style="color: #374151;">Phone:</strong>
+                <a href="tel:${selectedCustomer.phoneNumber}" style="color: #3b82f6; text-decoration: none;">
+                  ${selectedCustomer.phoneNumber || 'N/A'}
+                </a>
+              </div>
+              <div style="margin-bottom: 8px;">
+                <strong style="color: #374151;">Quality:</strong>
+                <span style="background: ${getMarkerColor(selectedCustomer.quality)}20; color: ${getMarkerColor(selectedCustomer.quality)}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
+                  ${selectedCustomer.quality}
+                </span>
+              </div>
+              <div style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">${selectedCustomer.address}</div>
+              <button onclick="window.viewLeadDetails('${selectedCustomer.id}')"
+                      style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                View Details
+              </button>
+            </div>
+          `;
+          infoWindowRef.current.setContent(content);
+          infoWindowRef.current.open(map, marker);
+        });
+
+        markersRef.current.push(marker);
+
+        if (onCustomerLocated) {
+          onCustomerLocated({ ...selectedCustomer, lat: result.lat, lng: result.lng });
+        }
+      } else {
+        console.warn('Failed to geocode customer address:', selectedCustomer.address, result.error);
+      }
+    });
+  }, [selectedCustomer, map, geocodeSingleAddress, createMarkerIcon, getMarkerColor, onCustomerLocated]);
+
 
   if (loading) {
     return (
@@ -252,23 +233,6 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     );
   }
 
-  // Show geocoding progress if in progress
-  if (map && geocodingProgress > 0 && geocodingProgress < 100) {
-    return (
-      <div>
-        <div className="h-[70vh] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-3" />
-            <p className="text-gray-600 text-lg">Geocoding Customer Addresses...</p>
-            <div className="w-64 bg-gray-200 rounded-full h-2 mx-auto mt-3">
-              <div className="bg-blue-600 h-2 rounded-full transition-all" style={{width: `${geocodingProgress}%`}}></div>
-            </div>
-            <p className="text-gray-500 text-sm mt-2">{Math.round(geocodingProgress)}% Complete</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -322,9 +286,40 @@ function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
   const [showDemoData, setShowDemoData] = useState(false);
   const [mapType, setMapType] = useState('roadmap');
   const [showTraffic, setShowTraffic] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
 
   const leadsWithAddresses = useMemo(() => leads.filter(lead => lead.address && lead.address.trim() !== ''), [leads]);
   const hasRealData = leadsWithAddresses.length > 0;
+
+  // Filter customers based on search
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch) return leadsWithAddresses;
+    return leadsWithAddresses.filter(lead =>
+      lead.customerName?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      lead.firstName?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      lead.lastName?.toLowerCase().includes(customerSearch.toLowerCase())
+    );
+  }, [leadsWithAddresses, customerSearch]);
+
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerSearch(customer.customerName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim());
+    setShowCustomerDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.customer-search-dropdown')) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const qualityStats = useMemo(() => {
     const dataToAnalyze = showDemoData ? [
@@ -373,6 +368,56 @@ function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
             >
               Demo Data (5)
             </button>
+          </div>
+
+          {/* Customer Search Dropdown */}
+          <div className="relative customer-search-dropdown">
+            <div className="flex items-center">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 z-10" />
+              <input
+                type="text"
+                placeholder="Search customer..."
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setShowCustomerDropdown(true);
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                className="pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+              />
+              <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3" />
+            </div>
+
+            {showCustomerDropdown && filteredCustomers.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
+                {filteredCustomers.slice(0, 10).map((customer) => (
+                  <button
+                    key={customer.id}
+                    onClick={() => handleCustomerSelect(customer)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="font-medium text-gray-900">
+                      {customer.customerName || `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || 'Unknown'}
+                    </div>
+                    <div className="text-sm text-gray-500 truncate">{customer.address}</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        customer.quality === 'Hot' ? 'bg-red-100 text-red-800' :
+                        customer.quality === 'Warm' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {customer.quality}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+                {filteredCustomers.length > 10 && (
+                  <div className="px-4 py-2 text-sm text-gray-500 bg-gray-50">
+                    And {filteredCustomers.length - 10} more results...
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Map Type Selector */}
@@ -522,6 +567,8 @@ function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
             showTraffic={showTraffic}
             searchAddress={searchAddress}
             onSearchComplete={onSearchComplete}
+            selectedCustomer={selectedCustomer}
+            onCustomerLocated={(customer) => console.log('Customer located:', customer)}
           />
         </div>
       )}
