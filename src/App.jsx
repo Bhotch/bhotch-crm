@@ -7,7 +7,7 @@ import { useNotifications } from './hooks/useNotifications';
 
 // Import features and components
 import LoginForm from './features/auth/LoginForm';
-import DashboardView from './features/Dashboard/DashboardView';
+import DashboardView from './features/dashboard/DashboardView';
 import LeadsView from './features/leads/LeadsView';
 import MapView from './features/map/MapView';
 import CalendarView from './features/calendar/CalendarView';
