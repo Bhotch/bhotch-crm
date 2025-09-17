@@ -6,13 +6,13 @@ import { useLeads } from './hooks/useLeads';
 import { useNotifications } from './hooks/useNotifications';
 
 // Import features and components
-import { LoginForm } from './features/auth/LoginForm';
+import { LoginForm } from './features/auth/LoginForm.jsx';
 import { DashboardView } from './features/dashboard/DashboardView.jsx';
-import { LeadsView } from './features/leads/LeadsView';
-import { MapView } from './features/map/MapView';
-import { CalendarView } from './features/calendar/CalendarView';
-import { LeadFormModal } from './features/leads/LeadFormModal';
-import { LeadDetailModal } from './features/leads/LeadDetailModal';
+import { LeadsView } from './features/leads/LeadsView.jsx';
+import { MapView } from './features/map/MapView.jsx';
+import { CalendarView } from './features/calendar/CalendarView.jsx';
+import { LeadFormModal } from './features/leads/LeadFormModal.jsx';
+import { LeadDetailModal } from './features/leads/LeadDetailModal.jsx';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { ConfigErrorDisplay } from './components/ConfigErrorDisplay';
 
