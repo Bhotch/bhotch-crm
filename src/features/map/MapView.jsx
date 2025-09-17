@@ -1,72 +1,181 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Loader2, AlertCircle, Map } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Loader2, AlertCircle, Map, MapPin, Navigation, Layers, Search } from 'lucide-react';
 import { loadGoogleMaps } from '../../services/googleMapsService';
 
-function GoogleMapComponent({ leads, onLeadClick }) {
+function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const infoWindowRef = useRef(null);
+  const trafficLayerRef = useRef(null);
   const [map, setMap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Demo data for when no real leads exist
+  const demoLeads = useMemo(() => [
+    { id: 'demo1', customerName: 'John Smith', phoneNumber: '555-0123', address: '123 Main St, Ogden, UT', quality: 'Hot', latitude: 41.2230, longitude: -111.9738 },
+    { id: 'demo2', customerName: 'Sarah Johnson', phoneNumber: '555-0456', address: '456 Oak Ave, Salt Lake City, UT', quality: 'Warm', latitude: 40.7608, longitude: -111.8910 },
+    { id: 'demo3', customerName: 'Mike Wilson', phoneNumber: '555-0789', address: '789 Pine St, Provo, UT', quality: 'Cold', latitude: 40.2338, longitude: -111.6585 },
+    { id: 'demo4', customerName: 'Emily Davis', phoneNumber: '555-0321', address: '321 Elm Dr, West Valley, UT', quality: 'Hot', latitude: 40.6916, longitude: -112.0011 },
+    { id: 'demo5', customerName: 'Chris Brown', phoneNumber: '555-0654', address: '654 Cedar Ln, Layton, UT', quality: 'Warm', latitude: 41.0602, longitude: -111.9711 }
+  ], []);
+
+  const dataToShow = showDemoData ? demoLeads : leads;
+
+  const getMarkerColor = useCallback((quality) => {
+    switch (quality) {
+      case 'Hot': return '#dc2626';
+      case 'Warm': return '#f59e0b';
+      case 'Cold': return '#3b82f6';
+      default: return '#6b7280';
+    }
+  }, []);
+
+  const createMarkerIcon = useCallback((quality) => {
+    const color = getMarkerColor(quality);
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+        `<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 2c-7.7 0-14 6.3-14 14 0 10.5 14 18 14 18s14-7.5 14-18c0-7.7-6.3-14-14-14z" fill="${color}" stroke="#ffffff" stroke-width="2"/>
+          <circle cx="18" cy="16" r="6" fill="#ffffff"/>
+          <circle cx="18" cy="16" r="3" fill="${color}"/>
+        </svg>`
+      ),
+      scaledSize: new window.google.maps.Size(36, 36),
+      anchor: new window.google.maps.Point(18, 36)
+    };
+  }, [getMarkerColor]);
 
   useEffect(() => {
     const initializeMap = async () => {
       try {
         const google = await loadGoogleMaps();
         if (!mapRef.current) return;
-        const mapInstance = new google.maps.Map(mapRef.current, { center: { lat: 41.1617, lng: -112.0377 }, zoom: 10, styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }] });
+
+        const mapStyles = [
+          { featureType: "poi.business", stylers: [{ visibility: "off" }] },
+          { featureType: "poi.park", elementType: "labels.text", stylers: [{ visibility: "off" }] }
+        ];
+
+        const mapInstance = new google.maps.Map(mapRef.current, {
+          center: { lat: 40.7608, lng: -111.8910 }, // Salt Lake City center
+          zoom: 9,
+          styles: mapStyles,
+          mapTypeId: mapType,
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+          zoomControl: true
+        });
+
+        // Initialize traffic layer
+        trafficLayerRef.current = new google.maps.TrafficLayer();
+        if (showTraffic) {
+          trafficLayerRef.current.setMap(mapInstance);
+        }
+
         infoWindowRef.current = new google.maps.InfoWindow();
         setMap(mapInstance);
-      } catch (err) { setError(err.message); } 
-      finally { setLoading(false); }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
     initializeMap();
-  }, []);
+  }, [mapType, showTraffic]);
+
+  // Update traffic layer visibility
+  useEffect(() => {
+    if (trafficLayerRef.current && map) {
+      trafficLayerRef.current.setMap(showTraffic ? map : null);
+    }
+  }, [showTraffic, map]);
 
   useEffect(() => {
     window.viewLeadDetails = (leadId) => {
-      const lead = leads.find(l => l.id === leadId);
+      const lead = dataToShow.find(l => l.id === leadId);
       if (lead && onLeadClick) onLeadClick(lead);
     };
     return () => { window.viewLeadDetails = null; };
-  }, [leads, onLeadClick]);
+  }, [dataToShow, onLeadClick]);
 
   useEffect(() => {
     if (!map || !window.google) return;
+
+    // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
+
     const bounds = new window.google.maps.LatLngBounds();
-    const leadsWithCoords = leads.filter(lead => {
+    const leadsWithCoords = dataToShow.filter(lead => {
       const lat = lead.latitude || lead.lat || lead.geocoded_lat;
       const lng = lead.longitude || lead.lng || lead.geocoded_lng;
       return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
     });
-    
+
     leadsWithCoords.forEach(lead => {
-        const lat = lead.latitude || lead.lat || lead.geocoded_lat;
-        const lng = lead.longitude || lead.lng || lead.geocoded_lng;
-        const position = { lat: parseFloat(lat), lng: parseFloat(lng) };
-        const marker = new window.google.maps.Marker({ position, map, title: lead.customerName, icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#dc2626" stroke="#ffffff" stroke-width="2"/><circle cx="16" cy="16" r="4" fill="#ffffff"/></svg>`), scaledSize: new window.google.maps.Size(32, 32), anchor: new window.google.maps.Point(16, 16) }});
-        marker.addListener('click', () => {
-            const content = `<div style="padding: 8px;"><h3 style="margin:0 0 8px 0;">${lead.customerName || ''}</h3><p><strong>Phone:</strong> ${lead.phoneNumber||'N/A'}</p><p><button onclick="window.viewLeadDetails('${lead.id}')" style="background:#3b82f6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">View Details</button></p></div>`;
-            infoWindowRef.current.setContent(content);
-            infoWindowRef.current.open(map, marker);
-        });
-        markersRef.current.push(marker);
-        bounds.extend(position);
+      const lat = lead.latitude || lead.lat || lead.geocoded_lat;
+      const lng = lead.longitude || lead.lng || lead.geocoded_lng;
+      const position = { lat: parseFloat(lat), lng: parseFloat(lng) };
+
+      const marker = new window.google.maps.Marker({
+        position,
+        map,
+        title: lead.customerName,
+        icon: createMarkerIcon(lead.quality),
+        animation: window.google.maps.Animation.DROP
+      });
+
+      marker.addListener('click', () => {
+        const content = `
+          <div style="padding: 12px; min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+              ${lead.customerName || 'Unknown'}
+            </h3>
+            <div style="margin-bottom: 8px;">
+              <strong style="color: #374151;">Phone:</strong>
+              <a href="tel:${lead.phoneNumber}" style="color: #3b82f6; text-decoration: none;">
+                ${lead.phoneNumber || 'N/A'}
+              </a>
+            </div>
+            <div style="margin-bottom: 8px;">
+              <strong style="color: #374151;">Quality:</strong>
+              <span style="background: ${getMarkerColor(lead.quality)}20; color: ${getMarkerColor(lead.quality)}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">
+                ${lead.quality}
+              </span>
+            </div>
+            ${lead.address ? `<div style="margin-bottom: 12px; color: #6b7280; font-size: 14px;">${lead.address}</div>` : ''}
+            <button onclick="window.viewLeadDetails('${lead.id}')"
+                    style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+              View Details
+            </button>
+          </div>
+        `;
+        infoWindowRef.current.setContent(content);
+        infoWindowRef.current.open(map, marker);
+      });
+
+      markersRef.current.push(marker);
+      bounds.extend(position);
     });
 
-    if (leadsWithCoords.length > 0) map.fitBounds(bounds);
-
-  }, [map, leads]);
+    if (leadsWithCoords.length > 0) {
+      map.fitBounds(bounds);
+      // Ensure reasonable zoom level
+      window.google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+        if (map.getZoom() > 15) map.setZoom(15);
+      });
+    }
+  }, [map, dataToShow, createMarkerIcon, getMarkerColor, onLeadClick]);
 
   if (loading) {
     return (
-      <div className="h-[60vh] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
+      <div className="h-[70vh] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader2 className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <p className="text-gray-600">Loading Google Maps...</p>
+          <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-3" />
+          <p className="text-gray-600 text-lg">Loading Interactive Map...</p>
+          <p className="text-gray-500 text-sm mt-1">Connecting to Google Maps</p>
         </div>
       </div>
     );
@@ -74,55 +183,230 @@ function GoogleMapComponent({ leads, onLeadClick }) {
 
   if (error) {
     return (
-      <div className="h-[60vh] w-full rounded-lg border border-red-300 flex items-center justify-center bg-red-50">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-          <p className="text-red-600 mb-2">Failed to load Google Maps</p>
-          <p className="text-sm text-gray-600">{error}</p>
+      <div className="h-[70vh] w-full rounded-lg border border-red-300 flex items-center justify-center bg-red-50">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Map Loading Failed</h3>
+          <p className="text-red-600 mb-3">{error}</p>
+          <p className="text-sm text-gray-600">
+            Please check your Google Maps API key configuration and internet connection.
+          </p>
         </div>
       </div>
     );
   }
 
-  return <div ref={mapRef} className="h-[60vh] w-full rounded-lg overflow-hidden border border-gray-300" />;
+  return <div ref={mapRef} className="h-[70vh] w-full rounded-lg overflow-hidden border border-gray-300 shadow-sm" />;
 }
 
 
 function MapView({ leads, onLeadClick }) {
-  const leadsWithCoords = useMemo(() => leads.filter(lead => 
-    (lead.latitude && lead.longitude) || 
-    (lead.lat && lead.lng) || 
+  const [showDemoData, setShowDemoData] = useState(false);
+  const [mapType, setMapType] = useState('roadmap');
+  const [showTraffic, setShowTraffic] = useState(false);
+
+  const leadsWithCoords = useMemo(() => leads.filter(lead =>
+    (lead.latitude && lead.longitude) ||
+    (lead.lat && lead.lng) ||
     (lead.geocoded_lat && lead.geocoded_lng)
   ), [leads]);
-  
+
+  const hasRealData = leadsWithCoords.length > 0;
+
+  const qualityStats = useMemo(() => {
+    const dataToAnalyze = showDemoData ? [
+      { quality: 'Hot' }, { quality: 'Hot' }, { quality: 'Warm' }, { quality: 'Warm' }, { quality: 'Cold' }
+    ] : leadsWithCoords;
+
+    return {
+      hot: dataToAnalyze.filter(l => l.quality === 'Hot').length,
+      warm: dataToAnalyze.filter(l => l.quality === 'Warm').length,
+      cold: dataToAnalyze.filter(l => l.quality === 'Cold').length,
+      total: dataToAnalyze.length
+    };
+  }, [leadsWithCoords, showDemoData]);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-          <Map className="w-8 h-8 mr-3 text-blue-600" /> Customer Locations
-        </h2>
-        <div className="text-sm text-gray-600">
-          Showing {leadsWithCoords.length} of {leads.length} customers on map
+      {/* Header with enhanced controls */}
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900 flex items-center">
+            <MapPin className="w-8 h-8 mr-3 text-blue-600" />
+            Customer Locations
+          </h2>
+          <p className="text-gray-600 mt-1">
+            Interactive map showing customer locations with lead quality indicators
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Data Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setShowDemoData(false)}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                !showDemoData ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Real Data ({leadsWithCoords.length})
+            </button>
+            <button
+              onClick={() => setShowDemoData(true)}
+              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                showDemoData ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Demo Data (5)
+            </button>
+          </div>
+
+          {/* Map Type Selector */}
+          <select
+            value={mapType}
+            onChange={(e) => setMapType(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="roadmap">Road Map</option>
+            <option value="satellite">Satellite</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="terrain">Terrain</option>
+          </select>
+
+          {/* Traffic Toggle */}
+          <button
+            onClick={() => setShowTraffic(!showTraffic)}
+            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+              showTraffic
+                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <Navigation className="w-4 h-4 mr-2" />
+            Traffic
+          </button>
         </div>
       </div>
-      
-      {leadsWithCoords.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-lg p-6">
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Hot Leads</p>
+              <p className="text-2xl font-semibold text-gray-900">{qualityStats.hot}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Warm Leads</p>
+              <p className="text-2xl font-semibold text-gray-900">{qualityStats.warm}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Cold Leads</p>
+              <p className="text-2xl font-semibold text-gray-900">{qualityStats.cold}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-gray-500">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-500">Total Mapped</p>
+              <p className="text-2xl font-semibold text-gray-900">{qualityStats.total}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Map Container */}
+      {!hasRealData && !showDemoData ? (
+        <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="text-center py-12">
-            <Map className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Geocoded Locations</h3>
-            <p className="text-gray-600 mb-4">
-              Your leads don't have location coordinates yet.
+            <Map className="mx-auto h-20 w-20 text-gray-400 mb-6" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">No Location Data Available</h3>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Your leads don't have geocoded coordinates yet. Add addresses to your leads or use demo data to see the map in action.
             </p>
-            <p className="text-sm text-gray-500">
-              Location data will appear here once addresses are geocoded.
-            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => setShowDemoData(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Map className="w-4 h-4 mr-2" />
+                View Demo Data
+              </button>
+              <button className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                <Search className="w-4 h-4 mr-2" />
+                Learn About Geocoding
+              </button>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <GoogleMapComponent leads={leads} onLeadClick={onLeadClick} />
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <h3 className="text-lg font-semibold text-gray-900">Interactive Map</h3>
+                <div className="flex items-center space-x-3 text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
+                    Hot ({qualityStats.hot})
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full mr-1"></div>
+                    Warm ({qualityStats.warm})
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-1"></div>
+                    Cold ({qualityStats.cold})
+                  </div>
+                </div>
+              </div>
+              {showDemoData && (
+                <div className="flex items-center text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                  <Layers className="w-4 h-4 mr-1" />
+                  Demo Mode
+                </div>
+              )}
+            </div>
+          </div>
+          <GoogleMapComponent
+            leads={leads}
+            onLeadClick={onLeadClick}
+            showDemoData={showDemoData}
+            mapType={mapType}
+            showTraffic={showTraffic}
+          />
         </div>
       )}
     </div>
