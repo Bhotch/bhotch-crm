@@ -10,6 +10,8 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
   const [map, setMap] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [geocodedLeads, setGeocodedLeads] = useState([]);
+  const [geocodingProgress, setGeocodingProgress] = useState(0);
 
   // Demo data for when no real leads exist
   const demoLeads = useMemo(() => [
@@ -23,18 +25,9 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
   // Use demo data if showDemoData is true, otherwise use all leads (with and without coords)
   const dataToShow = showDemoData ? demoLeads : leads;
 
-  // Separate leads with and without coordinates
-  const leadsWithCoords = dataToShow.filter(lead => {
-    const lat = lead.latitude || lead.lat || lead.geocoded_lat;
-    const lng = lead.longitude || lead.lng || lead.geocoded_lng;
-    return lat && lng && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng));
-  });
-
-  const leadsWithoutCoords = dataToShow.filter(lead => {
-    const lat = lead.latitude || lead.lat || lead.geocoded_lat;
-    const lng = lead.longitude || lead.lng || lead.geocoded_lng;
-    return !lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng));
-  });
+  // Separate leads with valid addresses for geocoding
+  const leadsWithAddresses = dataToShow.filter(lead => lead.address && lead.address.trim() !== '');
+  const leadsWithoutAddresses = dataToShow.filter(lead => !lead.address || lead.address.trim() === '');
 
   const getMarkerColor = useCallback((quality) => {
     switch (quality) {
@@ -145,8 +138,48 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     return () => { window.viewLeadDetails = null; };
   }, [dataToShow, onLeadClick]);
 
+  // Geocode leads with addresses
   useEffect(() => {
-    if (!map || !window.google) return;
+    if (!map || !window.google || leadsWithAddresses.length === 0) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    const geocodeLeads = async () => {
+      setGeocodingProgress(0);
+      const geocoded = [];
+
+      for (let i = 0; i < leadsWithAddresses.length; i++) {
+        const lead = leadsWithAddresses[i];
+
+        try {
+          await new Promise((resolve) => {
+            geocoder.geocode({ address: lead.address }, (results, status) => {
+              if (status === 'OK' && results[0]) {
+                const location = results[0].geometry.location;
+                geocoded.push({
+                  ...lead,
+                  geocoded_lat: location.lat(),
+                  geocoded_lng: location.lng()
+                });
+              }
+              setGeocodingProgress(((i + 1) / leadsWithAddresses.length) * 100);
+              // Add a small delay to avoid hitting rate limits
+              setTimeout(resolve, 100);
+            });
+          });
+        } catch (error) {
+          console.warn('Geocoding failed for lead:', lead.customerName, error);
+        }
+      }
+
+      setGeocodedLeads(geocoded);
+    };
+
+    geocodeLeads();
+  }, [map, leadsWithAddresses]);
+
+  // Create markers for geocoded leads
+  useEffect(() => {
+    if (!map || !window.google || geocodedLeads.length === 0) return;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -154,10 +187,8 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
 
     const bounds = new window.google.maps.LatLngBounds();
 
-    leadsWithCoords.forEach(lead => {
-      const lat = lead.latitude || lead.lat || lead.geocoded_lat;
-      const lng = lead.longitude || lead.lng || lead.geocoded_lng;
-      const position = { lat: parseFloat(lat), lng: parseFloat(lng) };
+    geocodedLeads.forEach(lead => {
+      const position = { lat: lead.geocoded_lat, lng: lead.geocoded_lng };
 
       const marker = new window.google.maps.Marker({
         position,
@@ -200,14 +231,14 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
       bounds.extend(position);
     });
 
-    if (leadsWithCoords.length > 0) {
+    if (geocodedLeads.length > 0) {
       map.fitBounds(bounds);
       // Ensure reasonable zoom level
       window.google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
         if (map.getZoom() > 15) map.setZoom(15);
       });
     }
-  }, [map, leadsWithCoords, createMarkerIcon, getMarkerColor, onLeadClick]);
+  }, [map, geocodedLeads, createMarkerIcon, getMarkerColor, onLeadClick]);
 
   if (loading) {
     return (
@@ -216,6 +247,24 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
           <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-3" />
           <p className="text-gray-600 text-lg">Loading Interactive Map...</p>
           <p className="text-gray-500 text-sm mt-1">Connecting to Google Maps</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show geocoding progress if in progress
+  if (map && geocodingProgress > 0 && geocodingProgress < 100) {
+    return (
+      <div>
+        <div className="h-[70vh] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-3" />
+            <p className="text-gray-600 text-lg">Geocoding Customer Addresses...</p>
+            <div className="w-64 bg-gray-200 rounded-full h-2 mx-auto mt-3">
+              <div className="bg-blue-600 h-2 rounded-full transition-all" style={{width: `${geocodingProgress}%`}}></div>
+            </div>
+            <p className="text-gray-500 text-sm mt-2">{Math.round(geocodingProgress)}% Complete</p>
+          </div>
         </div>
       </div>
     );
@@ -240,26 +289,26 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
     <div>
       <div ref={mapRef} className="h-[70vh] w-full rounded-lg overflow-hidden border border-gray-300 shadow-sm" />
 
-      {/* Show leads without coordinates if any exist */}
-      {!showDemoData && leadsWithoutCoords.length > 0 && (
+      {/* Show leads without addresses if any exist */}
+      {!showDemoData && leadsWithoutAddresses.length > 0 && (
         <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <h4 className="text-sm font-semibold text-yellow-800 mb-3 flex items-center">
             <AlertCircle className="w-4 h-4 mr-2" />
-            Leads Without Location Data ({leadsWithoutCoords.length})
+            Leads Without Address Data ({leadsWithoutAddresses.length})
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {leadsWithoutCoords.slice(0, 4).map(lead => (
+            {leadsWithoutAddresses.slice(0, 4).map(lead => (
               <div key={lead.id} className="bg-white p-3 rounded border border-yellow-200 hover:shadow-sm transition-shadow cursor-pointer"
                    onClick={() => onLeadClick && onLeadClick(lead)}>
                 <div className="font-medium text-gray-900">{lead.customerName || 'Unknown'}</div>
                 <div className="text-sm text-gray-600">{lead.phoneNumber || 'No phone'}</div>
-                <div className="text-xs text-gray-500">{lead.address || 'No address provided'}</div>
+                <div className="text-xs text-gray-500">No address provided</div>
               </div>
             ))}
           </div>
-          {leadsWithoutCoords.length > 4 && (
+          {leadsWithoutAddresses.length > 4 && (
             <div className="mt-3 text-sm text-yellow-700">
-              And {leadsWithoutCoords.length - 4} more leads without coordinates...
+              And {leadsWithoutAddresses.length - 4} more leads without addresses...
             </div>
           )}
         </div>
@@ -274,13 +323,8 @@ function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
   const [mapType, setMapType] = useState('roadmap');
   const [showTraffic, setShowTraffic] = useState(false);
 
-  const leadsWithCoords = useMemo(() => leads.filter(lead =>
-    (lead.latitude && lead.longitude) ||
-    (lead.lat && lead.lng) ||
-    (lead.geocoded_lat && lead.geocoded_lng)
-  ), [leads]);
-
-  const hasRealData = leadsWithCoords.length > 0;
+  const leadsWithAddresses = useMemo(() => leads.filter(lead => lead.address && lead.address.trim() !== ''), [leads]);
+  const hasRealData = leadsWithAddresses.length > 0;
 
   const qualityStats = useMemo(() => {
     const dataToAnalyze = showDemoData ? [
@@ -292,9 +336,9 @@ function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
       warm: dataToAnalyze.filter(l => l.quality === 'Warm').length,
       cold: dataToAnalyze.filter(l => l.quality === 'Cold').length,
       total: dataToAnalyze.length,
-      mapped: leadsWithCoords.length
+      mapped: leadsWithAddresses.length
     };
-  }, [leads, leadsWithCoords, showDemoData]);
+  }, [leads, leadsWithAddresses, showDemoData]);
 
   return (
     <div className="space-y-6">
