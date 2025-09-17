@@ -6,15 +6,20 @@ import { useLeads } from './hooks/useLeads';
 import { useNotifications } from './hooks/useNotifications';
 
 // Import features and components
-import { LoginForm } from './features/auth/LoginForm';
-import { DashboardView } from './features/dashboard/DashboardView';
-import { LeadsView } from './features/leads/LeadsView';
-import { MapView } from './features/map/MapView';
-import { CalendarView } from './features/calendar/CalendarView';
-import { LeadFormModal } from './features/leads/LeadFormModal';
-import { LeadDetailModal } from './features/leads/LeadDetailModal';
-import { ConnectionStatus } from './components/ConnectionStatus';
-import { ConfigErrorDisplay } from './components/ConfigErrorDisplay';
+// Correct imports (no curly braces for default exports)
+import DashboardView from './features/dashboard/DashboardView';
+import ProfessionalLeadsView from './features/leads/LeadsView';
+import LeadFormModal from './features/leads/LeadFormModal';
+import LeadDetailModal from './features/leads/LeadDetailModal';
+import MapView from './features/map/MapView';
+import CalendarView from './features/calendar/CalendarView';
+import LoginForm from './features/auth/LoginForm';
+import ConnectionStatus from './components/ConnectionStatus';
+import ConfigErrorDisplay from './components/ConfigErrorDisplay';
+
+// Only use curly braces for named exports like these:
+import { NotificationDisplay } from './components/ui';
+import { auth, configError } from './config/firebase';
 
 function CrmApplication({ onLogout }) {
   const { notifications, addNotification } = useNotifications();
