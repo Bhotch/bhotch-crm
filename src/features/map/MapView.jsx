@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Loader2, AlertCircle, Map, MapPin, Navigation, Layers, Search, ChevronDown } from 'lucide-react';
 import { loadGoogleMaps } from '../../services/googleMapsService';
 
-function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic, searchAddress, onSearchComplete, selectedCustomer, onCustomerLocated }) {
+function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTraffic, searchAddress, onSearchComplete, selectedCustomer, onCustomerLocated, onMapTypeChange }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const infoWindowRef = useRef(null);
@@ -166,9 +166,11 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
         markersRef.current.forEach(marker => marker.setMap(null));
         markersRef.current = [];
 
-        // Center map on customer location
+        // Switch to satellite mode and zoom to highest level
+        map.setMapTypeId('satellite');
+        if (onMapTypeChange) onMapTypeChange('satellite');
         map.setCenter(position);
-        map.setZoom(15);
+        map.setZoom(21); // Maximum zoom level for highest detail
 
         // Add marker for selected customer
         const marker = new window.google.maps.Marker({
@@ -569,6 +571,7 @@ function MapView({ leads, onLeadClick, searchAddress, onSearchComplete }) {
             onSearchComplete={onSearchComplete}
             selectedCustomer={selectedCustomer}
             onCustomerLocated={(customer) => console.log('Customer located:', customer)}
+            onMapTypeChange={setMapType}
           />
         </div>
       )}
