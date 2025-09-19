@@ -53,7 +53,21 @@ function getSheetSafely(sheetName) {
 function doGet(e) {
   logMessage(`GET request received: ${JSON.stringify(e.parameter)}`);
   try {
+    // Handle case where no parameters are provided
+    if (!e.parameter || Object.keys(e.parameter).length === 0) {
+      return createResponse({
+        status: 'Ultimate Lomanco CRM API is running',
+        version: '1.0.0',
+        endpoints: {
+          testConnection: 'GET ?action=testConnection',
+          getLeads: 'GET ?action=getLeads',
+          getJobCounts: 'GET ?action=getJobCounts'
+        }
+      }, true, 'API is operational');
+    }
+
     const action = e.parameter.action;
+
     switch (action) {
       case 'getLeads':
         return getLeads();
@@ -61,8 +75,17 @@ function doGet(e) {
         return getJobCounts();
       case 'testConnection':
         return testConnection();
+      case 'health':
+        return createResponse({
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          uptime: 'OK'
+        }, true, 'System is healthy');
       default:
-        return createResponse({}, false, `Unknown GET action: ${action}`);
+        return createResponse({
+          availableActions: ['getLeads', 'getJobCounts', 'testConnection', 'health'],
+          receivedAction: action
+        }, false, `Unknown GET action: ${action}`);
     }
   } catch (error) {
     logMessage(`GET Error: ${error.toString()}`, 'ERROR');
@@ -73,8 +96,29 @@ function doGet(e) {
 function doPost(e) {
   logMessage('POST request received');
   try {
-    const requestData = JSON.parse(e.postData.contents);
+    // Handle case where no POST data is provided
+    if (!e.postData || !e.postData.contents) {
+      return createResponse({}, false, 'No POST data provided');
+    }
+
+    let requestData;
+    try {
+      requestData = JSON.parse(e.postData.contents);
+    } catch (parseError) {
+      logMessage(`JSON Parse Error: ${parseError.toString()}`, 'ERROR');
+      return createResponse({}, false, 'Invalid JSON in request body');
+    }
+
     const action = requestData.action;
+    if (!action) {
+      return createResponse({
+        availableActions: [
+          'getLeads', 'addLead', 'updateLead', 'deleteLead',
+          'getJobCounts', 'addJobCount', 'updateJobCount', 'deleteJobCount',
+          'testConnection', 'geocodeAddress', 'calculateLomacoVents', 'batchCalculateVents'
+        ]
+      }, false, 'Action parameter is required');
+    }
 
     logMessage(`Executing action: ${action}`);
 
@@ -112,7 +156,14 @@ function doPost(e) {
         return batchCalculateVents(requestData.jobCountIds);
 
       default:
-        return createResponse({}, false, `Unknown POST action: ${action}`);
+        return createResponse({
+          availableActions: [
+            'getLeads', 'addLead', 'updateLead', 'deleteLead',
+            'getJobCounts', 'addJobCount', 'updateJobCount', 'deleteJobCount',
+            'testConnection', 'geocodeAddress', 'calculateLomacoVents', 'batchCalculateVents'
+          ],
+          receivedAction: action
+        }, false, `Unknown POST action: ${action}`);
     }
   } catch (error) {
     logMessage(`POST Error: ${error.toString()}`, 'ERROR');
@@ -736,10 +787,11 @@ function batchCalculateVents(jobCountIds = []) {
         const sqft = parseFloat(row[sqftIndex]);
 
         if (!isNaN(sqft) && sqft > 0) {
-          const calculation = calculateLomacoVents(sqft);
+          const calculationResult = calculateLomacoVents(sqft);
+          const calculationData = JSON.parse(calculationResult.getContent());
 
-          if (calculation.success) {
-            const vents = calculation.ventCalculations;
+          if (calculationData.success) {
+            const vents = calculationData.ventCalculations;
 
             // Update the sheet with calculated values
             if (ridgeVentsIndex !== -1) {
@@ -764,7 +816,7 @@ function batchCalculateVents(jobCountIds = []) {
             results.push({
               row: i + 1,
               sqft: sqft,
-              error: calculation.message,
+              error: calculationData.message,
               success: false
             });
           }
@@ -784,6 +836,47 @@ function batchCalculateVents(jobCountIds = []) {
   } catch (error) {
     logMessage(`Batch calculation error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Batch calculation failed: ${error.message}`);
+  }
+}
+
+// ============================================================================
+// TESTING FUNCTIONS
+// ============================================================================
+
+/**
+ * Test function that can be called directly from Google Apps Script editor
+ */
+function runTestSuite() {
+  logMessage('=== Starting Google Apps Script Test Suite ===');
+
+  try {
+    // Test 1: Connection test
+    logMessage('Test 1: Testing connection...');
+    const connectionTest = testConnection();
+    const connectionData = JSON.parse(connectionTest.getContent());
+    logMessage(`Connection test result: ${connectionData.success ? 'PASSED' : 'FAILED'}`);
+
+    // Test 2: Mathematical calculation
+    logMessage('Test 2: Testing mathematical calculation...');
+    const mathTest = calculateLomacoVents(2500);
+    const mathData = JSON.parse(mathTest.getContent());
+    logMessage(`Math calculation result: ${mathData.success ? 'PASSED' : 'FAILED'}`);
+    if (mathData.success) {
+      logMessage(`Ridge Vents: ${mathData.ventCalculations.ridgeVents}, Turbine: ${mathData.ventCalculations.turbineVents}, Rime Flow: ${mathData.ventCalculations.rimeFlow}`);
+    }
+
+    // Test 3: API endpoint simulation
+    logMessage('Test 3: Testing GET endpoint...');
+    const getTest = doGet({ parameter: { action: 'testConnection' } });
+    const getData = JSON.parse(getTest.getContent());
+    logMessage(`GET endpoint test result: ${getData.success ? 'PASSED' : 'FAILED'}`);
+
+    logMessage('=== Test Suite Complete ===');
+    return 'All tests completed. Check execution logs for results.';
+
+  } catch (error) {
+    logMessage(`Test suite error: ${error.toString()}`, 'ERROR');
+    return `Test suite failed: ${error.message}`;
   }
 }
 
