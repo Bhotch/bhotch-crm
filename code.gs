@@ -7,6 +7,7 @@
  * @fileoverview Production-ready backend API for CRM application
  * with complete CRUD operations, advanced Lomanco automation, and enterprise features.
  * Updated: 2025-09-19 - Latest Lomanco Calculator Integration
+ * Enhanced: 2025-09-19 - Added auto-calculation for ventilation values and updated pipe field mapping
  */
 
 // --- CONFIGURATION ---
@@ -415,6 +416,20 @@ function addJobCount(jobCountData) {
     jobCountData.id = `jobcount_${Date.now()}`;
     jobCountData.createdDate = new Date().toISOString();
 
+    // Auto-calculate ventilation values if sqFt is provided (matching frontend logic)
+    if (jobCountData.sqFt && !isNaN(parseFloat(jobCountData.sqFt))) {
+      const sqFt = parseFloat(jobCountData.sqFt);
+      if (!jobCountData.ridgeVents) {
+        jobCountData.ridgeVents = Math.ceil(sqFt / 250).toString();
+      }
+      if (!jobCountData.turbine) {
+        jobCountData.turbine = Math.ceil(sqFt / 1250).toString();
+      }
+      if (!jobCountData.rimeFlow) {
+        jobCountData.rimeFlow = Math.ceil(sqFt * 0.04).toString();
+      }
+    }
+
     // Map camelCase frontend fields to sheet headers
     const rowData = headers.map(header => {
       const camelCaseHeader = convertToCamelCase(header);
@@ -468,6 +483,20 @@ function updateJobCount(jobCountData) {
     }
 
     jobCountData.modifiedDate = new Date().toISOString();
+
+    // Auto-calculate ventilation values if sqFt is provided (matching frontend logic)
+    if (jobCountData.sqFt && !isNaN(parseFloat(jobCountData.sqFt))) {
+      const sqFt = parseFloat(jobCountData.sqFt);
+      if (!jobCountData.ridgeVents) {
+        jobCountData.ridgeVents = Math.ceil(sqFt / 250).toString();
+      }
+      if (!jobCountData.turbine) {
+        jobCountData.turbine = Math.ceil(sqFt / 1250).toString();
+      }
+      if (!jobCountData.rimeFlow) {
+        jobCountData.rimeFlow = Math.ceil(sqFt * 0.04).toString();
+      }
+    }
 
     const rowData = headers.map(header => {
       const camelCaseHeader = convertToCamelCase(header);
@@ -1228,6 +1257,8 @@ function convertToCamelCase(headerName) {
     'Pipes [3"]': 'pipes3',
     'Pipes [4\']': 'pipes4',
     'Pipes [4"]': 'pipes4',
+    'Pipes 1 1/2" - 2"': 'pipes1Half2',
+    'Pipes 3" - 5"': 'pipes3To5',
     'Gables': 'gables',
     'Turtle Backs': 'turtleBacks',
     'Satellite': 'satellite',
