@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { X, Edit2, Trash2, Calculator, User, FileText } from 'lucide-react';
+import VentCalculationWidget from '../../components/VentCalculationWidget';
+import { useNotifications } from '../../hooks/useNotifications';
+import { googleSheetsService } from '../../api/googleSheetsService';
 
-function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete }) {
+function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete, onJobCountUpdate }) {
+    const { addNotification } = useNotifications();
     const formatNumber = (value) => {
         if (!value || value === '0' || value === '-') return '-';
         return Number(value).toLocaleString();
@@ -55,6 +59,22 @@ function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete }) {
 
     const customerName = jobCount.customerName || `${jobCount.firstName || ''} ${jobCount.lastName || ''}`.trim() || 'Unknown Customer';
 
+    const handleCalculationComplete = useCallback(async (updatedJobCount) => {
+        try {
+            const response = await googleSheetsService.updateJobCount(updatedJobCount);
+            if (response.success) {
+                if (onJobCountUpdate) {
+                    onJobCountUpdate(updatedJobCount);
+                }
+                addNotification('Job count updated with vent calculations', 'success');
+            } else {
+                throw new Error(response.message);
+            }
+        } catch (error) {
+            addNotification(`Failed to update job count: ${error.message}`, 'error');
+        }
+    }, [onJobCountUpdate, addNotification]);
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl max-w-7xl w-full max-h-[95vh] flex flex-col shadow-2xl">
@@ -91,6 +111,15 @@ function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete }) {
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto flex-1">
+                    {/* Lomanco Vent Calculator Widget */}
+                    <div className="mb-8">
+                        <VentCalculationWidget
+                            jobCount={jobCount}
+                            onCalculationComplete={handleCalculationComplete}
+                            addNotification={addNotification}
+                        />
+                    </div>
+
                     {/* Customer Information */}
                     <DetailSection title="Customer Information" icon={User}>
                         <DetailField label="First Name" value={jobCount.firstName} />

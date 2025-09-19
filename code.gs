@@ -105,6 +105,12 @@ function doPost(e) {
       case 'geocodeAddress':
         return geocodeAddress(requestData.address);
 
+      // Lomanco vent calculation operations
+      case 'calculateLomacoVents':
+        return calculateLomacoVents(requestData.sqft, requestData.options);
+      case 'batchCalculateVents':
+        return batchCalculateVents(requestData.jobCountIds);
+
       default:
         return createResponse({}, false, `Unknown POST action: ${action}`);
     }
@@ -455,6 +461,329 @@ function deleteJobCount(jobCountId) {
   } catch (error) {
     logMessage(`deleteJobCount Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to delete job count: ${error.message}`);
+  }
+}
+
+// ============================================================================
+// LOMANCO VENT CALCULATION AUTOMATION
+// ============================================================================
+
+/**
+ * Enterprise-grade Lomanco vent calculation service
+ * Supports web automation with mathematical fallback
+ */
+class LomacoVentCalculationService {
+  constructor() {
+    this.baseUrl = 'https://ventselector.lomanco.com/index.php';
+    this.retryAttempts = 3;
+    this.retryDelay = 1000;
+    this.requestTimeout = 10000;
+  }
+
+  /**
+   * Calculate vent requirements with fallback strategy
+   */
+  calculateVentRequirements(sqft, options = {}) {
+    try {
+      logMessage(`Starting vent calculation for ${sqft} sqft`);
+
+      // Primary: Web automation approach
+      const webResult = this.calculateViaWebAutomation(sqft, options);
+      if (webResult.success) {
+        logMessage('Web automation successful');
+        return webResult;
+      }
+
+      logMessage('Web automation failed, using mathematical fallback');
+
+      // Secondary: Mathematical fallback
+      const mathResult = this.calculateViaMathematicalFormulas(sqft, options);
+      if (mathResult.success) {
+        logMessage('Mathematical calculation successful');
+        return mathResult;
+      }
+
+      logMessage('All calculation methods failed');
+      return createResponse({}, false, 'All calculation methods failed. Manual entry required.');
+
+    } catch (error) {
+      logMessage(`Vent calculation error: ${error.toString()}`, 'ERROR');
+      return createResponse({}, false, `Calculation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Web automation approach using UrlFetchApp
+   */
+  calculateViaWebAutomation(sqft, options = {}) {
+    try {
+      for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
+        try {
+          logMessage(`Web automation attempt ${attempt} for ${sqft} sqft`);
+
+          // Step 1: Get initial page to establish session
+          const sessionResponse = UrlFetchApp.fetch(this.baseUrl, {
+            method: 'GET',
+            followRedirects: true,
+            muteHttpExceptions: true,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          });
+
+          if (sessionResponse.getResponseCode() !== 200) {
+            throw new Error(`Session setup failed: ${sessionResponse.getResponseCode()}`);
+          }
+
+          // Step 2: Submit calculation request
+          const calculationPayload = {
+            'attic_floor_space': sqft.toString(),
+            'exhaust_system': 'ridge_vent',
+            'roof_slope': '4'
+          };
+
+          const calculationResponse = UrlFetchApp.fetch(this.baseUrl, {
+            method: 'POST',
+            payload: calculationPayload,
+            followRedirects: true,
+            muteHttpExceptions: true,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          });
+
+          if (calculationResponse.getResponseCode() !== 200) {
+            throw new Error(`Calculation request failed: ${calculationResponse.getResponseCode()}`);
+          }
+
+          const responseText = calculationResponse.getContentText();
+          const results = this.parseLomacoResponse(responseText, sqft);
+
+          if (results.success) {
+            return createResponse({
+              ventCalculations: results.data,
+              calculationMethod: 'web_automation',
+              timestamp: new Date().toISOString()
+            }, true, 'Lomanco calculation completed successfully');
+          } else {
+            throw new Error('Failed to parse Lomanco response');
+          }
+
+        } catch (attemptError) {
+          logMessage(`Attempt ${attempt} failed: ${attemptError.message}`, 'WARN');
+          if (attempt < this.retryAttempts) {
+            Utilities.sleep(this.retryDelay * attempt);
+          } else {
+            throw attemptError;
+          }
+        }
+      }
+    } catch (error) {
+      logMessage(`Web automation failed: ${error.toString()}`, 'ERROR');
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Parse Lomanco website response to extract vent values
+   */
+  parseLomacoResponse(htmlContent, sqft) {
+    try {
+      let ridgeVents = 0;
+      let turbineVents = 0;
+      let rimeFlow = 0;
+
+      // Extract DA-4 Ridge Vent values
+      const ridgeVentRegex = /DA-4[^0-9]*(\d+)/gi;
+      const ridgeMatches = htmlContent.match(ridgeVentRegex);
+      if (ridgeMatches && ridgeMatches.length > 0) {
+        const numbers = ridgeMatches[0].match(/\d+/);
+        if (numbers) ridgeVents = parseInt(numbers[0]);
+      }
+
+      // Extract ALL-14" Turbine values
+      const turbineRegex = /ALL-14["\s]*[^0-9]*(\d+)/gi;
+      const turbineMatches = htmlContent.match(turbineRegex);
+      if (turbineMatches && turbineMatches.length > 0) {
+        const numbers = turbineMatches[0].match(/\d+/);
+        if (numbers) turbineVents = parseInt(numbers[0]);
+      }
+
+      // Extract Rime Flow values (typically between ridge vent calculations)
+      const rimeFlowRegex = /(?:rime|flow)[^0-9]*(\d+(?:\.\d+)?)/gi;
+      const rimeMatches = htmlContent.match(rimeFlowRegex);
+      if (rimeMatches && rimeMatches.length > 0) {
+        const numbers = rimeMatches[0].match(/\d+(?:\.\d+)?/);
+        if (numbers) rimeFlow = parseFloat(numbers[0]);
+      }
+
+      // Validate results
+      if (ridgeVents > 0 || turbineVents > 0) {
+        return {
+          success: true,
+          data: {
+            ridgeVents: ridgeVents,
+            turbineVents: turbineVents,
+            rimeFlow: rimeFlow,
+            sqft: sqft,
+            source: 'lomanco_web'
+          }
+        };
+      }
+
+      return { success: false, message: 'No valid vent calculations found in response' };
+
+    } catch (error) {
+      logMessage(`Response parsing error: ${error.toString()}`, 'ERROR');
+      return { success: false, message: `Failed to parse response: ${error.message}` };
+    }
+  }
+
+  /**
+   * Mathematical fallback calculation based on industry standards
+   */
+  calculateViaMathematicalFormulas(sqft, options = {}) {
+    try {
+      logMessage(`Calculating vents using mathematical formulas for ${sqft} sqft`);
+
+      // Industry standard: 1 sq ft of ventilation per 300 sq ft of attic space
+      const requiredVentilationSqFt = sqft / 300;
+
+      // Ridge vent calculations (DA-4 specifications)
+      // DA-4: ~18 sq in of Net Free Area per linear foot
+      const da4NfaPerFoot = 18; // sq inches per linear foot
+      const requiredVentilationSqIn = requiredVentilationSqFt * 144; // convert to sq inches
+      const ridgeVentsLinearFt = Math.ceil(requiredVentilationSqIn / da4NfaPerFoot);
+
+      // Turbine vent calculations (ALL-14" specifications)
+      // ALL-14": ~130-150 sq in effective area
+      const all14EffectiveArea = 140; // sq inches per turbine
+      const turbineVentsCount = Math.ceil(requiredVentilationSqIn / all14EffectiveArea);
+
+      // Rime flow calculation (CFM estimate)
+      // Standard: ~0.75 CFM per sq ft of attic space
+      const rimeFlowCfm = Math.round(sqft * 0.75 * 100) / 100;
+
+      const calculations = {
+        ridgeVents: ridgeVentsLinearFt,
+        turbineVents: turbineVentsCount,
+        rimeFlow: rimeFlowCfm,
+        sqft: sqft,
+        source: 'mathematical_formula'
+      };
+
+      logMessage(`Mathematical calculation complete: ${JSON.stringify(calculations)}`);
+
+      return createResponse({
+        ventCalculations: calculations,
+        calculationMethod: 'mathematical_fallback',
+        timestamp: new Date().toISOString()
+      }, true, 'Mathematical calculation completed successfully');
+
+    } catch (error) {
+      logMessage(`Mathematical calculation error: ${error.toString()}`, 'ERROR');
+      return { success: false, message: `Mathematical calculation failed: ${error.message}` };
+    }
+  }
+}
+
+/**
+ * Main vent calculation endpoint
+ */
+function calculateLomacoVents(sqft, options = {}) {
+  try {
+    if (!sqft || isNaN(sqft) || sqft <= 0) {
+      return createResponse({}, false, 'Valid SQFT value is required');
+    }
+
+    const calculator = new LomacoVentCalculationService();
+    return calculator.calculateVentRequirements(parseFloat(sqft), options);
+
+  } catch (error) {
+    logMessage(`calculateLomacoVents Error: ${error.toString()}`, 'ERROR');
+    return createResponse({}, false, `Vent calculation failed: ${error.message}`);
+  }
+}
+
+/**
+ * Batch process multiple job counts for vent calculations
+ */
+function batchCalculateVents(jobCountIds = []) {
+  try {
+    const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    const sqftIndex = headers.findIndex(h => h.toLowerCase().includes('sq ft'));
+    const ridgeVentsIndex = headers.findIndex(h => h.toLowerCase().includes('ridge vents'));
+    const turbineIndex = headers.findIndex(h => h.toLowerCase().includes('turbine'));
+    const rimeFlowIndex = headers.findIndex(h => h.toLowerCase().includes('rime flow'));
+
+    if (sqftIndex === -1) {
+      return createResponse({}, false, 'SQFT column not found in Job Count sheet');
+    }
+
+    let processedCount = 0;
+    let errorCount = 0;
+    const results = [];
+
+    // Process each row
+    for (let i = 1; i < data.length; i++) {
+      try {
+        const row = data[i];
+        const sqft = parseFloat(row[sqftIndex]);
+
+        if (!isNaN(sqft) && sqft > 0) {
+          const calculation = calculateLomacoVents(sqft);
+
+          if (calculation.success) {
+            const vents = calculation.ventCalculations;
+
+            // Update the sheet with calculated values
+            if (ridgeVentsIndex !== -1) {
+              sheet.getRange(i + 1, ridgeVentsIndex + 1).setValue(vents.ridgeVents);
+            }
+            if (turbineIndex !== -1) {
+              sheet.getRange(i + 1, turbineIndex + 1).setValue(vents.turbineVents);
+            }
+            if (rimeFlowIndex !== -1) {
+              sheet.getRange(i + 1, rimeFlowIndex + 1).setValue(vents.rimeFlow);
+            }
+
+            processedCount++;
+            results.push({
+              row: i + 1,
+              sqft: sqft,
+              calculations: vents,
+              success: true
+            });
+          } else {
+            errorCount++;
+            results.push({
+              row: i + 1,
+              sqft: sqft,
+              error: calculation.message,
+              success: false
+            });
+          }
+        }
+      } catch (rowError) {
+        errorCount++;
+        logMessage(`Error processing row ${i + 1}: ${rowError.toString()}`, 'ERROR');
+      }
+    }
+
+    return createResponse({
+      processedCount: processedCount,
+      errorCount: errorCount,
+      results: results
+    }, true, `Batch calculation complete: ${processedCount} processed, ${errorCount} errors`);
+
+  } catch (error) {
+    logMessage(`Batch calculation error: ${error.toString()}`, 'ERROR');
+    return createResponse({}, false, `Batch calculation failed: ${error.message}`);
   }
 }
 

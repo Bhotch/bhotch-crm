@@ -94,6 +94,15 @@ class GoogleSheetsService {
   geocodeAddress(address) {
     return this.makeRequest('geocodeAddress', { address });
   }
+
+  // Lomanco vent calculation operations
+  calculateLomacoVents(sqft, options = {}) {
+    return this.makeRequest('calculateLomacoVents', { sqft, options });
+  }
+
+  batchCalculateVents(jobCountIds = []) {
+    return this.makeRequest('batchCalculateVents', { jobCountIds });
+  }
 }
 
 export const googleSheetsService = new GoogleSheetsService(GOOGLE_SCRIPT_URL);

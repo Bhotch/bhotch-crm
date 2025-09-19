@@ -1,15 +1,60 @@
 {
-  "short_name": "Bhotch CRM",
-  "name": "Bhotch CRM - Customer Relationship Management",
+  "short_name": "Ultimate CRM",
+  "name": "Ultimate Lomanco CRM Automation System",
+  "description": "Enterprise-grade automation system for roofing vent calculations",
   "icons": [
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#3b82f6",
-  "background_color": "#f8fafc"
+  "background_color": "#f8fafc",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en-US",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Job Counts",
+      "short_name": "Jobs",
+      "description": "Access job count management",
+      "url": "/?tab=jobcounts",
+      "icons": [{ "src": "favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Leads",
+      "short_name": "Leads",
+      "description": "Manage customer leads",
+      "url": "/?tab=leads",
+      "icons": [{ "src": "favicon.ico", "sizes": "64x64" }]
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "description": "View system analytics",
+      "url": "/?tab=analytics",
+      "icons": [{ "src": "favicon.ico", "sizes": "64x64" }]
+    }
+  ],
+  "related_applications": [],
+  "features": [
+    "Cross Platform",
+    "Fast",
+    "Simple"
+  ]
 }

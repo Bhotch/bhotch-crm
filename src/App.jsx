@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock, Shield, Activity, Database } from 'lucide-react';
 
 // Import hooks
 import { useLeads } from './hooks/useLeads';
@@ -20,12 +20,103 @@ import JobCountDetailModal from './features/jobcount/JobCountDetailModal';
 import ConnectionStatus from './components/ConnectionStatus';
 import ConfigErrorDisplay from './components/ConfigErrorDisplay';
 
+// Import Ultimate Enterprise Components
+import ErrorBoundary from './components/ErrorBoundary';
+import VentCalculationWidget from './components/VentCalculationWidget';
+import BatchVentCalculation from './components/BatchVentCalculation';
+import SystemMonitoringDashboard from './components/SystemMonitoringDashboard';
+import AdvancedAnalyticsDashboard from './components/AdvancedAnalyticsDashboard';
+
+// Import Ultimate Enterprise Systems
+import logger from './utils/enterpriseLogger';
+import enterpriseMonitoring from './utils/enterpriseMonitoring';
+import backupRecoverySystem from './utils/backupRecoverySystem';
+import securityManager from './utils/securityManager';
+import notificationSystem from './utils/notificationSystem';
+
 function CrmApplication({ onLogout }) {
   const { notifications, addNotification } = useNotifications();
   const { leads, loading: leadsLoading, refreshLeads, addLead, updateLead, deleteLead } = useLeads(addNotification);
   const { jobCounts, loading: jobCountsLoading, refreshJobCounts, addJobCount, updateJobCount, deleteJobCount } = useJobCounts(addNotification);
 
   const [currentView, setCurrentView] = useState('dashboard');
+  const [systemHealth, setSystemHealth] = useState('healthy');
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+
+  // Initialize Ultimate Enterprise Systems
+  useEffect(() => {
+    const initializeEnterpriseSystems = async () => {
+      try {
+        // Initialize security session
+        const userId = sessionStorage.getItem('userId') || 'user_' + Date.now();
+        sessionStorage.setItem('userId', userId);
+
+        const sessionToken = securityManager.generateSessionToken(userId);
+        sessionStorage.setItem('sessionToken', sessionToken);
+
+        // Log application startup
+        logger.business('Application Startup', {
+          userId,
+          timestamp: new Date().toISOString(),
+          version: process.env.REACT_APP_VERSION || '1.0.0'
+        });
+
+        // Initialize monitoring
+        enterpriseMonitoring.recordMetric('app.startup', 1, {
+          component: 'CrmApplication',
+          version: process.env.REACT_APP_VERSION || '1.0.0'
+        });
+
+        // Show notification for enterprise features
+        await notificationSystem.success('Ultimate CRM System Initialized', {
+          category: 'system',
+          metadata: {
+            features: ['Advanced Caching', 'Monitoring', 'Security', 'Backup Recovery'],
+            version: '1.0.0'
+          }
+        });
+
+        // Check system health
+        const health = await enterpriseMonitoring.getSystemReport();
+        setSystemHealth(health.systemHealth || 'healthy');
+
+      } catch (error) {
+        logger.error('Failed to initialize enterprise systems', { error: error.message });
+        addNotification('System initialization warning: Some enterprise features may be limited', 'error');
+      }
+    };
+
+    initializeEnterpriseSystems();
+
+    // PWA install prompt handler
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setShowInstallPrompt(true);
+      window.deferredPrompt = e;
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, [addNotification]);
+
+  // Handle PWA installation
+  const handleInstallPWA = async () => {
+    if (window.deferredPrompt) {
+      window.deferredPrompt.prompt();
+      const { outcome } = await window.deferredPrompt.userChoice;
+
+      if (outcome === 'accepted') {
+        logger.user('PWA Installation Accepted');
+        addNotification('App installed successfully!', 'success');
+      }
+
+      window.deferredPrompt = null;
+      setShowInstallPrompt(false);
+    }
+  };
 
   // Lead state management
   const [editingLead, setEditingLead] = useState(null);
@@ -125,6 +216,24 @@ function CrmApplication({ onLogout }) {
                 <span className="hidden sm:inline">Job Count</span>
               </button>
               <button
+                onClick={() => setCurrentView('analytics')}
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                  currentView === 'analytics' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <Activity className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Analytics</span>
+              </button>
+              <button
+                onClick={() => setCurrentView('monitoring')}
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                  currentView === 'monitoring' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <Shield className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">System</span>
+              </button>
+              <button
                 onClick={() => setCurrentView('map')}
                 className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
                   currentView === 'map' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
@@ -142,6 +251,35 @@ function CrmApplication({ onLogout }) {
                 <Calendar className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Calendar</span>
               </button>
+
+              {/* System Health Indicator */}
+              <div className={`px-2 py-2 rounded-md flex items-center ${
+                systemHealth === 'healthy' ? 'bg-green-100 text-green-700' :
+                systemHealth === 'degraded' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                <div className={`w-2 h-2 rounded-full mr-1 ${
+                  systemHealth === 'healthy' ? 'bg-green-500' :
+                  systemHealth === 'degraded' ? 'bg-yellow-500' :
+                  'bg-red-500'
+                }`}></div>
+                <span className="text-xs hidden sm:inline">
+                  {systemHealth === 'healthy' ? 'Optimal' :
+                   systemHealth === 'degraded' ? 'Degraded' : 'Critical'}
+                </span>
+              </div>
+
+              {/* PWA Install Button */}
+              {showInstallPrompt && (
+                <button
+                  onClick={handleInstallPWA}
+                  className="px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors flex items-center"
+                >
+                  <Database className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Install</span>
+                </button>
+              )}
+
               <button
                 onClick={onLogout}
                 className="p-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
@@ -177,6 +315,10 @@ function CrmApplication({ onLogout }) {
           <>
             <ConnectionStatus />
             <DashboardView stats={dashboardStats} leads={leads} />
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <VentCalculationWidget />
+              <BatchVentCalculation jobCounts={jobCounts} onJobCountUpdate={refreshJobCounts} />
+            </div>
           </>
         )}
         {currentView === 'leads' && (
@@ -198,6 +340,16 @@ function CrmApplication({ onLogout }) {
             onRefreshJobCounts={refreshJobCounts}
             onSelectJobCount={setSelectedDetailJobCount}
           />
+        )}
+        {currentView === 'analytics' && (
+          <AdvancedAnalyticsDashboard
+            leads={leads}
+            jobCounts={jobCounts}
+            onNavigateToTab={handleNavigateToTab}
+          />
+        )}
+        {currentView === 'monitoring' && (
+          <SystemMonitoringDashboard />
         )}
         {currentView === 'map' && (
           <MapView
@@ -268,15 +420,60 @@ function CrmApplication({ onLogout }) {
             deleteJobCount(selectedDetailJobCount.id);
             setSelectedDetailJobCount(null);
           }}
+          onJobCountUpdate={(updatedJobCount) => {
+            setSelectedDetailJobCount(updatedJobCount);
+            refreshJobCounts();
+          }}
         />
       )}
     </div>
   );
 }
 
-// Main App Component
+// Main App Component with Ultimate Enterprise Features
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!sessionStorage.getItem('isAuthenticated'));
+
+  // Enterprise system initialization
+  useEffect(() => {
+    // Initialize service worker for PWA
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => logger.info('Service Worker registered successfully'))
+        .catch((error) => logger.error('Service Worker registration failed', { error: error.message }));
+    }
+
+    // Initialize enterprise monitoring
+    enterpriseMonitoring.recordMetric('app.load', 1, {
+      version: process.env.REACT_APP_VERSION || '1.0.0',
+      environment: process.env.NODE_ENV || 'development'
+    });
+
+    // Log system initialization
+    logger.business('Ultimate CRM System Loaded', {
+      version: process.env.REACT_APP_VERSION || '1.0.0',
+      timestamp: new Date().toISOString(),
+      features: [
+        'Enterprise Security',
+        'Advanced Caching',
+        'Real-time Monitoring',
+        'Backup & Recovery',
+        'PWA Support',
+        'Automated Deployment'
+      ]
+    });
+
+    return () => {
+      // Cleanup enterprise systems
+      try {
+        backupRecoverySystem.destroy();
+        enterpriseMonitoring.destroy();
+        logger.destroy();
+      } catch (error) {
+        console.warn('Cleanup error:', error);
+      }
+    };
+  }, []);
 
   const configError = [
     process.env.REACT_APP_FIREBASE_API_KEY,
@@ -289,15 +486,28 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <LoginForm onLogin={() => setIsAuthenticated(true)} />;
+    return (
+      <ErrorBoundary>
+        <LoginForm onLogin={() => setIsAuthenticated(true)} />
+      </ErrorBoundary>
+    );
   }
 
   return (
-    <CrmApplication
-      onLogout={() => {
-        sessionStorage.removeItem('isAuthenticated');
-        setIsAuthenticated(false);
-      }}
-    />
+    <ErrorBoundary>
+      <CrmApplication
+        onLogout={() => {
+          // Log logout event
+          logger.user('User Logout', {
+            timestamp: new Date().toISOString()
+          });
+
+          // Clear session data
+          sessionStorage.removeItem('isAuthenticated');
+          sessionStorage.removeItem('sessionToken');
+          setIsAuthenticated(false);
+        }}
+      />
+    </ErrorBoundary>
   );
 }

@@ -17,7 +17,10 @@
       "Bash(git pull:*)",
       "Bash(git ls-tree:*)",
       "Bash(npm run:*)",
-      "WebFetch(domain:docs.google.com)"
+      "WebFetch(domain:docs.google.com)",
+      "WebFetch(domain:ventselector.lomanco.com)",
+      "Read(//c/Users/PC_User/Pictures/Screenshots/**)",
+      "Bash(dir)"
     ],
     "deny": [],
     "ask": []
