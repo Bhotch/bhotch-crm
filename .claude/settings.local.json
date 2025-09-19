@@ -25,7 +25,8 @@
       "Bash(npx eslint:*)",
       "Bash(npx react-scripts build:*)",
       "Bash(git reset:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
