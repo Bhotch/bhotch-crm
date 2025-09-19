@@ -1,11 +1,12 @@
 // ============================================================================
 // Bhotch CRM - Google Apps Script Backend (Code.gs)
-// CLEAN VERSION - Complete Job Count & Lead Management System
+// ULTIMATE LOMANCO AUTOMATION VERSION - Complete Job Count & Lead Management System
 // ============================================================================
 
 /**
- * @fileoverview Clean, production-ready backend API for CRM application
- * with complete CRUD operations for both leads and job counts.
+ * @fileoverview Production-ready backend API for CRM application
+ * with complete CRUD operations, advanced Lomanco automation, and enterprise features.
+ * Updated: 2025-09-19 - Latest Lomanco Calculator Integration
  */
 
 // --- CONFIGURATION ---
@@ -526,9 +527,15 @@ function deleteJobCount(jobCountId) {
 class LomacoVentCalculationService {
   constructor() {
     this.baseUrl = 'https://ventselector.lomanco.com/index.php';
-    this.retryAttempts = 3;
-    this.retryDelay = 1000;
-    this.requestTimeout = 10000;
+    this.retryAttempts = 5;
+    this.retryDelay = 1500;
+    this.requestTimeout = 15000;
+    this.userAgents = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    ];
+    this.sessionCache = new Map();
   }
 
   /**
@@ -837,6 +844,300 @@ function batchCalculateVents(jobCountIds = []) {
     logMessage(`Batch calculation error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Batch calculation failed: ${error.message}`);
   }
+}
+
+// ============================================================================
+// ENHANCED LOMANCO AUTOMATION FEATURES
+// ============================================================================
+
+/**
+ * Enhanced web automation strategies for Lomanco calculator
+ */
+function tryMultipleWebStrategies(sqft, options = {}) {
+  const service = new LomacoVentCalculationService();
+
+  // Strategy 1: Direct POST with comprehensive headers
+  try {
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+    const payload = {
+      'attic_floor_space': sqft.toString(),
+      'exhaust_system': 'ridge_vent',
+      'roof_slope': options.roofSlope || '4',
+      'roof_type': options.roofType || 'shingle',
+      'climate_zone': options.climateZone || 'mixed',
+      'intake_system': 'soffit_vent'
+    };
+
+    const response = UrlFetchApp.fetch(service.baseUrl, {
+      method: 'POST',
+      payload: payload,
+      followRedirects: true,
+      muteHttpExceptions: true,
+      headers: {
+        'User-Agent': userAgent,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      }
+    });
+
+    if (response.getResponseCode() === 200) {
+      const results = parseEnhancedLomacoResponse(response.getContentText(), sqft);
+      if (results.success) {
+        return createResponse({
+          ventCalculations: results.data,
+          calculationMethod: 'enhanced_web_automation',
+          timestamp: new Date().toISOString()
+        }, true, 'Enhanced Lomanco calculation successful');
+      }
+    }
+  } catch (error) {
+    logMessage(`Enhanced web strategy failed: ${error.message}`, 'WARN');
+  }
+
+  return { success: false, message: 'Enhanced web strategies failed' };
+}
+
+/**
+ * Enhanced response parser with multiple extraction strategies
+ */
+function parseEnhancedLomacoResponse(htmlContent, sqft) {
+  try {
+    let ridgeVents = 0;
+    let turbineVents = 0;
+    let rimeFlow = 0;
+    let extractionMethod = 'unknown';
+
+    // Strategy 1: JSON response parsing
+    try {
+      const jsonData = JSON.parse(htmlContent);
+      if (jsonData.ridge_vents || jsonData.ridgeVents) {
+        ridgeVents = parseInt(jsonData.ridge_vents || jsonData.ridgeVents) || 0;
+        turbineVents = parseInt(jsonData.turbine_vents || jsonData.turbineVents) || 0;
+        rimeFlow = parseFloat(jsonData.rime_flow || jsonData.rimeFlow || jsonData.cfm) || 0;
+        extractionMethod = 'json_api';
+      }
+    } catch (jsonError) {
+      // Not JSON, continue with HTML parsing
+    }
+
+    // Strategy 2: Enhanced HTML parsing with multiple patterns
+    if (ridgeVents === 0 && turbineVents === 0) {
+      // Enhanced DA-4 Ridge Vent extraction patterns
+      const ridgePatterns = [
+        /DA-?4[^\d]*(\d+)\s*(?:feet|ft|linear)/gi,
+        /ridge[^\d]*(\d+)\s*(?:feet|ft|linear)/gi,
+        /DA-?4[^\d]*(\d+)/gi,
+        /<span[^>]*ridge[^>]*>(\d+)<\/span>/gi,
+        /id=["']ridge[^"']*["'][^>]*>(\d+)/gi
+      ];
+
+      for (const pattern of ridgePatterns) {
+        const matches = htmlContent.match(pattern);
+        if (matches && matches.length > 0) {
+          const numbers = matches[0].match(/\d+/);
+          if (numbers && parseInt(numbers[0]) > 0) {
+            ridgeVents = parseInt(numbers[0]);
+            extractionMethod = 'html_ridge_pattern';
+            break;
+          }
+        }
+      }
+
+      // Enhanced ALL-14" Turbine extraction patterns
+      const turbinePatterns = [
+        /ALL-?14["\s]*[^\d]*(\d+)\s*(?:units?|turbines?)/gi,
+        /turbine[^\d]*(\d+)\s*(?:units?)/gi,
+        /ALL-?14["\s]*[^\d]*(\d+)/gi,
+        /<span[^>]*turbine[^>]*>(\d+)<\/span>/gi,
+        /id=["']turbine[^"']*["'][^>]*>(\d+)/gi
+      ];
+
+      for (const pattern of turbinePatterns) {
+        const matches = htmlContent.match(pattern);
+        if (matches && matches.length > 0) {
+          const numbers = matches[0].match(/\d+/);
+          if (numbers && parseInt(numbers[0]) > 0) {
+            turbineVents = parseInt(numbers[0]);
+            if (extractionMethod === 'unknown') extractionMethod = 'html_turbine_pattern';
+            break;
+          }
+        }
+      }
+
+      // Enhanced Rime Flow extraction patterns
+      const rimeFlowPatterns = [
+        /(?:rime|flow)[^\d]*(\d+(?:\.\d+)?)\s*(?:cfm|cubic)/gi,
+        /cfm[^\d]*(\d+(?:\.\d+)?)/gi,
+        /air\s*flow[^\d]*(\d+(?:\.\d+)?)/gi,
+        /<span[^>]*flow[^>]*>(\d+(?:\.\d+)?)<\/span>/gi,
+        /id=["']flow[^"']*["'][^>]*>(\d+(?:\.\d+)?)/gi
+      ];
+
+      for (const pattern of rimeFlowPatterns) {
+        const matches = htmlContent.match(pattern);
+        if (matches && matches.length > 0) {
+          const numbers = matches[0].match(/\d+(?:\.\d+)?/);
+          if (numbers && parseFloat(numbers[0]) > 0) {
+            rimeFlow = parseFloat(numbers[0]);
+            if (extractionMethod === 'unknown') extractionMethod = 'html_flow_pattern';
+            break;
+          }
+        }
+      }
+    }
+
+    // Validation and sanity checks
+    if (ridgeVents > 0 || turbineVents > 0) {
+      // Sanity check: values should be reasonable for the given SQFT
+      const maxReasonableRidge = Math.ceil(sqft / 50); // Very generous upper bound
+      const maxReasonableTurbine = Math.ceil(sqft / 200); // Very generous upper bound
+
+      if (ridgeVents > maxReasonableRidge) {
+        logMessage(`Ridge vent value ${ridgeVents} seems too high for ${sqft} sqft, capping at ${maxReasonableRidge}`, 'WARN');
+        ridgeVents = maxReasonableRidge;
+      }
+
+      if (turbineVents > maxReasonableTurbine) {
+        logMessage(`Turbine vent value ${turbineVents} seems too high for ${sqft} sqft, capping at ${maxReasonableTurbine}`, 'WARN');
+        turbineVents = maxReasonableTurbine;
+      }
+
+      // Estimate Rime Flow if not found
+      if (rimeFlow === 0) {
+        rimeFlow = Math.round(sqft * 0.75 * 100) / 100;
+        logMessage(`Rime flow not found in response, estimated as ${rimeFlow}`, 'INFO');
+      }
+
+      return {
+        success: true,
+        data: {
+          ridgeVents: ridgeVents,
+          turbineVents: turbineVents,
+          rimeFlow: rimeFlow,
+          sqft: sqft,
+          source: 'lomanco_web_enhanced',
+          extractionMethod: extractionMethod,
+          timestamp: new Date().toISOString()
+        }
+      };
+    }
+
+    logMessage(`No valid vent calculations found. Response preview: ${htmlContent.substring(0, 500)}...`, 'WARN');
+    return { success: false, message: 'No valid vent calculations found in response' };
+
+  } catch (error) {
+    logMessage(`Enhanced response parsing error: ${error.toString()}`, 'ERROR');
+    return { success: false, message: `Failed to parse response: ${error.message}` };
+  }
+}
+
+/**
+ * Enhanced mathematical calculations with climate and roof adjustments
+ */
+function calculateEnhancedMathematical(sqft, options = {}) {
+  try {
+    logMessage(`Calculating vents using enhanced mathematical formulas for ${sqft} sqft`);
+
+    // Enhanced calculation options
+    const roofSlope = parseFloat(options.roofSlope) || 4;
+    const climateZone = options.climateZone || 'mixed';
+    const buildingType = options.buildingType || 'residential';
+    const insulationLevel = options.insulationLevel || 'standard';
+
+    // Base ventilation requirements
+    const requiredVentilationSqFt = sqft / 150; // Enhanced standard
+    const requiredVentilationSqIn = requiredVentilationSqFt * 144; // convert to sq inches
+
+    // Ridge vent calculations with roof slope adjustment
+    const slopeMultiplier = getRoofSlopeMultiplier(roofSlope);
+    const da4NfaPerFoot = 18 * slopeMultiplier; // Adjusted for slope
+    const ridgeVentsLinearFt = Math.ceil(requiredVentilationSqIn / da4NfaPerFoot);
+
+    // Turbine vent calculations with performance adjustments
+    const all14EffectiveArea = getTurbineEffectiveArea(climateZone);
+    const turbineVentsCount = Math.ceil(requiredVentilationSqIn / all14EffectiveArea);
+
+    // Enhanced Rime flow calculation with multiple factors
+    const baseFlowRate = 0.75; // CFM per sq ft
+    const climateMultiplier = getClimateFlowMultiplier(climateZone);
+    const insulationMultiplier = getInsulationMultiplier(insulationLevel);
+    const rimeFlowCfm = Math.round(sqft * baseFlowRate * climateMultiplier * insulationMultiplier * 100) / 100;
+
+    const calculations = {
+      ridgeVents: ridgeVentsLinearFt,
+      turbineVents: turbineVentsCount,
+      rimeFlow: rimeFlowCfm,
+      sqft: sqft,
+      source: 'mathematical_formula_enhanced',
+      calculationDetails: {
+        roofSlope: roofSlope,
+        climateZone: climateZone,
+        slopeMultiplier: slopeMultiplier,
+        requiredVentilationSqFt: requiredVentilationSqFt,
+        requiredVentilationSqIn: requiredVentilationSqIn
+      }
+    };
+
+    logMessage(`Enhanced mathematical calculation complete: ${JSON.stringify(calculations)}`);
+
+    return createResponse({
+      ventCalculations: calculations,
+      calculationMethod: 'mathematical_enhanced',
+      timestamp: new Date().toISOString()
+    }, true, 'Enhanced mathematical calculation completed successfully');
+
+  } catch (error) {
+    logMessage(`Enhanced mathematical calculation error: ${error.toString()}`, 'ERROR');
+    return { success: false, message: `Enhanced mathematical calculation failed: ${error.message}` };
+  }
+}
+
+// Helper functions for enhanced calculations
+function getRoofSlopeMultiplier(roofSlope) {
+  if (roofSlope >= 12) return 1.2;      // Steep roof - better natural ventilation
+  if (roofSlope >= 8) return 1.1;       // High slope
+  if (roofSlope >= 6) return 1.0;       // Standard slope
+  if (roofSlope >= 4) return 0.9;       // Low slope - reduced effectiveness
+  return 0.8;                           // Very low slope
+}
+
+function getTurbineEffectiveArea(climateZone) {
+  const baseArea = 140; // sq inches
+  const adjustments = {
+    'hot_humid': baseArea * 0.9,    // Reduced effectiveness in high humidity
+    'hot_dry': baseArea * 1.1,      // Better performance in dry conditions
+    'mixed': baseArea,              // Standard
+    'cold': baseArea * 0.8,         // Reduced effectiveness in cold
+    'very_cold': baseArea * 0.7     // Minimal effectiveness
+  };
+  return adjustments[climateZone] || baseArea;
+}
+
+function getClimateFlowMultiplier(climateZone) {
+  const multipliers = {
+    'hot_humid': 1.3,       // Higher flow needed
+    'hot_dry': 1.2,         // Moderate increase
+    'mixed': 1.0,           // Standard
+    'cold': 0.8,            // Reduced flow
+    'very_cold': 0.6        // Minimal flow
+  };
+  return multipliers[climateZone] || 1.0;
+}
+
+function getInsulationMultiplier(insulationLevel) {
+  const multipliers = {
+    'minimal': 1.4,         // Poor insulation needs more ventilation
+    'standard': 1.0,        // Standard
+    'enhanced': 0.8,        // Good insulation needs less
+    'superior': 0.6         // Excellent insulation
+  };
+  return multipliers[insulationLevel] || 1.0;
 }
 
 // ============================================================================
