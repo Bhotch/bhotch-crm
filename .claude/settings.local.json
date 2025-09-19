@@ -21,7 +21,10 @@
       "WebFetch(domain:ventselector.lomanco.com)",
       "Read(//c/Users/PC_User/Pictures/Screenshots/**)",
       "Bash(dir)",
-      "Bash(claude doctor)"
+      "Bash(claude doctor)",
+      "Bash(npx eslint:*)",
+      "Bash(npx react-scripts build:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
