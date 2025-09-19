@@ -24,7 +24,8 @@
       "Bash(claude doctor)",
       "Bash(npx eslint:*)",
       "Bash(npx react-scripts build:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
