@@ -26,7 +26,9 @@
       "Bash(npx react-scripts build:*)",
       "Bash(git reset:*)",
       "Bash(git fetch:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(del nul)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
