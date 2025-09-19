@@ -398,6 +398,7 @@ function CrmApplication({ onLogout }) {
         <JobCountFormModal
           onSubmit={handleAddJobCountSubmit}
           onCancel={() => setShowAddJobCountForm(false)}
+          leads={leads}
         />
       )}
       {editingJobCount && (
@@ -406,6 +407,7 @@ function CrmApplication({ onLogout }) {
           onSubmit={handleUpdateJobCountSubmit}
           onCancel={() => setEditingJobCount(null)}
           isEdit={true}
+          leads={leads}
         />
       )}
       {selectedDetailJobCount && (

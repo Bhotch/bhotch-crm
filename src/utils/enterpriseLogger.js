@@ -62,9 +62,9 @@ class EnterpriseLogger {
       cookieEnabled: navigator.cookieEnabled,
       onLine: navigator.onLine,
       screen: {
-        width: screen.width,
-        height: screen.height,
-        colorDepth: screen.colorDepth
+        width: window.screen.width,
+        height: window.screen.height,
+        colorDepth: window.screen.colorDepth
       },
       viewport: {
         width: window.innerWidth,

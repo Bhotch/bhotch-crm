@@ -21,10 +21,20 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
         return phoneString;
     }, []);
 
-    const formatCurrency = useCallback((amount) => {
-        const amountString = String(amount || '');
-        if (!amountString || amountString === '-' || amountString === '0') return 'N/A';
-        return amountString.includes('$') ? amountString : `$${amountString}`;
+
+    const calculateDaysOpen = useCallback((lead) => {
+        const startDate = lead.createdDate || lead.date || lead.startDate;
+        if (!startDate) return 'N/A';
+
+        try {
+            const start = new Date(startDate);
+            const today = new Date();
+            const diffTime = Math.abs(today - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        } catch (error) {
+            return 'N/A';
+        }
     }, []);
 
     const filteredLeads = useMemo(() => {
@@ -68,9 +78,9 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disposition</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Open</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -79,9 +89,9 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                             <tr key={lead.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => onSelectLead(lead)}>
                                 <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{lead.customerName || 'N/A'}</div></td>
                                 <td className="px-6 py-4 whitespace-nowrap"><a href={`tel:${lead.phoneNumber}`} onClick={(e) => e.stopPropagation()} className="hover:text-blue-600 text-sm text-gray-900">{formatPhone(lead.phoneNumber)}</a></td>
-                                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{formatCurrency(lead.dabellaQuote)}</div></td>
-                                <td className="px-6 py-4 whitespace-nowrap">{lead.leadSource}</td>
+                                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-900">{lead.leadSource || 'N/A'}</div></td>
                                 <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(lead.disposition)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{calculateDaysOpen(lead)}</div></td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex items-center space-x-2">
                                         <button onClick={(e) => { e.stopPropagation(); onSelectLead(lead); }} className="text-blue-600 hover:text-blue-900 p-1 rounded" title="View Details"><Eye className="w-4 h-4" /></button>

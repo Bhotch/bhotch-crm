@@ -38,13 +38,6 @@ const NumberInput = (props) => (
     />
 );
 
-const DateInput = (props) => (
-    <input
-        {...props}
-        type="date"
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-    />
-);
 
 const SelectInput = ({ children, ...props }) => (
     <select
@@ -74,12 +67,6 @@ const initialFormData = {
 
     // Job Information
     date: new Date().toISOString().split('T')[0],
-    leadSource: 'Door Knock',
-    quality: 'Cold',
-    disposition: 'New',
-    roofAge: '',
-    roofType: 'Asphalt Shingle',
-    dabellaQuote: '',
     notes: '',
 
     // Primary Measurements
@@ -98,18 +85,8 @@ const initialFormData = {
     valleyMetal: '',
 
     // Pipes
-    pipes1Half: '',
-    pipes2: '',
-    pipes3: '',
-    pipes4: '',
-
-    // Roof Features
-    gables: '',
-    turtleBacks: '',
-    satellite: '',
-    chimney: '',
-    solar: '',
-    swampCooler: '',
+    pipes1Half2: '',
+    pipes3To5: '',
 
     // Gutters & Additional
     guttersLf: '',
@@ -118,14 +95,64 @@ const initialFormData = {
     permanentLighting: ''
 };
 
-function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
+function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, leads = [] }) {
     const [formData, setFormData] = useState(() => initialData || initialFormData);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedCustomerId, setSelectedCustomerId] = useState('');
+    const [showNewCustomerFields, setShowNewCustomerFields] = useState(false);
 
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            const newData = { ...prev, [name]: value };
+
+            // Auto-calculate ventilation based on sq ft
+            if (name === 'sqFt' && value) {
+                const sqFt = parseFloat(value);
+                if (!isNaN(sqFt)) {
+                    newData.ridgeVents = Math.ceil(sqFt / 250).toString();
+                    newData.turbine = Math.ceil(sqFt / 1250).toString();
+                    newData.rimeFlow = Math.ceil(sqFt * 0.04).toString();
+                }
+            }
+
+            return newData;
+        });
     }, []);
+
+    const handleCustomerSelect = useCallback((e) => {
+        const customerId = e.target.value;
+        setSelectedCustomerId(customerId);
+
+        if (customerId === 'new') {
+            setShowNewCustomerFields(true);
+            setFormData(prev => ({
+                ...prev,
+                firstName: '',
+                lastName: '',
+                customerName: '',
+                phoneNumber: '',
+                email: '',
+                address: ''
+            }));
+        } else if (customerId) {
+            setShowNewCustomerFields(false);
+            const selectedLead = leads.find(lead => lead.id === customerId);
+            if (selectedLead) {
+                setFormData(prev => ({
+                    ...prev,
+                    firstName: selectedLead.firstName || '',
+                    lastName: selectedLead.lastName || '',
+                    customerName: selectedLead.customerName || '',
+                    phoneNumber: selectedLead.phoneNumber || '',
+                    email: selectedLead.email || '',
+                    address: selectedLead.address || ''
+                }));
+            }
+        } else {
+            setShowNewCustomerFields(false);
+        }
+    }, [leads]);
 
     const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
@@ -174,121 +201,74 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) 
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Customer Information */}
                         <FormSection title="Customer Information">
-                            <FormField label="First Name" required>
-                                <TextInput
-                                    name="firstName"
-                                    value={formData.firstName}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="John"
-                                />
+                            <FormField label="Select Customer" fullWidth required>
+                                <SelectInput value={selectedCustomerId} onChange={handleCustomerSelect}>
+                                    <option value="">Select a customer...</option>
+                                    <option value="new">Add New Customer...</option>
+                                    {leads.map(lead => (
+                                        <option key={lead.id} value={lead.id}>
+                                            {lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Customer'}
+                                        </option>
+                                    ))}
+                                </SelectInput>
                             </FormField>
-                            <FormField label="Last Name">
-                                <TextInput
-                                    name="lastName"
-                                    value={formData.lastName}
-                                    onChange={handleChange}
-                                    placeholder="Doe"
-                                />
-                            </FormField>
-                            <FormField label="Full Name">
-                                <TextInput
-                                    name="customerName"
-                                    value={formData.customerName}
-                                    onChange={handleChange}
-                                    placeholder="John Doe (auto-filled from above)"
-                                />
-                            </FormField>
-                            <FormField label="Phone Number">
-                                <TextInput
-                                    name="phoneNumber"
-                                    value={formData.phoneNumber}
-                                    onChange={handleChange}
-                                    placeholder="(555) 123-4567"
-                                />
-                            </FormField>
-                            <FormField label="Email">
-                                <TextInput
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="john@example.com"
-                                />
-                            </FormField>
-                            <FormField label="Address" fullWidth>
-                                <TextInput
-                                    name="address"
-                                    value={formData.address}
-                                    onChange={handleChange}
-                                    placeholder="123 Main St, City, State 12345"
-                                />
-                            </FormField>
+
+                            {(showNewCustomerFields || isEdit) && (
+                                <>
+                                    <FormField label="First Name" required>
+                                        <TextInput
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleChange}
+                                            required
+                                            placeholder="John"
+                                        />
+                                    </FormField>
+                                    <FormField label="Last Name">
+                                        <TextInput
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleChange}
+                                            placeholder="Doe"
+                                        />
+                                    </FormField>
+                                    <FormField label="Full Name">
+                                        <TextInput
+                                            name="customerName"
+                                            value={formData.customerName}
+                                            onChange={handleChange}
+                                            placeholder="John Doe"
+                                        />
+                                    </FormField>
+                                    <FormField label="Phone Number">
+                                        <TextInput
+                                            name="phoneNumber"
+                                            value={formData.phoneNumber}
+                                            onChange={handleChange}
+                                            placeholder="(555) 123-4567"
+                                        />
+                                    </FormField>
+                                    <FormField label="Email">
+                                        <TextInput
+                                            name="email"
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={handleChange}
+                                            placeholder="john@example.com"
+                                        />
+                                    </FormField>
+                                    <FormField label="Address" fullWidth>
+                                        <TextInput
+                                            name="address"
+                                            value={formData.address}
+                                            onChange={handleChange}
+                                            placeholder="123 Main St, City, State 12345"
+                                        />
+                                    </FormField>
+                                </>
+                            )}
                         </FormSection>
 
-                        {/* Job Information */}
-                        <FormSection title="Job Information">
-                            <FormField label="Date" required>
-                                <DateInput
-                                    name="date"
-                                    value={formData.date}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </FormField>
-                            <FormField label="Lead Source">
-                                <SelectInput name="leadSource" value={formData.leadSource} onChange={handleChange}>
-                                    <option value="Door Knock">Door Knock</option>
-                                    <option value="Rime">Rime</option>
-                                    <option value="Adverta">Adverta</option>
-                                    <option value="Referral">Referral</option>
-                                    <option value="DaBella">DaBella</option>
-                                </SelectInput>
-                            </FormField>
-                            <FormField label="Quality">
-                                <SelectInput name="quality" value={formData.quality} onChange={handleChange}>
-                                    <option value="Hot">Hot</option>
-                                    <option value="Warm">Warm</option>
-                                    <option value="Cold">Cold</option>
-                                </SelectInput>
-                            </FormField>
-                            <FormField label="Disposition">
-                                <SelectInput name="disposition" value={formData.disposition} onChange={handleChange}>
-                                    <option value="New">New</option>
-                                    <option value="Scheduled">Scheduled</option>
-                                    <option value="Insurance">Insurance</option>
-                                    <option value="Quoted">Quoted</option>
-                                    <option value="Follow Up">Follow Up</option>
-                                    <option value="Closed Sold">Closed Sold</option>
-                                    <option value="Closed Lost">Closed Lost</option>
-                                </SelectInput>
-                            </FormField>
-                            <FormField label="Roof Age">
-                                <TextInput
-                                    name="roofAge"
-                                    value={formData.roofAge}
-                                    onChange={handleChange}
-                                    placeholder="10 years"
-                                />
-                            </FormField>
-                            <FormField label="Roof Type">
-                                <SelectInput name="roofType" value={formData.roofType} onChange={handleChange}>
-                                    <option value="Asphalt Shingle">Asphalt Shingle</option>
-                                    <option value="Metal">Metal</option>
-                                    <option value="Tile">Tile</option>
-                                    <option value="TPO">TPO</option>
-                                    <option value="Wood">Wood</option>
-                                </SelectInput>
-                            </FormField>
-                            <FormField label="Quote Amount">
-                                <TextInput
-                                    name="dabellaQuote"
-                                    value={formData.dabellaQuote}
-                                    onChange={handleChange}
-                                    placeholder="15000"
-                                />
-                            </FormField>
-                        </FormSection>
 
                         {/* Primary Measurements */}
                         <FormSection title="Primary Measurements">
@@ -380,91 +360,24 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) 
 
                         {/* Pipes */}
                         <FormSection title="Pipes">
-                            <FormField label="Pipes [1 1/2&quot;]">
+                            <FormField label="Pipes 1 1/2&quot; - 2&quot;">
                                 <NumberInput
-                                    name="pipes1Half"
-                                    value={formData.pipes1Half}
+                                    name="pipes1Half2"
+                                    value={formData.pipes1Half2 || formData.pipes1Half}
                                     onChange={handleChange}
-                                    placeholder="3"
+                                    placeholder="5"
                                 />
                             </FormField>
-                            <FormField label="Pipes [2&quot;]">
+                            <FormField label="Pipes 3&quot; - 5&quot;">
                                 <NumberInput
-                                    name="pipes2"
-                                    value={formData.pipes2}
+                                    name="pipes3To5"
+                                    value={formData.pipes3To5 || formData.pipes3}
                                     onChange={handleChange}
                                     placeholder="2"
-                                />
-                            </FormField>
-                            <FormField label="Pipes [3&quot;]">
-                                <NumberInput
-                                    name="pipes3"
-                                    value={formData.pipes3}
-                                    onChange={handleChange}
-                                    placeholder="1"
-                                />
-                            </FormField>
-                            <FormField label="Pipes [4&quot;]">
-                                <NumberInput
-                                    name="pipes4"
-                                    value={formData.pipes4}
-                                    onChange={handleChange}
-                                    placeholder="1"
                                 />
                             </FormField>
                         </FormSection>
 
-                        {/* Roof Features */}
-                        <FormSection title="Roof Features">
-                            <FormField label="Gables">
-                                <NumberInput
-                                    name="gables"
-                                    value={formData.gables}
-                                    onChange={handleChange}
-                                    placeholder="4"
-                                />
-                            </FormField>
-                            <FormField label="Turtle Backs">
-                                <NumberInput
-                                    name="turtleBacks"
-                                    value={formData.turtleBacks}
-                                    onChange={handleChange}
-                                    placeholder="2"
-                                />
-                            </FormField>
-                            <FormField label="Satellite">
-                                <NumberInput
-                                    name="satellite"
-                                    value={formData.satellite}
-                                    onChange={handleChange}
-                                    placeholder="1"
-                                />
-                            </FormField>
-                            <FormField label="Chimney">
-                                <NumberInput
-                                    name="chimney"
-                                    value={formData.chimney}
-                                    onChange={handleChange}
-                                    placeholder="1"
-                                />
-                            </FormField>
-                            <FormField label="Solar">
-                                <NumberInput
-                                    name="solar"
-                                    value={formData.solar}
-                                    onChange={handleChange}
-                                    placeholder="20"
-                                />
-                            </FormField>
-                            <FormField label="Swamp Cooler">
-                                <NumberInput
-                                    name="swampCooler"
-                                    value={formData.swampCooler}
-                                    onChange={handleChange}
-                                    placeholder="1"
-                                />
-                            </FormField>
-                        </FormSection>
 
                         {/* Gutters & Additional */}
                         <FormSection title="Gutters & Additional">

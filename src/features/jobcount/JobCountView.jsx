@@ -23,15 +23,6 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         }
     }, []);
 
-    const formatPhone = useCallback((phone) => {
-        if (!phone) return '-';
-        const cleaned = phone.toString().replace(/\D/g, '');
-        if (cleaned.length === 10) {
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-        }
-        return phone;
-    }, []);
-
     const filteredJobCounts = useMemo(() => {
         return jobCounts.filter(job => {
             const matchesSearch =
@@ -187,13 +178,15 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SQ FT</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sq Ft</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ridge LF</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valley LF</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Eaves LF</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ridge Vent</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Turbine</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rime Flow</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -205,25 +198,9 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                                     onClick={() => onSelectJobCount(job)}
                                 >
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex flex-col">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
-                                            </div>
-                                            {job.address && (
-                                                <div className="text-sm text-gray-500 truncate max-w-xs">
-                                                    {job.address}
-                                                </div>
-                                            )}
+                                        <div className="text-sm font-medium text-gray-900">
+                                            {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <a
-                                            href={`tel:${job.phoneNumber}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="text-sm text-blue-600 hover:text-blue-800"
-                                        >
-                                            {formatPhone(job.phoneNumber)}
-                                        </a>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-gray-900">{formatDate(job.date)}</div>
@@ -238,9 +215,16 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                                         <div className="text-sm font-medium text-gray-900">{formatNumber(job.valleyLf)}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">
-                                            {job.dabellaQuote ? `$${formatNumber(job.dabellaQuote)}` : '-'}
-                                        </div>
+                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.eavesLf)}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.ridgeVents)}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.turbine)}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.rimeFlow)}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center space-x-2">
