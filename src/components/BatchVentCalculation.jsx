@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Calculator, Play, Pause, CheckCircle, AlertCircle, Loader2, BarChart3 } from 'lucide-react';
+import { Calculator, Play, Loader2, BarChart3 } from 'lucide-react';
 import { googleSheetsService } from '../api/googleSheetsService';
 
 function BatchVentCalculation({ jobCounts, onBatchComplete, addNotification }) {

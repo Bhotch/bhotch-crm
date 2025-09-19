@@ -403,6 +403,9 @@ class EnterpriseMonitoringSystem {
               metadata: alert.data
             });
             break;
+          default:
+            console.warn(`Unknown alert channel: ${channel}`);
+            break;
 
           case 'console':
             console.warn('🚨 MONITORING ALERT:', alert);

@@ -220,7 +220,7 @@ function GoogleMapComponent({ leads, onLeadClick, showDemoData, mapType, showTra
         console.warn('Failed to geocode customer address:', selectedCustomer.address, result.error);
       }
     });
-  }, [selectedCustomer, map, geocodeSingleAddress, createMarkerIcon, getMarkerColor, onCustomerLocated]);
+  }, [selectedCustomer, map, geocodeSingleAddress, createMarkerIcon, getMarkerColor, onCustomerLocated, onMapTypeChange]);
 
 
   if (loading) {

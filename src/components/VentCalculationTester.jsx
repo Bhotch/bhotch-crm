@@ -16,7 +16,7 @@ function VentCalculationTestInterface({ addNotification }) {
         setShowResults(true);
 
         try {
-            const result = await tester.runFullTestSuite(
+            await tester.runFullTestSuite(
                 // Progress callback
                 (progressData) => {
                     setProgress(progressData);

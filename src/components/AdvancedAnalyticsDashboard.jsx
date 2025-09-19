@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { BarChart3, TrendingUp, PieChart, Download, Calendar, Filter, Target, Zap, DollarSign, Clock, Users, AlertTriangle } from 'lucide-react';
-import { googleSheetsService } from '../api/googleSheetsService';
+import { BarChart3, TrendingUp, Download, Target, Zap, DollarSign, Clock, Users, AlertTriangle } from 'lucide-react';
 
 function AdvancedAnalyticsDashboard({ jobCounts, leads, addNotification }) {
     const [analytics, setAnalytics] = useState(null);
     const [timeRange, setTimeRange] = useState('30'); // days
-    const [selectedMetrics, setSelectedMetrics] = useState(['revenue', 'automation', 'performance']);
     const [isLoading, setIsLoading] = useState(false);
-    const [reportData, setReportData] = useState(null);
 
     // Calculate comprehensive analytics
     const calculateAnalytics = useCallback(() => {
