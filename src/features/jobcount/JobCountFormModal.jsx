@@ -101,30 +101,36 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
     const [showNewCustomerFields, setShowNewCustomerFields] = useState(false);
 
+    const calculateVentilationValues = useCallback((sqFt) => {
+        const sqFtNumber = parseFloat(sqFt);
+        if (isNaN(sqFtNumber) || sqFtNumber <= 0) return {};
+
+        return {
+            ridgeVents: Math.ceil(sqFtNumber / 250).toString(),
+            turbine: Math.ceil(sqFtNumber / 1250).toString(),
+            rimeFlow: Math.ceil(sqFtNumber * 0.04).toString()
+        };
+    }, []);
+
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
 
-            // Auto-calculate ventilation based on sq ft
             if (name === 'sqFt' && value) {
-                const sqFt = parseFloat(value);
-                if (!isNaN(sqFt)) {
-                    newData.ridgeVents = Math.ceil(sqFt / 250).toString();
-                    newData.turbine = Math.ceil(sqFt / 1250).toString();
-                    newData.rimeFlow = Math.ceil(sqFt * 0.04).toString();
-                }
+                const ventilationValues = calculateVentilationValues(value);
+                Object.assign(newData, ventilationValues);
             }
 
             return newData;
         });
-    }, []);
+    }, [calculateVentilationValues]);
 
     const handleCustomerSelect = useCallback((e) => {
         const customerId = e.target.value;
         setSelectedCustomerId(customerId);
 
-        if (customerId === 'new') {
+        if (!customerId) {
             setShowNewCustomerFields(true);
             setFormData(prev => ({
                 ...prev,
@@ -135,7 +141,7 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
                 email: '',
                 address: ''
             }));
-        } else if (customerId) {
+        } else {
             setShowNewCustomerFields(false);
             const selectedLead = leads.find(lead => lead.id === customerId);
             if (selectedLead) {
@@ -149,8 +155,6 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
                     address: selectedLead.address || ''
                 }));
             }
-        } else {
-            setShowNewCustomerFields(false);
         }
     }, [leads]);
 
@@ -203,14 +207,24 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
                         <FormSection title="Customer Information">
                             <FormField label="Select Customer" fullWidth required>
                                 <SelectInput value={selectedCustomerId} onChange={handleCustomerSelect}>
-                                    <option value="">Select a customer...</option>
-                                    <option value="new">Add New Customer...</option>
+                                    <option value="">Add New Customer...</option>
                                     {leads.map(lead => (
                                         <option key={lead.id} value={lead.id}>
                                             {lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Customer'}
                                         </option>
                                     ))}
                                 </SelectInput>
+                            </FormField>
+
+                            <FormField label="Date" required>
+                                <input
+                                    type="date"
+                                    name="date"
+                                    value={formData.date}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                />
                             </FormField>
 
                             {(showNewCustomerFields || isEdit) && (
