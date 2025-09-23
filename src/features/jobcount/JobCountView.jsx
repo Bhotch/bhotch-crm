@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, BarChart3 } from 'lucide-react';
-import BatchVentCalculation from '../../components/BatchVentCalculation';
 import { useNotifications } from '../../hooks/useNotifications';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
     const { addNotification } = useNotifications();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDate, setFilterDate] = useState('');
-    const [showBatchCalculation, setShowBatchCalculation] = useState(false);
 
     const formatNumber = useCallback((value) => {
         if (!value || value === '0' || value === '-') return '-';
@@ -57,11 +55,6 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         }, { totalJobs: 0, totalSqFt: 0, totalRidgeLf: 0, totalValleyLf: 0 });
     }, [filteredJobCounts]);
 
-    const handleBatchComplete = useCallback((results) => {
-        onRefreshJobCounts();
-        setShowBatchCalculation(false);
-    }, [onRefreshJobCounts]);
-
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -71,17 +64,6 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     <p className="text-gray-600 mt-1">Track roofing job counts, measurements, and customer information</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                    <button
-                        onClick={() => setShowBatchCalculation(!showBatchCalculation)}
-                        className={`inline-flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                            showBatchCalculation
-                                ? 'border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        Batch Calculate
-                    </button>
                     <button
                         onClick={onRefreshJobCounts}
                         className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
@@ -123,15 +105,6 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     </div>
                 </div>
             </div>
-
-            {/* Batch Calculation Component */}
-            {showBatchCalculation && (
-                <BatchVentCalculation
-                    jobCounts={filteredJobCounts}
-                    onBatchComplete={handleBatchComplete}
-                    addNotification={addNotification}
-                />
-            )}
 
             {/* Summary Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

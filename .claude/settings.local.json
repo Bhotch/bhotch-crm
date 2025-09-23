@@ -20,7 +20,9 @@
       "WebFetch(domain:docs.google.com)",
       "WebFetch(domain:ventselector.lomanco.com)",
       "Read(//c/Users/PC_User/Pictures/Screenshots/**)",
-      "Bash(dir)"
+      "Bash(dir)",
+      "Bash(rm:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

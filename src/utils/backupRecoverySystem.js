@@ -267,7 +267,7 @@ class BackupRecoverySystem {
       logger.info('Starting restore operation', { backupId, dryRun });
 
       if (!skipConfirmation && !dryRun) {
-        const confirmed = confirm(
+        const confirmed = window.confirm(
           `Are you sure you want to restore from backup "${backupId}"? This will overwrite current data.`
         );
         if (!confirmed) {

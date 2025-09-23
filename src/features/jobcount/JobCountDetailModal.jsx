@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 import { X, Edit2, Trash2, Calculator, User, FileText } from 'lucide-react';
-import VentCalculationWidget from '../../components/VentCalculationWidget';
 import { useNotifications } from '../../hooks/useNotifications';
 import { googleSheetsService } from '../../api/googleSheetsService';
 
@@ -111,15 +110,6 @@ function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete, onJobCountUp
 
                 {/* Content */}
                 <div className="p-6 overflow-y-auto flex-1">
-                    {/* Lomanco Vent Calculator Widget */}
-                    <div className="mb-8">
-                        <VentCalculationWidget
-                            jobCount={jobCount}
-                            onCalculationComplete={handleCalculationComplete}
-                            addNotification={addNotification}
-                        />
-                    </div>
-
                     {/* Customer Information */}
                     <DetailSection title="Customer Information" icon={User}>
                         <DetailField label="First Name" value={jobCount.firstName} />

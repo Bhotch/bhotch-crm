@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Activity, TrendingUp, AlertTriangle, CheckCircle, Clock, Zap, Server, Database, Globe } from 'lucide-react';
 import { googleSheetsService } from '../api/googleSheetsService';
-import VentCalculationTestInterface from './VentCalculationTester';
 
 function SystemMonitoringDashboard({ addNotification }) {
     const [systemStatus, setSystemStatus] = useState({
@@ -420,8 +419,6 @@ function SystemMonitoringDashboard({ addNotification }) {
                 </div>
             </div>
 
-            {/* Testing Framework */}
-            <VentCalculationTestInterface addNotification={addNotification} />
         </div>
     );
 }

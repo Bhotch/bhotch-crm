@@ -22,8 +22,6 @@ import ConfigErrorDisplay from './components/ConfigErrorDisplay';
 
 // Import Ultimate Enterprise Components
 import ErrorBoundary from './components/ErrorBoundary';
-import VentCalculationWidget from './components/VentCalculationWidget';
-import BatchVentCalculation from './components/BatchVentCalculation';
 import SystemMonitoringDashboard from './components/SystemMonitoringDashboard';
 import AdvancedAnalyticsDashboard from './components/AdvancedAnalyticsDashboard';
 
@@ -315,10 +313,6 @@ function CrmApplication({ onLogout }) {
           <>
             <ConnectionStatus />
             <DashboardView stats={dashboardStats} leads={leads} />
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <VentCalculationWidget />
-              <BatchVentCalculation jobCounts={jobCounts} onJobCountUpdate={refreshJobCounts} />
-            </div>
           </>
         )}
         {currentView === 'leads' && (
