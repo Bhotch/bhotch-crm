@@ -1,6 +1,6 @@
 {
   "name": "bhotch-crm",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "engines": {
     "node": "22.x"
@@ -31,6 +31,7 @@
     "react-redux": "^9.2.0",
     "react-scripts": "5.0.1",
     "react-spring": "^10.0.3",
+    "recharts": "^2.15.4",
     "redux-persist": "^6.0.0",
     "yup": "^1.7.0"
   },
@@ -39,12 +40,19 @@
     "prebuild": "chmod +x ./node_modules/.bin/react-scripts",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "analyze": "npm run build && npx serve -s build",
+    "deploy": "npm run build && npm run deploy:vercel"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
+    ]
+  },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-error-boundary|recharts|lucide-react)/)"
     ]
   },
   "browserslist": {
