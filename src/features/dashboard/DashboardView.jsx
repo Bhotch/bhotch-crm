@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StatCard } from '../../components/StatCard';
-import { DollarSign, Users, Target, TrendingUp } from 'lucide-react';
+import { DollarSign, Users, Target, TrendingUp, Zap } from 'lucide-react';
+import RevolutionaryDashboard from './RevolutionaryDashboard';
 
-function DashboardView({ stats, leads }) {
+function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
+  const [showRevolutionary, setShowRevolutionary] = useState(false);
   const recentLeads = leads.slice(0, 5);
 
   const formatCurrency = (value) => {
@@ -12,8 +14,25 @@ function DashboardView({ stats, leads }) {
     }).format(value);
   };
 
+  // Toggle between classic and revolutionary view
+  if (showRevolutionary) {
+    return <RevolutionaryDashboard leads={leads} jobCounts={jobCounts} onNavigateToTab={onNavigateToTab} />;
+  }
+
   return (
     <div className="space-y-6">
+      {/* Dashboard Toggle */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+        <button
+          onClick={() => setShowRevolutionary(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-600 text-white rounded-lg hover:from-purple-600 hover:to-blue-700 transition-all duration-200 shadow-lg transform hover:scale-105"
+        >
+          <Zap className="h-4 w-4" />
+          Revolutionary View
+        </button>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard

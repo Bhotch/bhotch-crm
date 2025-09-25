@@ -312,7 +312,12 @@ function CrmApplication({ onLogout }) {
         {currentView === 'dashboard' && (
           <>
             <ConnectionStatus />
-            <DashboardView stats={dashboardStats} leads={leads} />
+            <DashboardView
+              stats={dashboardStats}
+              leads={leads}
+              jobCounts={jobCounts}
+              onNavigateToTab={handleNavigateToTab}
+            />
           </>
         )}
         {currentView === 'leads' && (
