@@ -497,7 +497,7 @@ function convertToCamelCase(headerName) {
     'Pipes [1 1/2"]': 'pipes1Half',
     'Pipes [2"]': 'pipes2',
     'Pipes [3"]': 'pipes3',
-    'Pipes [4\']': 'pipes4',
+    'Pipes [4"]': 'pipes4Inch',
     'Pipes [4"]': 'pipes4',
     'Gables': 'gables',
     'Turtle Backs': 'turtleBacks',
