@@ -1,10 +1,7 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { X, Edit2, Trash2, Calculator, User, FileText } from 'lucide-react';
-import { useNotifications } from '../../hooks/useNotifications';
-import { googleSheetsService } from '../../api/googleSheetsService';
 
-function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete, onJobCountUpdate }) {
-    const { addNotification } = useNotifications();
+function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete }) {
     const formatNumber = (value) => {
         if (!value || value === '0' || value === '-') return '-';
         return Number(value).toLocaleString();
@@ -58,21 +55,8 @@ function JobCountDetailModal({ jobCount, onClose, onEdit, onDelete, onJobCountUp
 
     const customerName = jobCount.customerName || `${jobCount.firstName || ''} ${jobCount.lastName || ''}`.trim() || 'Unknown Customer';
 
-    const handleCalculationComplete = useCallback(async (updatedJobCount) => {
-        try {
-            const response = await googleSheetsService.updateJobCount(updatedJobCount);
-            if (response.success) {
-                if (onJobCountUpdate) {
-                    onJobCountUpdate(updatedJobCount);
-                }
-                addNotification('Job count updated with vent calculations', 'success');
-            } else {
-                throw new Error(response.message);
-            }
-        } catch (error) {
-            addNotification(`Failed to update job count: ${error.message}`, 'error');
-        }
-    }, [onJobCountUpdate, addNotification]);
+    // Note: handleCalculationComplete function removed as it's currently unused
+    // Can be re-added when vent calculation feature is implemented
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">

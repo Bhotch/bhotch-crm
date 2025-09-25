@@ -338,7 +338,7 @@ class BackupRecoverySystem {
   }
 
   async performRestore(backupData, selectiveRestore) {
-    const { metadata, localStorage: lsData, sessionStorage: ssData, indexedDB, cache } = backupData;
+    const { localStorage: lsData, sessionStorage: ssData, indexedDB, cache } = backupData;
 
     // Restore localStorage
     if ((!selectiveRestore || selectiveRestore.includes('localStorage')) && lsData) {

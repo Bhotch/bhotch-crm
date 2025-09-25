@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, BarChart3 } from 'lucide-react';
-import { useNotifications } from '../../hooks/useNotifications';
+import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp } from 'lucide-react';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
-    const { addNotification } = useNotifications();
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDate, setFilterDate] = useState('');
 

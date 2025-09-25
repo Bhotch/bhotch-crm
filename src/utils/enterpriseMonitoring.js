@@ -415,6 +415,10 @@ class EnterpriseMonitoringSystem {
           case 'webhook':
             await this.sendWebhookAlert(alert);
             break;
+
+          default:
+            console.warn('Unknown alert channel:', channel);
+            break;
         }
       }
     } catch (error) {

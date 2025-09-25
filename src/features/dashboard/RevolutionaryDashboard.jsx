@@ -1,21 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Calendar, Search, Plus, Edit, Trash2, Calculator, FileText, Filter, X, Save,
-  MapPin, Phone, Mail, MessageSquare, Clock, BarChart3, TrendingUp, Users,
-  Target, DollarSign, CheckCircle, AlertCircle, Home, Map, Zap, Cloud,
-  Sun, CloudRain, Wind, Thermometer, Eye, Bell, Settings, Download,
-  Star, Award, Briefcase, Activity, Globe, Smartphone, Wifi,
-  Shield, Headphones, Coffee, Lightbulb, Rocket, Crown, Diamond
+  Plus, Calculator, MapPin, BarChart3, TrendingUp, Users,
+  Target, DollarSign, Home, Sun, CloudRain, Wind, Eye, Download,
+  Award, Lightbulb, Rocket, Crown
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-         BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+         Bar, PieChart, Pie, Cell } from 'recharts';
 
 const RevolutionaryDashboard = ({ leads = [], jobCounts = [], onNavigateToTab }) => {
   const [darkMode, setDarkMode] = useState(false);
   const [selectedTimeRange, setSelectedTimeRange] = useState('30');
-  const [showWeather, setShowWeather] = useState(true);
+  const [showWeather] = useState(true);
   const [weatherData, setWeatherData] = useState(null);
-  const [notifications, setNotifications] = useState([]);
 
   // Mock weather data for demo
   useEffect(() => {

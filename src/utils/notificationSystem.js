@@ -248,7 +248,7 @@ class NotificationSystem {
      * Smart notification filtering
      */
     applyAlertRules(notification) {
-        for (const [ruleId, rule] of this.alertRules) {
+        for (const [, rule] of this.alertRules) {
             if (this.matchesRule(notification, rule)) {
                 // Apply rule modifications
                 if (rule.escalate) {

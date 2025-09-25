@@ -22,7 +22,8 @@
       "Read(//c/Users/PC_User/Pictures/Screenshots/**)",
       "Bash(dir)",
       "Bash(rm:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm audit:*)"
     ],
     "deny": [],
     "ask": []

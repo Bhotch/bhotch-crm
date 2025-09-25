@@ -34,7 +34,7 @@ class SecurityManager {
 
             case 'name':
                 // Sanitize customer names
-                return input.replace(/[<>\"'&]/g, '').trim().slice(0, 100);
+                return input.replace(/[<>"'&]/g, '').trim().slice(0, 100);
 
             case 'phone':
                 // Validate and format phone numbers
@@ -54,11 +54,11 @@ class SecurityManager {
 
             case 'address':
                 // Address sanitization
-                return input.replace(/[<>\"']/g, '').trim().slice(0, 500);
+                return input.replace(/[<>"']/g, '').trim().slice(0, 500);
 
             default:
                 // General text sanitization
-                return input.replace(/[<>\"'&]/g, '').trim();
+                return input.replace(/[<>"'&]/g, '').trim();
         }
     }
 
@@ -280,7 +280,7 @@ class SecurityManager {
             // Path traversal patterns
             /(\.\.\/|\.\.\\)/g,
             // LDAP injection patterns
-            /(\*|\(|\)|\||\&)/g
+            /(\*|\(|\)|\||&)/g
         ];
 
         for (const pattern of vulnerabilityPatterns) {
