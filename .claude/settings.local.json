@@ -23,7 +23,8 @@
       "Bash(dir)",
       "Bash(rm:*)",
       "Bash(git checkout:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

@@ -39,7 +39,7 @@ const ErrorFallback = ({ error, resetErrorBoundary, componentStack }) => {
             </div>
             <div>
               <h1 className="text-xl font-bold">System Error Detected</h1>
-              <p className="text-red-100">The Ultimate CRM encountered an unexpected error</p>
+              <p className="text-red-100">The CRM encountered an unexpected error</p>
             </div>
           </div>
         </div>
@@ -142,7 +142,7 @@ const ErrorFallback = ({ error, resetErrorBoundary, componentStack }) => {
         {/* Footer */}
         <div className="bg-gray-50 px-6 py-3 rounded-b-xl border-t text-center">
           <p className="text-xs text-gray-500">
-            Ultimate Lomanco CRM Automation System - Error ID: {Date.now().toString(36)}
+            Bhotch CRM System - Error ID: {Date.now().toString(36)}
           </p>
         </div>
       </div>

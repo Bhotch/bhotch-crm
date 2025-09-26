@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp } from 'lucide-react';
+import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDate, setFilterDate] = useState('');
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
     const formatNumber = useCallback((value) => {
         if (!value || value === '0' || value === '-') return '-';
@@ -28,8 +29,36 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         return phone;
     }, []);
 
-    const filteredJobCounts = useMemo(() => {
-        return jobCounts.filter(job => {
+    const handleSort = useCallback((key) => {
+        setSortConfig(prevConfig => ({
+            key,
+            direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    }, []);
+
+    const getSortValue = useCallback((job, key) => {
+        switch (key) {
+            case 'customer':
+                return job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown';
+            case 'phone':
+                return job.phoneNumber || '';
+            case 'date':
+                return job.date || '';
+            case 'sqFt':
+                return parseFloat(job.sqFt) || 0;
+            case 'ridgeLf':
+                return parseFloat(job.ridgeLf) || 0;
+            case 'valleyLf':
+                return parseFloat(job.valleyLf) || 0;
+            case 'quote':
+                return parseFloat(job.dabellaQuote) || 0;
+            default:
+                return '';
+        }
+    }, []);
+
+    const filteredAndSortedJobCounts = useMemo(() => {
+        let filtered = jobCounts.filter(job => {
             const matchesSearch =
                 job.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 job.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,17 +70,53 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
 
             return matchesSearch && matchesDate;
         });
-    }, [jobCounts, searchTerm, filterDate]);
+
+        if (sortConfig.key) {
+            filtered.sort((a, b) => {
+                const aValue = getSortValue(a, sortConfig.key);
+                const bValue = getSortValue(b, sortConfig.key);
+
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+                    return sortConfig.direction === 'asc' ? comparison : -comparison;
+                } else {
+                    const comparison = aValue - bValue;
+                    return sortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+            });
+        }
+
+        return filtered;
+    }, [jobCounts, searchTerm, filterDate, sortConfig, getSortValue]);
 
     const summaryStats = useMemo(() => {
-        return filteredJobCounts.reduce((stats, job) => {
+        return filteredAndSortedJobCounts.reduce((stats, job) => {
             stats.totalJobs += 1;
             stats.totalSqFt += parseFloat(job.sqFt) || 0;
             stats.totalRidgeLf += parseFloat(job.ridgeLf) || 0;
             stats.totalValleyLf += parseFloat(job.valleyLf) || 0;
             return stats;
         }, { totalJobs: 0, totalSqFt: 0, totalRidgeLf: 0, totalValleyLf: 0 });
-    }, [filteredJobCounts]);
+    }, [filteredAndSortedJobCounts]);
+
+    const SortableHeader = ({ sortKey, children, className = "" }) => (
+        <th
+            className={`px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none ${className}`}
+            onClick={() => handleSort(sortKey)}
+        >
+            <div className="flex items-center justify-between">
+                <span>{children}</span>
+                <div className="flex flex-col ml-2">
+                    <ChevronUp
+                        className={`w-3 h-3 ${sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-gray-300'}`}
+                    />
+                    <ChevronDown
+                        className={`w-3 h-3 -mt-1 ${sortConfig.key === sortKey && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-gray-300'}`}
+                    />
+                </div>
+            </div>
+        </th>
+    );
 
     return (
         <div className="space-y-6">
@@ -153,78 +218,92 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
             </div>
 
             {/* Job Counts Table */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SQ FT</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ridge LF</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valley LF</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quote</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <SortableHeader sortKey="customer">Customer</SortableHeader>
+                                <SortableHeader sortKey="phone">Phone</SortableHeader>
+                                <SortableHeader sortKey="date">Date</SortableHeader>
+                                <SortableHeader sortKey="sqFt">SQ FT</SortableHeader>
+                                <SortableHeader sortKey="ridgeLf">Ridge LF</SortableHeader>
+                                <SortableHeader sortKey="valleyLf">Valley LF</SortableHeader>
+                                <SortableHeader sortKey="quote">Quote</SortableHeader>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredJobCounts.map((job, index) => (
+                        <tbody className="bg-white divide-y divide-gray-100">
+                            {filteredAndSortedJobCounts.map((job, index) => (
                                 <tr
                                     key={job.id || index}
-                                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                    className={`cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:shadow-md transform hover:-translate-y-0.5 ${
+                                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                    }`}
                                     onClick={() => onSelectJobCount(job)}
                                 >
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex flex-col">
-                                            <div className="text-sm font-medium text-gray-900">
+                                    <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="flex flex-col space-y-1">
+                                            <div className="text-sm font-semibold text-gray-900">
                                                 {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
                                             </div>
                                             {job.address && (
-                                                <div className="text-sm text-gray-500 truncate max-w-xs">
+                                                <div className="text-xs text-gray-500 truncate max-w-xs">
                                                     {job.address}
                                                 </div>
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-6 py-5 whitespace-nowrap">
                                         <a
                                             href={`tel:${job.phoneNumber}`}
                                             onClick={(e) => e.stopPropagation()}
-                                            className="text-sm text-blue-600 hover:text-blue-800"
+                                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
                                         >
                                             {formatPhone(job.phoneNumber)}
                                         </a>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-900">{formatDate(job.date)}</div>
+                                    <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">{formatDate(job.date)}</div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.sqFt)}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.ridgeLf)}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{formatNumber(job.valleyLf)}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">
-                                            {job.dabellaQuote ? `$${formatNumber(job.dabellaQuote)}` : '-'}
+                                    <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded-md inline-block">
+                                            {formatNumber(job.sqFt)}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex items-center space-x-2">
+                                    <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="text-sm font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded-md inline-block">
+                                            {formatNumber(job.ridgeLf)}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="text-sm font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded-md inline-block">
+                                            {formatNumber(job.valleyLf)}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="text-sm font-bold text-gray-900">
+                                            {job.dabellaQuote ? (
+                                                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                                                    ${formatNumber(job.dabellaQuote)}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-5 whitespace-nowrap text-sm font-medium">
+                                        <div className="flex items-center space-x-3">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onSelectJobCount(job); }}
-                                                className="text-blue-600 hover:text-blue-900 p-2 rounded-md hover:bg-blue-50 transition-colors"
+                                                className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-100 transition-all duration-200 hover:scale-110"
                                                 title="View Details"
                                             >
                                                 <Eye className="w-4 h-4" />
                                             </button>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onEditJobCount(job); }}
-                                                className="text-orange-600 hover:text-orange-900 p-2 rounded-md hover:bg-orange-50 transition-colors"
+                                                className="text-orange-600 hover:text-orange-900 p-2 rounded-lg hover:bg-orange-100 transition-all duration-200 hover:scale-110"
                                                 title="Edit"
                                             >
                                                 <Edit2 className="w-4 h-4" />
@@ -235,7 +314,7 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                             ))}
                         </tbody>
                     </table>
-                    {filteredJobCounts.length === 0 && (
+                    {filteredAndSortedJobCounts.length === 0 && (
                         <div className="text-center py-12">
                             <Calculator className="mx-auto h-12 w-12 text-gray-400" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900">No job counts found</h3>
