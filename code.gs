@@ -323,12 +323,36 @@ function getJobCounts() {
         if (header) {
           const value = row[columnIndex];
           const camelCaseHeader = convertToCamelCase(header);
-          jobCount[camelCaseHeader] = value instanceof Date ? value.toISOString() : value;
+
+          // Handle date formatting specifically
+          if (value instanceof Date) {
+            jobCount[camelCaseHeader] = value.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+          } else if (camelCaseHeader === 'date' && value) {
+            // Try to parse and format date strings
+            try {
+              const dateObj = new Date(value);
+              if (!isNaN(dateObj.getTime())) {
+                jobCount[camelCaseHeader] = dateObj.toISOString().split('T')[0];
+              } else {
+                jobCount[camelCaseHeader] = value;
+              }
+            } catch {
+              jobCount[camelCaseHeader] = value;
+            }
+          } else {
+            jobCount[camelCaseHeader] = value;
+          }
         }
       });
 
+      // Ensure we have an ID and created date
       if (!jobCount.id) {
         jobCount.id = `jobcount_${Date.now()}_${index}`;
+      }
+
+      // Add created date if missing
+      if (!jobCount.createdDate) {
+        jobCount.createdDate = new Date().toISOString();
       }
 
       return jobCount;
@@ -351,12 +375,41 @@ function addJobCount(jobCountData) {
     const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
+    // Generate unique ID and set timestamps
     jobCountData.id = `jobcount_${Date.now()}`;
     jobCountData.createdDate = new Date().toISOString();
 
+    // Ensure date is properly formatted
+    if (jobCountData.date && typeof jobCountData.date === 'string') {
+      try {
+        const dateObj = new Date(jobCountData.date);
+        if (!isNaN(dateObj.getTime())) {
+          jobCountData.date = dateObj.toISOString().split('T')[0];
+        }
+      } catch {
+        // Keep original value if parsing fails
+      }
+    }
+
+    // If no date provided, use today's date
+    if (!jobCountData.date) {
+      jobCountData.date = new Date().toISOString().split('T')[0];
+    }
+
     const rowData = headers.map(header => {
       const camelCaseHeader = convertToCamelCase(header);
-      return jobCountData[camelCaseHeader] || '';
+      const value = jobCountData[camelCaseHeader] || '';
+
+      // Handle date conversion for sheet
+      if (camelCaseHeader === 'date' && value) {
+        try {
+          return new Date(value);
+        } catch {
+          return value;
+        }
+      }
+
+      return value;
     });
 
     sheet.appendRow(rowData);
@@ -472,16 +525,26 @@ function convertToCamelCase(headerName) {
     'Phone': 'phoneNumber',
     'Email': 'email',
     'Address': 'address',
+    'Street Address': 'address',
+    'City': 'city',
+    'State': 'state',
+    'Zip Code': 'zipCode',
+    'Zip': 'zipCode',
 
     // Job Information
     'Lead Source': 'leadSource',
+    'Source': 'leadSource',
     'Quality': 'quality',
+    'Lead Quality': 'quality',
     'Disposition': 'disposition',
+    'Status': 'disposition',
     'Roof Age': 'roofAge',
     'Roof Type': 'roofType',
     'Quote Amount': 'dabellaQuote',
     'DaBella Quote': 'dabellaQuote',
+    'Quote': 'dabellaQuote',
     'Notes': 'notes',
+    'Comments': 'notes',
 
     // Job Count Measurements
     'Date': 'date',

@@ -1,10 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterDate, setFilterDate] = useState('');
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+    const [columnFilters, setColumnFilters] = useState({});
+    const [showFilters, setShowFilters] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(25);
 
     const formatNumber = useCallback((value) => {
         if (!value || value === '0' || value === '-') return '-';
@@ -57,18 +61,100 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         }
     }, []);
 
+    const availableColumns = useMemo(() => [
+        { key: 'date', label: 'Date', type: 'date' },
+        { key: 'customer', label: 'Customer', type: 'text' },
+        { key: 'phone', label: 'Phone', type: 'text' },
+        { key: 'address', label: 'Address', type: 'text' },
+        { key: 'sqFt', label: 'SQ FT', type: 'number' },
+        { key: 'ridgeLf', label: 'Ridge LF', type: 'number' },
+        { key: 'valleyLf', label: 'Valley LF', type: 'number' },
+        { key: 'quote', label: 'Quote', type: 'number' },
+        { key: 'quality', label: 'Quality', type: 'text' },
+        { key: 'disposition', label: 'Disposition', type: 'text' },
+        { key: 'leadSource', label: 'Lead Source', type: 'text' }
+    ], []);
+
+    const updateColumnFilter = useCallback((column, value) => {
+        setColumnFilters(prev => {
+            const newFilters = { ...prev };
+            if (value === '' || value === null || value === undefined) {
+                delete newFilters[column];
+            } else {
+                newFilters[column] = value;
+            }
+            setCurrentPage(1); // Reset to first page when filtering
+            return newFilters;
+        });
+    }, []);
+
+    const clearAllFilters = useCallback(() => {
+        setColumnFilters({});
+        setSearchTerm('');
+        setFilterDate('');
+        setCurrentPage(1);
+    }, []);
+
     const filteredAndSortedJobCounts = useMemo(() => {
         let filtered = jobCounts.filter(job => {
-            const matchesSearch =
-                job.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                job.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                job.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                job.phoneNumber?.toString().includes(searchTerm) ||
-                job.address?.toLowerCase().includes(searchTerm.toLowerCase());
+            // Global search filter
+            const matchesSearch = !searchTerm || [
+                job.firstName,
+                job.lastName,
+                job.customerName,
+                job.phoneNumber?.toString(),
+                job.address,
+                job.quality,
+                job.disposition,
+                job.leadSource
+            ].some(field => field?.toLowerCase().includes(searchTerm.toLowerCase()));
 
+            // Date filter
             const matchesDate = !filterDate || job.date === filterDate;
 
-            return matchesSearch && matchesDate;
+            // Column-specific filters
+            const matchesColumnFilters = Object.entries(columnFilters).every(([column, filterValue]) => {
+                if (!filterValue) return true;
+
+                let jobValue;
+                switch (column) {
+                    case 'customer':
+                        jobValue = job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim();
+                        break;
+                    case 'phone':
+                        jobValue = job.phoneNumber?.toString() || '';
+                        break;
+                    case 'address':
+                        jobValue = job.address || '';
+                        break;
+                    case 'sqFt':
+                        jobValue = parseFloat(job.sqFt) || 0;
+                        break;
+                    case 'ridgeLf':
+                        jobValue = parseFloat(job.ridgeLf) || 0;
+                        break;
+                    case 'valleyLf':
+                        jobValue = parseFloat(job.valleyLf) || 0;
+                        break;
+                    case 'quote':
+                        jobValue = parseFloat(job.dabellaQuote) || 0;
+                        break;
+                    case 'date':
+                        jobValue = job.date || '';
+                        break;
+                    default:
+                        jobValue = job[column] || '';
+                }
+
+                const columnConfig = availableColumns.find(col => col.key === column);
+                if (columnConfig?.type === 'number') {
+                    return jobValue >= parseFloat(filterValue);
+                } else {
+                    return jobValue.toString().toLowerCase().includes(filterValue.toLowerCase());
+                }
+            });
+
+            return matchesSearch && matchesDate && matchesColumnFilters;
         });
 
         if (sortConfig.key) {
@@ -87,7 +173,19 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         }
 
         return filtered;
-    }, [jobCounts, searchTerm, filterDate, sortConfig, getSortValue]);
+    }, [jobCounts, searchTerm, filterDate, columnFilters, sortConfig, getSortValue, availableColumns]);
+
+    const paginatedJobCounts = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        return filteredAndSortedJobCounts.slice(startIndex, endIndex);
+    }, [filteredAndSortedJobCounts, currentPage, itemsPerPage]);
+
+    const totalPages = Math.ceil(filteredAndSortedJobCounts.length / itemsPerPage);
+
+    const hasActiveFilters = useMemo(() => {
+        return searchTerm || filterDate || Object.keys(columnFilters).length > 0;
+    }, [searchTerm, filterDate, columnFilters]);
 
     const summaryStats = useMemo(() => {
         return filteredAndSortedJobCounts.reduce((stats, job) => {
@@ -99,24 +197,67 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         }, { totalJobs: 0, totalSqFt: 0, totalRidgeLf: 0, totalValleyLf: 0 });
     }, [filteredAndSortedJobCounts]);
 
-    const SortableHeader = ({ sortKey, children, className = "" }) => (
-        <th
-            className={`px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none ${className}`}
-            onClick={() => handleSort(sortKey)}
-        >
-            <div className="flex items-center justify-between">
-                <span>{children}</span>
-                <div className="flex flex-col ml-2">
-                    <ChevronUp
-                        className={`w-3 h-3 ${sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-gray-300'}`}
-                    />
-                    <ChevronDown
-                        className={`w-3 h-3 -mt-1 ${sortConfig.key === sortKey && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-gray-300'}`}
-                    />
+    const SortableHeader = ({ sortKey, children, className = "" }) => {
+        const hasFilter = columnFilters[sortKey];
+        return (
+            <th className={`px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+                <div className="space-y-2">
+                    <div
+                        className="flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors select-none p-1 rounded"
+                        onClick={() => handleSort(sortKey)}
+                    >
+                        <span className={hasFilter ? 'text-blue-600 font-semibold' : ''}>{children}</span>
+                        <div className="flex items-center space-x-1">
+                            {hasFilter && <Filter className="w-3 h-3 text-blue-600" />}
+                            <div className="flex flex-col">
+                                <ChevronUp
+                                    className={`w-3 h-3 ${sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-gray-300'}`}
+                                />
+                                <ChevronDown
+                                    className={`w-3 h-3 -mt-1 ${sortConfig.key === sortKey && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-gray-300'}`}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    {showFilters && (
+                        <ColumnFilter
+                            column={sortKey}
+                            value={columnFilters[sortKey] || ''}
+                            onChange={(value) => updateColumnFilter(sortKey, value)}
+                            type={availableColumns.find(col => col.key === sortKey)?.type || 'text'}
+                        />
+                    )}
                 </div>
+            </th>
+        );
+    };
+
+    const ColumnFilter = ({ column, value, onChange, type }) => {
+        const placeholder = type === 'number' ? 'Min value...' : 'Filter...';
+        return (
+            <div className="relative">
+                <input
+                    type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    onClick={(e) => e.stopPropagation()}
+                />
+                {value && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onChange('');
+                        }}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                )}
             </div>
-        </th>
-    );
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -146,25 +287,80 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
 
             {/* Search and Filters */}
             <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="relative md:col-span-2">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Search by name, phone, or address..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+                <div className="space-y-4">
+                    {/* Main Search and Date Filter */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="relative md:col-span-2">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                                type="text"
+                                placeholder="Search across all fields..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
+                        <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                                type="date"
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                        </div>
                     </div>
-                    <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                        <input
-                            type="date"
-                            value={filterDate}
-                            onChange={(e) => setFilterDate(e.target.value)}
-                            className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+
+                    {/* Filter Controls */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`inline-flex items-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                                    showFilters
+                                        ? 'border-blue-500 text-blue-700 bg-blue-50'
+                                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                                }`}
+                            >
+                                <Filter className="w-4 h-4 mr-2" />
+                                Column Filters
+                                {Object.keys(columnFilters).length > 0 && (
+                                    <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                        {Object.keys(columnFilters).length}
+                                    </span>
+                                )}
+                            </button>
+
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                                >
+                                    <X className="w-4 h-4 mr-2" />
+                                    Clear All Filters
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                            <select
+                                value={itemsPerPage}
+                                onChange={(e) => {
+                                    setItemsPerPage(Number(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value={10}>10 per page</option>
+                                <option value={25}>25 per page</option>
+                                <option value={50}>50 per page</option>
+                                <option value={100}>100 per page</option>
+                            </select>
+
+                            <div className="text-sm text-gray-600">
+                                Showing {filteredAndSortedJobCounts.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredAndSortedJobCounts.length)} of {filteredAndSortedJobCounts.length}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -234,7 +430,7 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
-                            {filteredAndSortedJobCounts.map((job, index) => (
+                            {paginatedJobCounts.map((job, index) => (
                                 <tr
                                     key={job.id || index}
                                     className={`cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:shadow-md transform hover:-translate-y-0.5 ${
@@ -319,7 +515,7 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                             <Calculator className="mx-auto h-12 w-12 text-gray-400" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900">No job counts found</h3>
                             <p className="mt-1 text-sm text-gray-500">
-                                {searchTerm || filterDate
+                                {hasActiveFilters
                                     ? 'Try adjusting your search or filter criteria.'
                                     : 'Get started by adding your first job count.'}
                             </p>
@@ -327,6 +523,78 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     )}
                 </div>
             </div>
+
+            {/* Pagination */}
+            {filteredAndSortedJobCounts.length > 0 && totalPages > 1 && (
+                <div className="bg-white p-4 rounded-lg shadow-sm border">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                First
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft className="w-4 h-4 mr-1" />
+                                Previous
+                            </button>
+                        </div>
+
+                        <div className="flex items-center space-x-1">
+                            {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 7) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 4) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 3) {
+                                    pageNum = totalPages - 6 + i;
+                                } else {
+                                    pageNum = currentPage - 3 + i;
+                                }
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                                            currentPage === pageNum
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage === totalPages}
+                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                                <ChevronRight className="w-4 h-4 ml-1" />
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={currentPage === totalPages}
+                                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Last
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
