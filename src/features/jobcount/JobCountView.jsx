@@ -223,9 +223,9 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
-                                <SortableHeader sortKey="customer">Customer</SortableHeader>
-                                <SortableHeader sortKey="phone">Phone</SortableHeader>
                                 <SortableHeader sortKey="date">Date</SortableHeader>
+                                <SortableHeader sortKey="customer" className="w-80">Customer</SortableHeader>
+                                <SortableHeader sortKey="phone">Phone</SortableHeader>
                                 <SortableHeader sortKey="sqFt">SQ FT</SortableHeader>
                                 <SortableHeader sortKey="ridgeLf">Ridge LF</SortableHeader>
                                 <SortableHeader sortKey="valleyLf">Valley LF</SortableHeader>
@@ -243,12 +243,15 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                                     onClick={() => onSelectJobCount(job)}
                                 >
                                     <td className="px-6 py-5 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">{formatDate(job.date)}</div>
+                                    </td>
+                                    <td className="px-6 py-5 whitespace-nowrap w-80">
                                         <div className="flex flex-col space-y-1">
                                             <div className="text-sm font-semibold text-gray-900">
                                                 {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
                                             </div>
                                             {job.address && (
-                                                <div className="text-xs text-gray-500 truncate max-w-xs">
+                                                <div className="text-xs text-gray-500 truncate max-w-sm">
                                                     {job.address}
                                                 </div>
                                             )}
@@ -262,9 +265,6 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                                         >
                                             {formatPhone(job.phoneNumber)}
                                         </a>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{formatDate(job.date)}</div>
                                     </td>
                                     <td className="px-6 py-5 whitespace-nowrap">
                                         <div className="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded-md inline-block">
