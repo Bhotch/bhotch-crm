@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -9,6 +9,43 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
     const [showFilters, setShowFilters] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
+    const [showColumnSettings, setShowColumnSettings] = useState(false);
+    const [visibleColumns, setVisibleColumns] = useState({
+        date: true,
+        customer: true,
+        phone: true,
+        address: true,
+        email: false,
+        sqFt: true,
+        ridgeLf: true,
+        valleyLf: true,
+        eavesLf: false,
+        quote: true,
+        quality: true,
+        disposition: true,
+        leadSource: true,
+        roofAge: false,
+        roofType: false,
+        ridgeVents: false,
+        turbine: false,
+        rimeFlow: false,
+        highProfileRidgeCap: false,
+        valleyMetal: false,
+        pipes1Half: false,
+        pipes2: false,
+        pipes3: false,
+        pipes4: false,
+        gables: false,
+        turtleBacks: false,
+        satellite: false,
+        chimney: false,
+        solar: false,
+        swampCooler: false,
+        guttersLf: false,
+        downspouts: false,
+        gutterGuardLf: false,
+        permanentLighting: false
+    });
 
     const formatNumber = useCallback((value) => {
         if (!value || value === '0' || value === '-') return '-';
@@ -40,40 +77,69 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         }));
     }, []);
 
-    const getSortValue = useCallback((job, key) => {
-        switch (key) {
-            case 'customer':
-                return job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown';
-            case 'phone':
-                return job.phoneNumber || '';
-            case 'date':
-                return job.date || '';
-            case 'sqFt':
-                return parseFloat(job.sqFt) || 0;
-            case 'ridgeLf':
-                return parseFloat(job.ridgeLf) || 0;
-            case 'valleyLf':
-                return parseFloat(job.valleyLf) || 0;
-            case 'quote':
-                return parseFloat(job.dabellaQuote) || 0;
-            default:
-                return '';
-        }
-    }, []);
-
     const availableColumns = useMemo(() => [
-        { key: 'date', label: 'Date', type: 'date' },
-        { key: 'customer', label: 'Customer', type: 'text' },
-        { key: 'phone', label: 'Phone', type: 'text' },
-        { key: 'address', label: 'Address', type: 'text' },
-        { key: 'sqFt', label: 'SQ FT', type: 'number' },
-        { key: 'ridgeLf', label: 'Ridge LF', type: 'number' },
-        { key: 'valleyLf', label: 'Valley LF', type: 'number' },
-        { key: 'quote', label: 'Quote', type: 'number' },
-        { key: 'quality', label: 'Quality', type: 'text' },
-        { key: 'disposition', label: 'Disposition', type: 'text' },
-        { key: 'leadSource', label: 'Lead Source', type: 'text' }
+        { key: 'date', label: 'Date', type: 'date', category: 'Basic' },
+        { key: 'customer', label: 'Customer', type: 'text', category: 'Basic' },
+        { key: 'phone', label: 'Phone', type: 'text', category: 'Basic' },
+        { key: 'email', label: 'Email', type: 'text', category: 'Basic' },
+        { key: 'address', label: 'Address', type: 'text', category: 'Basic' },
+        { key: 'quality', label: 'Quality', type: 'text', category: 'Job Info' },
+        { key: 'disposition', label: 'Disposition', type: 'text', category: 'Job Info' },
+        { key: 'leadSource', label: 'Lead Source', type: 'text', category: 'Job Info' },
+        { key: 'roofAge', label: 'Roof Age', type: 'text', category: 'Job Info' },
+        { key: 'roofType', label: 'Roof Type', type: 'text', category: 'Job Info' },
+        { key: 'sqFt', label: 'SQ FT', type: 'number', category: 'Measurements' },
+        { key: 'ridgeLf', label: 'Ridge LF', type: 'number', category: 'Measurements' },
+        { key: 'valleyLf', label: 'Valley LF', type: 'number', category: 'Measurements' },
+        { key: 'eavesLf', label: 'Eaves LF', type: 'number', category: 'Measurements' },
+        { key: 'quote', label: 'Quote', type: 'number', category: 'Financial' },
+        { key: 'ridgeVents', label: 'Ridge Vents', type: 'number', category: 'Ventilation' },
+        { key: 'turbine', label: 'Turbine', type: 'number', category: 'Ventilation' },
+        { key: 'rimeFlow', label: 'Rime Flow', type: 'number', category: 'Ventilation' },
+        { key: 'highProfileRidgeCap', label: 'High Profile Ridge Cap', type: 'number', category: 'Components' },
+        { key: 'valleyMetal', label: 'Valley Metal', type: 'number', category: 'Components' },
+        { key: 'pipes1Half', label: 'Pipes 1.5"', type: 'number', category: 'Pipes' },
+        { key: 'pipes2', label: 'Pipes 2"', type: 'number', category: 'Pipes' },
+        { key: 'pipes3', label: 'Pipes 3"', type: 'number', category: 'Pipes' },
+        { key: 'pipes4', label: 'Pipes 4"', type: 'number', category: 'Pipes' },
+        { key: 'gables', label: 'Gables', type: 'number', category: 'Features' },
+        { key: 'turtleBacks', label: 'Turtle Backs', type: 'number', category: 'Features' },
+        { key: 'satellite', label: 'Satellite', type: 'number', category: 'Features' },
+        { key: 'chimney', label: 'Chimney', type: 'number', category: 'Features' },
+        { key: 'solar', label: 'Solar', type: 'number', category: 'Features' },
+        { key: 'swampCooler', label: 'Swamp Cooler', type: 'number', category: 'Features' },
+        { key: 'guttersLf', label: 'Gutters LF', type: 'number', category: 'Gutters' },
+        { key: 'downspouts', label: 'Downspouts', type: 'number', category: 'Gutters' },
+        { key: 'gutterGuardLf', label: 'Gutter Guard LF', type: 'number', category: 'Gutters' },
+        { key: 'permanentLighting', label: 'Permanent Lighting', type: 'number', category: 'Additional' }
     ], []);
+
+    const getSortValue = useCallback((job, key) => {
+        const column = availableColumns.find(col => col.key === key);
+
+        if (key === 'customer') {
+            return job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown';
+        }
+        if (key === 'phone') {
+            return job.phoneNumber || '';
+        }
+        if (key === 'quote') {
+            return parseFloat(job.dabellaQuote) || 0;
+        }
+
+        if (column?.type === 'number') {
+            return parseFloat(job[key]) || 0;
+        }
+
+        return job[key] || '';
+    }, [availableColumns]);
+
+    const toggleColumnVisibility = useCallback((columnKey) => {
+        setVisibleColumns(prev => ({
+            ...prev,
+            [columnKey]: !prev[columnKey]
+        }));
+    }, []);
 
     const updateColumnFilter = useCallback((column, value) => {
         setColumnFilters(prev => {
@@ -117,33 +183,19 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                 if (!filterValue) return true;
 
                 let jobValue;
-                switch (column) {
-                    case 'customer':
-                        jobValue = job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim();
-                        break;
-                    case 'phone':
-                        jobValue = job.phoneNumber?.toString() || '';
-                        break;
-                    case 'address':
-                        jobValue = job.address || '';
-                        break;
-                    case 'sqFt':
-                        jobValue = parseFloat(job.sqFt) || 0;
-                        break;
-                    case 'ridgeLf':
-                        jobValue = parseFloat(job.ridgeLf) || 0;
-                        break;
-                    case 'valleyLf':
-                        jobValue = parseFloat(job.valleyLf) || 0;
-                        break;
-                    case 'quote':
-                        jobValue = parseFloat(job.dabellaQuote) || 0;
-                        break;
-                    case 'date':
-                        jobValue = job.date || '';
-                        break;
-                    default:
+                if (column === 'customer') {
+                    jobValue = job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim();
+                } else if (column === 'phone') {
+                    jobValue = job.phoneNumber?.toString() || '';
+                } else if (column === 'quote') {
+                    jobValue = parseFloat(job.dabellaQuote) || 0;
+                } else {
+                    const columnConfig = availableColumns.find(col => col.key === column);
+                    if (columnConfig?.type === 'number') {
+                        jobValue = parseFloat(job[column]) || 0;
+                    } else {
                         jobValue = job[column] || '';
+                    }
                 }
 
                 const columnConfig = availableColumns.find(col => col.key === column);
@@ -331,6 +383,21 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                                 )}
                             </button>
 
+                            <button
+                                onClick={() => setShowColumnSettings(!showColumnSettings)}
+                                className={`inline-flex items-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
+                                    showColumnSettings
+                                        ? 'border-purple-500 text-purple-700 bg-purple-50'
+                                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                                }`}
+                            >
+                                <Settings className="w-4 h-4 mr-2" />
+                                Manage Columns
+                                <span className="ml-2 bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                                    {Object.values(visibleColumns).filter(Boolean).length}
+                                </span>
+                            </button>
+
                             {hasActiveFilters && (
                                 <button
                                     onClick={clearAllFilters}
@@ -364,6 +431,37 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     </div>
                 </div>
             </div>
+
+            {/* Column Settings Panel */}
+            {showColumnSettings && (
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Manage Visible Columns</h3>
+                        <button
+                            onClick={() => setShowColumnSettings(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                        {availableColumns.map(column => (
+                            <label
+                                key={column.key}
+                                className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={visibleColumns[column.key]}
+                                    onChange={() => toggleColumnVisibility(column.key)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">{column.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Summary Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -419,13 +517,11 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
-                                <SortableHeader sortKey="date">Date</SortableHeader>
-                                <SortableHeader sortKey="customer" className="w-80">Customer</SortableHeader>
-                                <SortableHeader sortKey="phone">Phone</SortableHeader>
-                                <SortableHeader sortKey="sqFt">SQ FT</SortableHeader>
-                                <SortableHeader sortKey="ridgeLf">Ridge LF</SortableHeader>
-                                <SortableHeader sortKey="valleyLf">Valley LF</SortableHeader>
-                                <SortableHeader sortKey="quote">Quote</SortableHeader>
+                                {availableColumns.filter(col => visibleColumns[col.key]).map(column => (
+                                    <SortableHeader key={column.key} sortKey={column.key}>
+                                        {column.label}
+                                    </SortableHeader>
+                                ))}
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -438,56 +534,65 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                                     }`}
                                     onClick={() => onSelectJobCount(job)}
                                 >
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{formatDate(job.date)}</div>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap w-80">
-                                        <div className="flex flex-col space-y-1">
-                                            <div className="text-sm font-semibold text-gray-900">
-                                                {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
-                                            </div>
-                                            {job.address && (
-                                                <div className="text-xs text-gray-500 truncate max-w-sm">
-                                                    {job.address}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <a
-                                            href={`tel:${job.phoneNumber}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                                        >
-                                            {formatPhone(job.phoneNumber)}
-                                        </a>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded-md inline-block">
-                                            {formatNumber(job.sqFt)}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="text-sm font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded-md inline-block">
-                                            {formatNumber(job.ridgeLf)}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="text-sm font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded-md inline-block">
-                                            {formatNumber(job.valleyLf)}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5 whitespace-nowrap">
-                                        <div className="text-sm font-bold text-gray-900">
-                                            {job.dabellaQuote ? (
-                                                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
-                                                    ${formatNumber(job.dabellaQuote)}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400">-</span>
-                                            )}
-                                        </div>
-                                    </td>
+                                    {availableColumns.filter(col => visibleColumns[col.key]).map(column => {
+                                        const renderCellContent = () => {
+                                            if (column.key === 'date') {
+                                                return <div className="text-sm font-medium text-gray-900">{formatDate(job.date)}</div>;
+                                            }
+                                            if (column.key === 'customer') {
+                                                return (
+                                                    <div className="text-sm font-semibold text-gray-900">
+                                                        {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
+                                                    </div>
+                                                );
+                                            }
+                                            if (column.key === 'phone') {
+                                                return (
+                                                    <a
+                                                        href={`tel:${job.phoneNumber}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                                    >
+                                                        {formatPhone(job.phoneNumber)}
+                                                    </a>
+                                                );
+                                            }
+                                            if (column.key === 'email') {
+                                                return job.email ? (
+                                                    <a
+                                                        href={`mailto:${job.email}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+                                                    >
+                                                        {job.email}
+                                                    </a>
+                                                ) : '-';
+                                            }
+                                            if (column.key === 'address') {
+                                                return <div className="text-sm text-gray-700 truncate max-w-xs">{job.address || '-'}</div>;
+                                            }
+                                            if (column.key === 'quote') {
+                                                return job.dabellaQuote ? (
+                                                    <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
+                                                        ${formatNumber(job.dabellaQuote)}
+                                                    </span>
+                                                ) : '-';
+                                            }
+                                            if (column.type === 'number') {
+                                                const value = job[column.key];
+                                                return value ? (
+                                                    <div className="text-sm font-medium text-gray-900">{formatNumber(value)}</div>
+                                                ) : '-';
+                                            }
+                                            return <div className="text-sm text-gray-900">{job[column.key] || '-'}</div>;
+                                        };
+
+                                        return (
+                                            <td key={column.key} className="px-6 py-5 whitespace-nowrap">
+                                                {renderCellContent()}
+                                            </td>
+                                        );
+                                    })}
                                     <td className="px-6 py-5 whitespace-nowrap text-sm font-medium">
                                         <div className="flex items-center space-x-3">
                                             <button

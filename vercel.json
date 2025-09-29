@@ -1,52 +1,60 @@
 {
-  "version": 2,
-  "name": "ultimate-lomanco-crm",
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "framework": "create-react-app",
-  "routes": [
-    {
-      "src": "/service-worker.js",
-      "headers": {
-        "cache-control": "public, max-age=0, must-revalidate"
-      }
-    },
-    {
-      "src": "/sw.js",
-      "headers": {
-        "cache-control": "public, max-age=0, must-revalidate"
-      }
-    },
-    {
-      "src": "/manifest.json",
-      "headers": {
-        "cache-control": "public, max-age=86400"
-      }
-    },
-    {
-      "src": "/static/(.*)",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html",
-      "headers": {
-        "cache-control": "public, max-age=0, must-revalidate"
-      }
-    }
-  ],
   "headers": [
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/:path*.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
@@ -70,6 +78,12 @@
       ]
     }
   ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "env": {
     "CI": "false",
     "NODE_ENV": "production"
@@ -77,8 +91,7 @@
   "build": {
     "env": {
       "CI": "false",
-      "GENERATE_SOURCEMAP": "false",
-      "REACT_APP_VERSION": "@vercel/git-sha"
+      "GENERATE_SOURCEMAP": "false"
     }
   }
 }
