@@ -24,7 +24,10 @@
       "Bash(rm:*)",
       "Bash(git checkout:*)",
       "Bash(npm audit:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(claude mcp:*)",
+      "Bash(vercel ls:*)",
+      "Bash(vercel logs:*)"
     ],
     "deny": [],
     "ask": []
