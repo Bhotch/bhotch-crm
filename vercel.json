@@ -78,12 +78,6 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
   "env": {
     "CI": "false",
     "NODE_ENV": "production"
