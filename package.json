@@ -69,5 +69,17 @@
   },
   "devDependencies": {
     "tailwindcss": "^3.3.0"
+  },
+  "overrides": {
+    "react-spring": {
+      "@react-three/fiber": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
+      },
+      "react-konva": {
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1"
+      }
+    }
   }
 }
