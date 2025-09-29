@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
@@ -10,7 +10,9 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [showColumnSettings, setShowColumnSettings] = useState(false);
-    const [visibleColumns, setVisibleColumns] = useState({
+
+    // Default column visibility settings
+    const defaultVisibleColumns = {
         date: true,
         customer: true,
         phone: true,
@@ -45,7 +47,31 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
         downspouts: false,
         gutterGuardLf: false,
         permanentLighting: false
-    });
+    };
+
+    // Load saved column preferences from localStorage
+    const loadSavedColumns = () => {
+        try {
+            const saved = localStorage.getItem('jobCountVisibleColumns');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (error) {
+            console.error('Error loading saved columns:', error);
+        }
+        return defaultVisibleColumns;
+    };
+
+    const [visibleColumns, setVisibleColumns] = useState(loadSavedColumns);
+
+    // Save column preferences to localStorage whenever they change
+    useEffect(() => {
+        try {
+            localStorage.setItem('jobCountVisibleColumns', JSON.stringify(visibleColumns));
+        } catch (error) {
+            console.error('Error saving columns:', error);
+        }
+    }, [visibleColumns]);
 
     const formatNumber = useCallback((value) => {
         if (!value || value === '0' || value === '-') return '-';

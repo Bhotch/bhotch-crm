@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plus, Edit2, Eye, RefreshCw, XCircle, CheckCircle, Clock, AlertCircle, DollarSign, ShieldCheck, Search, Calendar, ChevronUp, ChevronDown, Filter, X, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads, onSelectLead }) {
@@ -10,7 +10,9 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [showColumnSettings, setShowColumnSettings] = useState(false);
-    const [visibleColumns, setVisibleColumns] = useState({
+
+    // Default column visibility settings
+    const defaultVisibleColumns = {
         date: true,
         customer: true,
         phone: true,
@@ -45,7 +47,31 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
         downspouts: false,
         gutterGuardLf: false,
         permanentLighting: false
-    });
+    };
+
+    // Load saved column preferences from localStorage
+    const loadSavedColumns = () => {
+        try {
+            const saved = localStorage.getItem('leadsVisibleColumns');
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (error) {
+            console.error('Error loading saved columns:', error);
+        }
+        return defaultVisibleColumns;
+    };
+
+    const [visibleColumns, setVisibleColumns] = useState(loadSavedColumns);
+
+    // Save column preferences to localStorage whenever they change
+    useEffect(() => {
+        try {
+            localStorage.setItem('leadsVisibleColumns', JSON.stringify(visibleColumns));
+        } catch (error) {
+            console.error('Error saving columns:', error);
+        }
+    }, [visibleColumns]);
 
     const getStatusBadge = useCallback((status) => {
         const badges = {
