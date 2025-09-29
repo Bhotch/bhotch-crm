@@ -27,7 +27,12 @@
       "Bash(npx eslint:*)",
       "Bash(claude mcp:*)",
       "Bash(vercel ls:*)",
-      "Bash(vercel logs:*)"
+      "Bash(vercel logs:*)",
+      "Bash(vercel:*)",
+      "Bash(npm i:*)",
+      "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy)",
+      "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy --yes)",
+      "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy --yes --prod)"
     ],
     "deny": [],
     "ask": []
