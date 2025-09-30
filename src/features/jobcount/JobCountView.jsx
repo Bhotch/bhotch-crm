@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Settings, Save } from 'lucide-react';
 
 function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,15 +63,18 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
     };
 
     const [visibleColumns, setVisibleColumns] = useState(loadSavedColumns);
+    const [tempVisibleColumns, setTempVisibleColumns] = useState(loadSavedColumns);
 
-    // Save column preferences to localStorage whenever they change
-    useEffect(() => {
+    // Save column preferences to localStorage when save button is clicked
+    const handleSaveColumns = useCallback(() => {
         try {
-            localStorage.setItem('jobCountVisibleColumns', JSON.stringify(visibleColumns));
+            localStorage.setItem('jobCountVisibleColumns', JSON.stringify(tempVisibleColumns));
+            setVisibleColumns(tempVisibleColumns);
+            setShowColumnSettings(false);
         } catch (error) {
             console.error('Error saving columns:', error);
         }
-    }, [visibleColumns]);
+    }, [tempVisibleColumns]);
 
     const formatNumber = useCallback((value) => {
         if (!value || value === '0' || value === '-') return '-';
@@ -161,7 +164,7 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
     }, [availableColumns]);
 
     const toggleColumnVisibility = useCallback((columnKey) => {
-        setVisibleColumns(prev => ({
+        setTempVisibleColumns(prev => ({
             ...prev,
             [columnKey]: !prev[columnKey]
         }));
@@ -464,13 +467,16 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold text-gray-900">Manage Visible Columns</h3>
                         <button
-                            onClick={() => setShowColumnSettings(false)}
+                            onClick={() => {
+                                setTempVisibleColumns(visibleColumns);
+                                setShowColumnSettings(false);
+                            }}
                             className="text-gray-400 hover:text-gray-600"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
                         {availableColumns.map(column => (
                             <label
                                 key={column.key}
@@ -478,13 +484,31 @@ function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCou
                             >
                                 <input
                                     type="checkbox"
-                                    checked={visibleColumns[column.key]}
+                                    checked={tempVisibleColumns[column.key]}
                                     onChange={() => toggleColumnVisibility(column.key)}
                                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{column.label}</span>
                             </label>
                         ))}
+                    </div>
+                    <div className="flex justify-end space-x-3 pt-4 border-t">
+                        <button
+                            onClick={() => {
+                                setTempVisibleColumns(visibleColumns);
+                                setShowColumnSettings(false);
+                            }}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSaveColumns}
+                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                        >
+                            <Save className="w-4 h-4 mr-2" />
+                            Save Column Selection
+                        </button>
                     </div>
                 </div>
             )}
