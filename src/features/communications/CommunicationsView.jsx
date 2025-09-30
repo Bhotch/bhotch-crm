@@ -15,7 +15,7 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
     const leadCustomers = leads.map(lead => ({
       id: `lead-${lead.id}`,
       type: 'lead',
-      name: lead.name,
+      name: lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.name || 'Unknown',
       address: lead.address,
       phone: lead.phone,
       email: lead.email || '',
@@ -29,7 +29,7 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
     const jobCountCustomers = jobCounts.map(job => ({
       id: `job-${job.id}`,
       type: 'jobcount',
-      name: job.customerName,
+      name: job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown',
       address: job.address,
       phone: job.phone || '',
       email: job.email || '',
