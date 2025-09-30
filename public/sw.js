@@ -1,17 +1,18 @@
-const CACHE_NAME = 'ultimate-crm-v1.0.0';
+const CACHE_NAME = 'ultimate-crm-v2.0.1'; // Updated version to force cache refresh
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
   '/favicon.ico'
 ];
 
 self.addEventListener('install', (event) => {
+  // Force immediate activation
+  self.skipWaiting();
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Cache opened');
+        console.log('Service Worker: Cache opened with version', CACHE_NAME);
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
@@ -22,47 +23,74 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method === 'GET') {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          if (response) {
-            return response;
-          }
-          return fetch(event.request).then((response) => {
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
+    // Network-first strategy for HTML and JS files to always get fresh content
+    if (event.request.destination === 'document' ||
+        event.request.url.includes('.js') ||
+        event.request.url.includes('.css')) {
+      event.respondWith(
+        fetch(event.request)
+          .then((response) => {
+            if (response && response.status === 200) {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                });
             }
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
             return response;
-          });
-        })
-        .catch(() => {
-          if (event.request.destination === 'document') {
-            return caches.match('/');
-          }
-        })
-    );
+          })
+          .catch(() => {
+            return caches.match(event.request);
+          })
+      );
+    } else {
+      // Cache-first for other resources
+      event.respondWith(
+        caches.match(event.request)
+          .then((response) => {
+            return response || fetch(event.request).then((response) => {
+              if (!response || response.status !== 200 || response.type !== 'basic') {
+                return response;
+              }
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                });
+              return response;
+            });
+          })
+          .catch(() => {
+            if (event.request.destination === 'document') {
+              return caches.match('/');
+            }
+          })
+      );
+    }
   }
 });
 
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
+  // Take control of all clients immediately
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('Service Worker: Deleting old cache', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    Promise.all([
+      // Delete old caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('Service Worker: Deleting old cache', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Take control immediately
+      self.clients.claim()
+    ])
   );
+
+  console.log('Service Worker: Activated version', CACHE_NAME);
 });
 
 self.addEventListener('message', (event) => {
