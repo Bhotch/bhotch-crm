@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, X, Edit2, Trash2, Phone, Mail, DollarSign, Tag, ClipboardList, Briefcase, Calendar, MapPin } from 'lucide-react';
+import CommunicationModal from './CommunicationModal';
 
 const DetailItem = React.memo(({ icon, label, value }) => (
     <div>
@@ -8,8 +9,25 @@ const DetailItem = React.memo(({ icon, label, value }) => (
     </div>
 ));
 
-function LeadDetailModal({ lead, onEdit, onDelete, onClose, onNavigateToTab }) {
+function LeadDetailModal({ lead, onEdit, onDelete, onClose, onNavigateToTab, onLogCommunication, onUpdateLead }) {
+  const [showCommunicationModal, setShowCommunicationModal] = useState(false);
+
+  const handleLogCommunication = async (communication) => {
+    if (onLogCommunication) {
+      await onLogCommunication(communication);
+    } else {
+      console.log('Communication logged:', communication);
+    }
+  };
+
+  const handleUpdateLead = async (updatedLead) => {
+    if (onUpdateLead) {
+      await onUpdateLead(updatedLead);
+    }
+  };
+
   return (
+    <>
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40 animate-fade-in">
         <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
             <div className="p-6 border-b flex justify-between items-center">
@@ -43,22 +61,37 @@ function LeadDetailModal({ lead, onEdit, onDelete, onClose, onNavigateToTab }) {
                         <h4 className="font-semibold text-sm mb-3 text-center">Communications</h4>
                         <div className="space-y-2">
                             <button
-                                onClick={() => window.open(`mailto:${lead.email}?from=brandon@rimehq.net&subject=Follow up - ${lead.customerName}`)}
+                                onClick={() => {
+                                    window.open(`mailto:${lead.email}?from=brandon@rimehq.net&subject=Follow up - ${lead.customerName}`);
+                                    setShowCommunicationModal(true);
+                                }}
                                 className="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex items-center justify-center"
                             >
                                 <Mail size={12} className="mr-1"/>Email
                             </button>
                             <button
-                                onClick={() => window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${lead.phoneNumber?.replace(/\D/g, '')}`)}
+                                onClick={() => {
+                                    window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${lead.phoneNumber?.replace(/\D/g, '')}`);
+                                    setShowCommunicationModal(true);
+                                }}
                                 className="w-full px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center justify-center"
                             >
                                 <Phone size={12} className="mr-1"/>Call
                             </button>
                             <button
-                                onClick={() => window.open(`https://voice.google.com/u/0/messages?contact=%2B1${lead.phoneNumber?.replace(/\D/g, '')}`)}
+                                onClick={() => {
+                                    window.open(`https://voice.google.com/u/0/messages?contact=%2B1${lead.phoneNumber?.replace(/\D/g, '')}`);
+                                    setShowCommunicationModal(true);
+                                }}
                                 className="w-full px-3 py-2 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 flex items-center justify-center"
                             >
                                 <Mail size={12} className="mr-1"/>SMS
+                            </button>
+                            <button
+                                onClick={() => setShowCommunicationModal(true)}
+                                className="w-full px-3 py-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 flex items-center justify-center font-semibold"
+                            >
+                                📋 Log Communication
                             </button>
                         </div>
                     </div>
@@ -82,6 +115,15 @@ function LeadDetailModal({ lead, onEdit, onDelete, onClose, onNavigateToTab }) {
             </div>
         </div>
     </div>
+    {showCommunicationModal && (
+      <CommunicationModal
+        lead={lead}
+        onClose={() => setShowCommunicationModal(false)}
+        onLogCommunication={handleLogCommunication}
+        onUpdateLead={handleUpdateLead}
+      />
+    )}
+    </>
   );
 }
 

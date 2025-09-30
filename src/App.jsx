@@ -5,6 +5,7 @@ import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Lo
 import { useLeads } from './hooks/useLeads';
 import { useJobCounts } from './hooks/useJobCounts';
 import { useNotifications } from './hooks/useNotifications';
+import { useCommunications } from './hooks/useCommunications';
 
 // Import features and components
 import LoginForm from './features/auth/LoginForm';
@@ -25,6 +26,7 @@ function CrmApplication({ onLogout }) {
   const { notifications, addNotification } = useNotifications();
   const { leads, loading: leadsLoading, refreshLeads, addLead, updateLead, deleteLead } = useLeads(addNotification);
   const { jobCounts, loading: jobCountsLoading, refreshJobCounts, addJobCount, updateJobCount, deleteJobCount } = useJobCounts(addNotification);
+  const { addCommunication } = useCommunications(addNotification);
 
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -245,6 +247,8 @@ function CrmApplication({ onLogout }) {
             setSelectedDetailLead(null);
           }}
           onNavigateToTab={handleNavigateToTab}
+          onLogCommunication={addCommunication}
+          onUpdateLead={updateLead}
         />
       )}
 
