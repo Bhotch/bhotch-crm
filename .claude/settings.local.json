@@ -32,7 +32,11 @@
       "Bash(npm i:*)",
       "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy)",
       "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy --yes)",
-      "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy --yes --prod)"
+      "Bash(VERCEL_FORCE_NO_BUILD_CACHE=1 vercel deploy --yes --prod)",
+      "mcp__ide__getDiagnostics",
+      "Bash(git restore:*)",
+      "Bash(dir:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
