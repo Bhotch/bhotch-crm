@@ -13,40 +13,70 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
 
     // Default column visibility settings
     const defaultVisibleColumns = {
+        // Basic Information (most important shown by default)
+        id: false,
         date: true,
-        customer: true,
-        phone: true,
-        address: true,
+        createdDate: false,
+        modifiedDate: false,
+        customerName: true,
+        firstName: false,
+        lastName: false,
+        phoneNumber: true,
         email: false,
+        address: true,
+        latitude: false,
+        longitude: false,
+
+        // Lead Information
+        quality: true,
+        disposition: true,
+        leadSource: true,
+        status: false,
+
+        // Roof Information
+        roofAge: false,
+        roofType: false,
+
+        // Measurements
         sqFt: true,
         ridgeLf: true,
         valleyLf: true,
         eavesLf: false,
-        quote: true,
-        quality: true,
-        disposition: true,
-        leadSource: true,
-        roofAge: false,
-        roofType: false,
+
+        // Financial
+        dabellaQuote: true,
+
+        // Ventilation
         ridgeVents: false,
         turbine: false,
         rimeFlow: false,
+
+        // Components
         highProfileRidgeCap: false,
         valleyMetal: false,
+
+        // Pipes
         pipes1Half: false,
         pipes2: false,
         pipes3: false,
         pipes4: false,
+
+        // Features
         gables: false,
         turtleBacks: false,
         satellite: false,
         chimney: false,
         solar: false,
         swampCooler: false,
+
+        // Gutters
         guttersLf: false,
         downspouts: false,
         gutterGuardLf: false,
-        permanentLighting: false
+
+        // Additional
+        permanentLighting: false,
+        notes: false
     };
 
     // Load saved column preferences from localStorage
@@ -121,53 +151,78 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
     }, []);
 
     const availableColumns = useMemo(() => [
+        // Basic Information
+        { key: 'id', label: 'ID', type: 'text', category: 'Basic' },
         { key: 'date', label: 'Date', type: 'date', category: 'Basic' },
-        { key: 'customer', label: 'Customer', type: 'text', category: 'Basic' },
-        { key: 'phone', label: 'Phone', type: 'text', category: 'Basic' },
+        { key: 'createdDate', label: 'Created Date', type: 'date', category: 'Basic' },
+        { key: 'modifiedDate', label: 'Modified Date', type: 'date', category: 'Basic' },
+        { key: 'customerName', label: 'Customer Name', type: 'text', category: 'Basic' },
+        { key: 'firstName', label: 'First Name', type: 'text', category: 'Basic' },
+        { key: 'lastName', label: 'Last Name', type: 'text', category: 'Basic' },
+        { key: 'phoneNumber', label: 'Phone Number', type: 'text', category: 'Basic' },
         { key: 'email', label: 'Email', type: 'text', category: 'Basic' },
         { key: 'address', label: 'Address', type: 'text', category: 'Basic' },
-        { key: 'quality', label: 'Quality', type: 'text', category: 'Job Info' },
-        { key: 'disposition', label: 'Disposition', type: 'text', category: 'Job Info' },
-        { key: 'leadSource', label: 'Lead Source', type: 'text', category: 'Job Info' },
-        { key: 'roofAge', label: 'Roof Age', type: 'text', category: 'Job Info' },
-        { key: 'roofType', label: 'Roof Type', type: 'text', category: 'Job Info' },
+        { key: 'latitude', label: 'Latitude', type: 'number', category: 'Basic' },
+        { key: 'longitude', label: 'Longitude', type: 'number', category: 'Basic' },
+
+        // Lead Information
+        { key: 'quality', label: 'Quality', type: 'text', category: 'Lead Info' },
+        { key: 'disposition', label: 'Disposition', type: 'text', category: 'Lead Info' },
+        { key: 'leadSource', label: 'Lead Source', type: 'text', category: 'Lead Info' },
+        { key: 'status', label: 'Status', type: 'text', category: 'Lead Info' },
+
+        // Roof Information
+        { key: 'roofAge', label: 'Roof Age', type: 'text', category: 'Roof Info' },
+        { key: 'roofType', label: 'Roof Type', type: 'text', category: 'Roof Info' },
+
+        // Measurements
         { key: 'sqFt', label: 'SQ FT', type: 'number', category: 'Measurements' },
         { key: 'ridgeLf', label: 'Ridge LF', type: 'number', category: 'Measurements' },
         { key: 'valleyLf', label: 'Valley LF', type: 'number', category: 'Measurements' },
         { key: 'eavesLf', label: 'Eaves LF', type: 'number', category: 'Measurements' },
-        { key: 'quote', label: 'Quote', type: 'number', category: 'Financial' },
+
+        // Financial
+        { key: 'dabellaQuote', label: 'DaBella Quote', type: 'number', category: 'Financial' },
+
+        // Ventilation
         { key: 'ridgeVents', label: 'Ridge Vents', type: 'number', category: 'Ventilation' },
         { key: 'turbine', label: 'Turbine', type: 'number', category: 'Ventilation' },
         { key: 'rimeFlow', label: 'Rime Flow', type: 'number', category: 'Ventilation' },
+
+        // Components
         { key: 'highProfileRidgeCap', label: 'High Profile Ridge Cap', type: 'number', category: 'Components' },
         { key: 'valleyMetal', label: 'Valley Metal', type: 'number', category: 'Components' },
+
+        // Pipes
         { key: 'pipes1Half', label: 'Pipes 1.5"', type: 'number', category: 'Pipes' },
         { key: 'pipes2', label: 'Pipes 2"', type: 'number', category: 'Pipes' },
         { key: 'pipes3', label: 'Pipes 3"', type: 'number', category: 'Pipes' },
         { key: 'pipes4', label: 'Pipes 4"', type: 'number', category: 'Pipes' },
+
+        // Features
         { key: 'gables', label: 'Gables', type: 'number', category: 'Features' },
         { key: 'turtleBacks', label: 'Turtle Backs', type: 'number', category: 'Features' },
         { key: 'satellite', label: 'Satellite', type: 'number', category: 'Features' },
         { key: 'chimney', label: 'Chimney', type: 'number', category: 'Features' },
         { key: 'solar', label: 'Solar', type: 'number', category: 'Features' },
         { key: 'swampCooler', label: 'Swamp Cooler', type: 'number', category: 'Features' },
+
+        // Gutters
         { key: 'guttersLf', label: 'Gutters LF', type: 'number', category: 'Gutters' },
         { key: 'downspouts', label: 'Downspouts', type: 'number', category: 'Gutters' },
         { key: 'gutterGuardLf', label: 'Gutter Guard LF', type: 'number', category: 'Gutters' },
-        { key: 'permanentLighting', label: 'Permanent Lighting', type: 'number', category: 'Additional' }
+
+        // Additional
+        { key: 'permanentLighting', label: 'Permanent Lighting', type: 'number', category: 'Additional' },
+        { key: 'notes', label: 'Notes', type: 'text', category: 'Additional' }
     ], []);
 
     const getSortValue = useCallback((lead, key) => {
         const column = availableColumns.find(col => col.key === key);
 
-        if (key === 'customer') {
+        // Handle special field mappings
+        if (key === 'customerName') {
             return lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown';
-        }
-        if (key === 'phone') {
-            return lead.phoneNumber || '';
-        }
-        if (key === 'quote') {
-            return parseFloat(lead.dabellaQuote) || 0;
         }
 
         if (column?.type === 'number') {
@@ -226,12 +281,8 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                 if (!filterValue) return true;
 
                 let leadValue;
-                if (column === 'customer') {
+                if (column === 'customerName') {
                     leadValue = lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
-                } else if (column === 'phone') {
-                    leadValue = lead.phoneNumber?.toString() || '';
-                } else if (column === 'quote') {
-                    leadValue = parseFloat(lead.dabellaQuote) || 0;
                 } else {
                     const columnConfig = availableColumns.find(col => col.key === column);
                     if (columnConfig?.type === 'number') {
@@ -542,17 +593,22 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                                 >
                                     {availableColumns.filter(col => visibleColumns[col.key]).map(column => {
                                         const renderCellContent = () => {
-                                            if (column.key === 'date') {
-                                                return <div className="text-sm font-medium text-gray-900">{formatDate(lead.date)}</div>;
+                                            // Date columns
+                                            if (column.key === 'date' || column.key === 'createdDate' || column.key === 'modifiedDate') {
+                                                return <div className="text-sm font-medium text-gray-900">{formatDate(lead[column.key])}</div>;
                                             }
-                                            if (column.key === 'customer') {
+
+                                            // Customer Name
+                                            if (column.key === 'customerName') {
                                                 return (
                                                     <div className="text-sm font-semibold text-gray-900">
                                                         {lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'}
                                                     </div>
                                                 );
                                             }
-                                            if (column.key === 'phone') {
+
+                                            // Phone Number
+                                            if (column.key === 'phoneNumber') {
                                                 return (
                                                     <a
                                                         href={`tel:${lead.phoneNumber}`}
@@ -563,6 +619,8 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                                                     </a>
                                                 );
                                             }
+
+                                            // Email
                                             if (column.key === 'email') {
                                                 return lead.email ? (
                                                     <a
@@ -574,25 +632,35 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                                                     </a>
                                                 ) : '-';
                                             }
+
+                                            // Address
                                             if (column.key === 'address') {
                                                 return <div className="text-sm text-gray-700 truncate max-w-xs">{lead.address || '-'}</div>;
                                             }
+
+                                            // Disposition
                                             if (column.key === 'disposition') {
                                                 return getStatusBadge(lead.disposition);
                                             }
-                                            if (column.key === 'quote') {
+
+                                            // DaBella Quote
+                                            if (column.key === 'dabellaQuote') {
                                                 return lead.dabellaQuote ? (
                                                     <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
                                                         ${formatNumber(lead.dabellaQuote)}
                                                     </span>
                                                 ) : '-';
                                             }
+
+                                            // Number columns
                                             if (column.type === 'number') {
                                                 const value = lead[column.key];
                                                 return value ? (
                                                     <div className="text-sm font-medium text-gray-900">{formatNumber(value)}</div>
                                                 ) : '-';
                                             }
+
+                                            // Default text rendering
                                             return <div className="text-sm text-gray-900">{lead[column.key] || '-'}</div>;
                                         };
 
