@@ -36,7 +36,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(git restore:*)",
       "Bash(dir:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

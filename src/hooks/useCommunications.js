@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   logCommunication,
   getCommunicationsForLead,
@@ -30,6 +30,11 @@ export function useCommunications(addNotification) {
       return [];
     }
   }, []);
+
+  // Load communications on mount
+  useEffect(() => {
+    loadFromLocal();
+  }, [loadFromLocal]);
 
   /**
    * Add a new communication

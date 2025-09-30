@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock, MessageCircle } from 'lucide-react';
 
 // Import hooks
 import { useLeads } from './hooks/useLeads';
@@ -14,6 +14,7 @@ import LeadsView from './features/leads/LeadsView';
 import JobCountView from './features/jobcount/JobCountView';
 import MapView from './features/map/MapView';
 import CalendarView from './features/calendar/CalendarView';
+import CommunicationsView from './features/communications/CommunicationsView';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
 import JobCountFormModal from './features/jobcount/JobCountFormModal';
@@ -26,7 +27,7 @@ function CrmApplication({ onLogout }) {
   const { notifications, addNotification } = useNotifications();
   const { leads, loading: leadsLoading, refreshLeads, addLead, updateLead, deleteLead } = useLeads(addNotification);
   const { jobCounts, loading: jobCountsLoading, refreshJobCounts, addJobCount, updateJobCount, deleteJobCount } = useJobCounts(addNotification);
-  const { addCommunication } = useCommunications(addNotification);
+  const { communications, addCommunication } = useCommunications(addNotification);
 
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -145,6 +146,15 @@ function CrmApplication({ onLogout }) {
                 <Calendar className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Calendar</span>
               </button>
+              <button
+                onClick={() => setCurrentView('communications')}
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                  currentView === 'communications' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Comms</span>
+              </button>
 
               <button
                 onClick={onLogout}
@@ -217,6 +227,13 @@ function CrmApplication({ onLogout }) {
           />
         )}
         {currentView === 'calendar' && <CalendarView />}
+        {currentView === 'communications' && (
+          <CommunicationsView
+            leads={leads}
+            jobCounts={jobCounts}
+            communications={communications}
+          />
+        )}
       </main>
 
       {/* Lead Modals */}
