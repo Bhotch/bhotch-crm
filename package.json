@@ -58,8 +58,7 @@
     "web-vitals": "^5.1.0",
     "workbox-webpack-plugin": "^7.3.0",
     "yup": "^1.7.1",
-    "zustand": "^5.0.8",
-    "zustand-middleware-xstate": "^3.0.1"
+    "zustand": "^5.0.8"
   },
   "scripts": {
     "start": "react-scripts start",
