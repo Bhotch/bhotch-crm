@@ -132,14 +132,15 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
   };
 
   return (
-    <div className="h-[calc(100vh-140px)] flex gap-6">
+    <div className="h-[calc(100vh-140px)] flex flex-col lg:flex-row gap-4 lg:gap-6">
       {/* Left Panel - Customer Search */}
-      <div className="w-1/3 bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col">
+      <div className="w-full lg:w-1/3 bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col max-h-[40vh] lg:max-h-none">
         {/* Search Header */}
-        <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            <MessageCircle className="w-6 h-6 mr-2 text-blue-600" />
-            Communications Hub
+        <div className="p-3 lg:p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 flex items-center">
+            <MessageCircle className="w-5 h-5 lg:w-6 lg:h-6 mr-2 text-blue-600" />
+            <span className="hidden sm:inline">Communications Hub</span>
+            <span className="sm:hidden">Comms</span>
           </h2>
 
           {/* Search Bar */}
@@ -155,37 +156,40 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
           </div>
 
           {/* Filter Buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-1 lg:gap-2">
             <button
               onClick={() => setFilterType('all')}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                 filterType === 'all'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
               }`}
             >
-              <Filter className="w-4 h-4 inline mr-1" />
-              All ({allCustomers.length})
+              <Filter className="w-3 h-3 lg:w-4 lg:h-4 inline mr-1" />
+              <span className="hidden sm:inline">All ({allCustomers.length})</span>
+              <span className="sm:hidden">{allCustomers.length}</span>
             </button>
             <button
               onClick={() => setFilterType('lead')}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                 filterType === 'lead'
                   ? 'bg-green-600 text-white shadow-md'
                   : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
               }`}
             >
-              Leads ({leads.length})
+              <span className="hidden sm:inline">Leads ({leads.length})</span>
+              <span className="sm:hidden">L{leads.length}</span>
             </button>
             <button
               onClick={() => setFilterType('jobcount')}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all ${
                 filterType === 'jobcount'
                   ? 'bg-purple-600 text-white shadow-md'
                   : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
               }`}
             >
-              Jobs ({jobCounts.length})
+              <span className="hidden sm:inline">Jobs ({jobCounts.length})</span>
+              <span className="sm:hidden">J{jobCounts.length}</span>
             </button>
           </div>
         </div>
@@ -321,70 +325,100 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
           </div>
 
           {/* Action Buttons */}
-          <div className="p-4 border-b bg-gray-50">
-            <div className="flex gap-3">
+          <div className="p-3 lg:p-4 border-b bg-gray-50">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-3">
               <button
                 onClick={() => handleActionClick('call')}
                 disabled={!selectedCustomer.phone}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 ${
                   activeAction === 'call'
                     ? 'bg-blue-600 text-white shadow-lg scale-105'
                     : 'bg-white text-gray-700 border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
               >
-                <PhoneCall className="w-5 h-5" />
-                Call
+                <PhoneCall className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span>Call</span>
+              </button>
+              <button
+                onClick={() => handleActionClick('sms-sent')}
+                disabled={!selectedCustomer.phone}
+                className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 ${
+                  activeAction === 'sms-sent'
+                    ? 'bg-green-600 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
+              >
+                <Send className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span className="hidden lg:inline">Sent SMS</span>
+                <span className="lg:hidden">Send</span>
+              </button>
+              <button
+                onClick={() => handleActionClick('sms-received')}
+                disabled={!selectedCustomer.phone}
+                className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 ${
+                  activeAction === 'sms-received'
+                    ? 'bg-teal-600 text-white shadow-lg scale-105'
+                    : 'bg-white text-gray-700 border-2 border-teal-200 hover:border-teal-400 hover:bg-teal-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span className="hidden lg:inline">Recv SMS</span>
+                <span className="lg:hidden">Recv</span>
               </button>
               <button
                 onClick={() => handleActionClick('sms')}
                 disabled={!selectedCustomer.phone}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 ${
                   activeAction === 'sms'
                     ? 'bg-green-600 text-white shadow-lg scale-105'
                     : 'bg-white text-gray-700 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
               >
-                <MessageSquare className="w-5 h-5" />
-                SMS
+                <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span>SMS</span>
               </button>
               <button
                 onClick={() => handleActionClick('email')}
                 disabled={!selectedCustomer.email}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 ${
                   activeAction === 'email'
                     ? 'bg-purple-600 text-white shadow-lg scale-105'
                     : 'bg-white text-gray-700 border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
               >
-                <Mail className="w-5 h-5" />
-                Email
+                <Mail className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span>Email</span>
               </button>
             </div>
           </div>
 
           {/* Communication Interface */}
           {activeAction && (
-            <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
-              {activeAction === 'sms' && (
+            <div className="p-3 lg:p-4 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+              {(activeAction === 'sms' || activeAction === 'sms-sent' || activeAction === 'sms-received') && (
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-900 flex items-center">
-                    <MessageSquare className="w-5 h-5 mr-2 text-green-600" />
-                    Send SMS via Google Voice
+                  <h3 className="text-sm lg:text-base font-semibold text-gray-900 flex items-center">
+                    {activeAction === 'sms-sent' && <Send className="w-4 h-4 lg:w-5 lg:h-5 mr-2 text-green-600" />}
+                    {activeAction === 'sms-received' && <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5 mr-2 text-teal-600" />}
+                    {activeAction === 'sms' && <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5 mr-2 text-green-600" />}
+                    {activeAction === 'sms-sent' && 'Send SMS via Google Voice'}
+                    {activeAction === 'sms-received' && 'Log Received SMS'}
+                    {activeAction === 'sms' && 'Send SMS via Google Voice'}
                   </h3>
                   <textarea
                     value={messageContent}
                     onChange={(e) => setMessageContent(e.target.value)}
-                    placeholder="Type your message here..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                    placeholder={activeAction === 'sms-received' ? "Message received from customer..." : "Type your message here..."}
+                    className="w-full p-2 lg:p-3 text-sm lg:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
                     rows="3"
                   />
                   <button
                     onClick={handleSendSMS}
                     disabled={!messageContent.trim()}
-                    className="w-full bg-green-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-green-600 text-white py-2 lg:py-2.5 px-3 lg:px-4 text-sm lg:text-base rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    Open Google Voice SMS
+                    {activeAction === 'sms-received' ? 'Log Received SMS' : 'Open Google Voice SMS'}
                   </button>
                 </div>
               )}

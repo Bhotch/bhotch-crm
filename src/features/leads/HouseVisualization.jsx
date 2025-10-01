@@ -265,24 +265,12 @@ export default function HouseVisualization({ leadId }) {
   return (
     <div className="house-visualization-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
       {/* Control Panel */}
-      <div style={{
-        position: 'absolute',
-        top: 20,
-        left: 20,
-        zIndex: 10,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 8,
-        padding: 20,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        maxWidth: 350,
-        maxHeight: 'calc(100vh - 200px)',
-        overflowY: 'auto'
-      }}>
-        <h3 style={{ margin: '0 0 15px 0', fontSize: 18, fontWeight: 600 }}>360° House Visualization</h3>
+      <div className="absolute top-3 left-3 lg:top-5 lg:left-5 z-10 bg-white/95 rounded-lg p-3 lg:p-5 shadow-lg w-[calc(100%-24px)] sm:w-80 lg:w-[350px] max-h-[calc(100vh-150px)] lg:max-h-[calc(100vh-200px)] overflow-y-auto">
+        <h3 className="text-base lg:text-lg font-semibold mb-3 lg:mb-4">360° House Visualization</h3>
 
         {/* Image Upload Section */}
-        <div style={{ marginBottom: 20 }}>
-          <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Images</h4>
+        <div className="mb-4 lg:mb-5">
+          <h4 className="text-xs lg:text-sm font-semibold mb-2 lg:mb-2.5">Images</h4>
           <input
             type="file"
             ref={fileInputRef}
@@ -293,73 +281,42 @@ export default function HouseVisualization({ leadId }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingImage}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              marginBottom: 8,
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: 4,
-              cursor: uploadingImage ? 'not-allowed' : 'pointer',
-              fontSize: 13
-            }}
+            className="w-full py-2 lg:py-2.5 px-3 lg:px-4 mb-2 bg-green-600 text-white rounded text-xs lg:text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {uploadingImage ? 'Uploading...' : beforeImage ? 'Change Image' : 'Upload House Photo'}
           </button>
           {beforeImage && (
-            <div style={{ fontSize: 12, color: '#666', marginTop: 5 }}>
+            <div className="text-xs text-gray-600 mt-1">
               ✓ Image loaded
             </div>
           )}
         </div>
 
         {/* View Mode Selector */}
-        <div style={{ marginBottom: 20 }}>
-          <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>View Mode</h4>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div className="mb-4 lg:mb-5">
+          <h4 className="text-xs lg:text-sm font-semibold mb-2 lg:mb-2.5">View Mode</h4>
+          <div className="flex gap-2">
             <button
               onClick={() => setViewMode('before')}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                backgroundColor: viewMode === 'before' ? '#2196F3' : '#f0f0f0',
-                color: viewMode === 'before' ? 'white' : '#333',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 12
-              }}
+              className={`flex-1 py-2 px-2 lg:px-3 rounded text-xs lg:text-sm font-medium transition-colors ${
+                viewMode === 'before' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              }`}
             >
               Before
             </button>
             <button
               onClick={() => setViewMode('after')}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                backgroundColor: viewMode === 'after' ? '#2196F3' : '#f0f0f0',
-                color: viewMode === 'after' ? 'white' : '#333',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 12
-              }}
+              className={`flex-1 py-2 px-2 lg:px-3 rounded text-xs lg:text-sm font-medium transition-colors ${
+                viewMode === 'after' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              }`}
             >
               After
             </button>
             <button
               onClick={() => setViewMode('compare')}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                backgroundColor: viewMode === 'compare' ? '#2196F3' : '#f0f0f0',
-                color: viewMode === 'compare' ? 'white' : '#333',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 12
-              }}
+              className={`flex-1 py-2 px-2 lg:px-3 rounded text-xs lg:text-sm font-medium transition-colors ${
+                viewMode === 'compare' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              }`}
             >
               Compare
             </button>
@@ -368,19 +325,12 @@ export default function HouseVisualization({ leadId }) {
 
         {/* Roof Products Section */}
         {viewMode !== 'before' && (
-          <div style={{ marginBottom: 20 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Roof Products</h4>
+          <div className="mb-4 lg:mb-5">
+            <h4 className="text-xs lg:text-sm font-semibold mb-2 lg:mb-2.5">Roof Products</h4>
             <select
               value={selectedRoofStyle}
               onChange={(e) => setSelectedRoofStyle(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                marginBottom: 8,
-                border: '1px solid #ddd',
-                borderRadius: 4,
-                fontSize: 13
-              }}
+              className="w-full p-2 mb-2 border border-gray-300 rounded text-xs lg:text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="ridge-vent">Ridge Vent</option>
               <option value="intake-vent">Intake Vent</option>
@@ -389,47 +339,21 @@ export default function HouseVisualization({ leadId }) {
             </select>
             <button
               onClick={addRoofProduct}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                backgroundColor: '#FF9800',
-                color: 'white',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 13
-              }}
+              className="w-full py-2 lg:py-2.5 px-3 lg:px-4 bg-orange-600 text-white rounded text-xs lg:text-sm font-medium hover:bg-orange-700 transition-colors"
             >
               Add Roof Product
             </button>
             {roofProducts.length > 0 && (
-              <div style={{ marginTop: 10 }}>
+              <div className="mt-2 lg:mt-2.5">
                 {roofProducts.map((product) => (
                   <div
                     key={product.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '6px 8px',
-                      backgroundColor: '#f9f9f9',
-                      marginBottom: 4,
-                      borderRadius: 4,
-                      fontSize: 12
-                    }}
+                    className="flex justify-between items-center p-2 bg-gray-100 mb-1 rounded text-xs lg:text-sm"
                   >
                     <span>{product.style.replace('-', ' ').toUpperCase()}</span>
                     <button
                       onClick={() => removeProduct(product.id)}
-                      style={{
-                        padding: '2px 8px',
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 3,
-                        cursor: 'pointer',
-                        fontSize: 11
-                      }}
+                      className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
                     >
                       Remove
                     </button>
@@ -442,81 +366,45 @@ export default function HouseVisualization({ leadId }) {
 
         {/* Outdoor Lighting Section */}
         {viewMode !== 'before' && (
-          <div style={{ marginBottom: 20 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Outdoor Lighting (Jellyfish)</h4>
+          <div className="mb-4 lg:mb-5">
+            <h4 className="text-xs lg:text-sm font-semibold mb-2 lg:mb-2.5">Outdoor Lighting (Jellyfish)</h4>
             <button
               onClick={generateDefaultLighting}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                marginBottom: 8,
-                backgroundColor: '#9C27B0',
-                color: 'white',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 13
-              }}
+              className="w-full py-2 lg:py-2.5 px-3 lg:px-4 mb-2 bg-purple-700 text-white rounded text-xs lg:text-sm font-medium hover:bg-purple-800 transition-colors"
             >
               Generate Lighting Design
             </button>
             <button
               onClick={() => addLightingFixture()}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                backgroundColor: '#673AB7',
-                color: 'white',
-                border: 'none',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 13
-              }}
+              className="w-full py-2 lg:py-2.5 px-3 lg:px-4 bg-purple-600 text-white rounded text-xs lg:text-sm font-medium hover:bg-purple-700 transition-colors"
             >
               Add Single Light
             </button>
-            <div style={{ marginTop: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', fontSize: 13 }}>
+            <div className="mt-2">
+              <label className="flex items-center text-xs lg:text-sm cursor-pointer">
                 <input
                   type="checkbox"
                   checked={lightingConfig.enabled}
                   onChange={(e) => setLightingConfig({ ...lightingConfig, enabled: e.target.checked })}
-                  style={{ marginRight: 8 }}
+                  className="mr-2 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                 />
                 Show Lighting
               </label>
             </div>
             {lightingConfig.lights.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
+              <div className="mt-2 lg:mt-2.5">
+                <div className="text-xs text-gray-600 mb-1.5">
                   {lightingConfig.lights.length} light fixture(s)
                 </div>
                 {lightingConfig.lights.map((light) => (
                   <div
                     key={light.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '6px 8px',
-                      backgroundColor: '#f9f9f9',
-                      marginBottom: 4,
-                      borderRadius: 4,
-                      fontSize: 12
-                    }}
+                    className="flex justify-between items-center p-2 bg-gray-100 mb-1 rounded text-xs lg:text-sm"
                   >
                     <span>Light @ {light.position.map(n => n.toFixed(0)).join(', ')}</span>
                     <button
                       onClick={() => removeLight(light.id)}
-                      style={{
-                        padding: '2px 8px',
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 3,
-                        cursor: 'pointer',
-                        fontSize: 11
-                      }}
+                      className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors"
                     >
                       Remove
                     </button>
@@ -528,12 +416,12 @@ export default function HouseVisualization({ leadId }) {
         )}
 
         {/* Instructions */}
-        <div style={{ fontSize: 12, color: '#666', paddingTop: 10, borderTop: '1px solid #e0e0e0' }}>
+        <div className="text-xs text-gray-600 pt-2 lg:pt-2.5 border-t border-gray-300">
           <strong>Controls:</strong>
-          <ul style={{ margin: '5px 0', paddingLeft: 20 }}>
+          <ul className="my-1 pl-5 space-y-0.5">
             <li>Click & drag to rotate view</li>
             <li>Scroll to zoom in/out</li>
-            <li>Upload a 360° or wide-angle photo for best results</li>
+            <li className="hidden sm:list-item">Upload a 360° or wide-angle photo for best results</li>
           </ul>
         </div>
       </div>
@@ -570,19 +458,9 @@ export default function HouseVisualization({ leadId }) {
 
       {/* Loading Overlay */}
       {!beforeImage && (
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          textAlign: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          padding: '30px 40px',
-          borderRadius: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-        }}>
-          <h2 style={{ margin: '0 0 10px 0', fontSize: 24, fontWeight: 600 }}>Welcome to 360° Visualization</h2>
-          <p style={{ margin: 0, color: '#666', fontSize: 14 }}>Upload a house photo to begin</p>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-white/90 p-6 lg:p-10 rounded-lg shadow-lg">
+          <h2 className="text-lg lg:text-2xl font-semibold mb-2 lg:mb-2.5">Welcome to 360° Visualization</h2>
+          <p className="text-sm lg:text-base text-gray-600">Upload a house photo to begin</p>
         </div>
       )}
     </div>

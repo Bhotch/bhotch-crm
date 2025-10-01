@@ -396,36 +396,36 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900">Lead Management</h2>
-                    <p className="text-gray-600 mt-1">Track and manage your sales leads</p>
+                    <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Lead Management</h2>
+                    <p className="text-sm lg:text-base text-gray-600 mt-1">Track and manage your sales leads</p>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 lg:space-x-3">
                     <button
                         onClick={onRefreshLeads}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                        className="inline-flex items-center px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-xs lg:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                     >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Refresh
+                        <RefreshCw className="w-3 h-3 lg:w-4 lg:h-4 lg:mr-2" />
+                        <span className="hidden lg:inline">Refresh</span>
                     </button>
                     <button
                         onClick={onAddLead}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                        className="inline-flex items-center px-3 lg:px-4 py-2 border border-transparent rounded-lg text-xs lg:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                     >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
                         Add Lead
                     </button>
                 </div>
             </div>
 
             {/* Search and Filters */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <div className="space-y-4">
+            <div className="bg-white p-3 lg:p-6 rounded-lg shadow-sm border">
+                <div className="space-y-3 lg:space-y-4">
                     {/* Main Search and Date Filter */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
                         <div className="relative md:col-span-2">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
