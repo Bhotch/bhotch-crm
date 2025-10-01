@@ -38,7 +38,12 @@
       "Bash(dir:*)",
       "Bash(curl:*)",
       "Bash(findstr:*)",
-      "Bash(git clean:*)"
+      "Bash(git clean:*)",
+      "Bash(timeout 30 bash -c 'while ! curl -s http://localhost:3000 > /dev/null; do sleep 1; done && echo \"\"Server is ready!\"\"')",
+      "Bash(timeout 60 bash -c 'while ! curl -s http://localhost:3000 > /dev/null; do sleep 2; done && echo \"\"Server ready\"\"')",
+      "Bash(timeout:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
