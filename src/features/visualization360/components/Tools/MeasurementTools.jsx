@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Ruler, Move, Square, Triangle, Calculator, Save, Trash2 } from 'lucide-react';
 import { useVisualizationStore } from '../../store/visualizationStore';
 
@@ -13,9 +13,9 @@ export default function MeasurementTools({ className = '' }) {
   const [measurements, setMeasurements] = useState([]);
   const [currentMeasurement, setCurrentMeasurement] = useState(null);
   const [unit, setUnit] = useState('feet'); // 'feet', 'meters', 'inches'
-  const canvasRef = useRef(null);
+  // const canvasRef = useRef(null); // Reserved for future use
 
-  const { images, setMeasurements: storeSetMeasurements } = useVisualizationStore();
+  const { setMeasurements: storeSetMeasurements } = useVisualizationStore();
 
   const tools = [
     { id: 'distance', name: 'Distance', icon: Ruler, description: 'Measure linear distance' },
@@ -41,43 +41,51 @@ export default function MeasurementTools({ className = '' }) {
   /**
    * Add point to current measurement
    */
-  const addPoint = (x, y, z = 0) => {
-    if (!currentMeasurement) return;
+  // Reserved for future interactive measurement feature
+  // const addPoint = (x, y, z = 0) => {
+  //   if (!currentMeasurement) return;
 
-    const newPoints = [...currentMeasurement.points, { x, y, z }];
-    const updated = { ...currentMeasurement, points: newPoints };
+  //   const newPoints = [...currentMeasurement.points, { x, y, z }];
+  //   const updated = { ...currentMeasurement, points: newPoints };
 
-    // Calculate value based on tool type
-    switch (currentMeasurement.type) {
-      case 'distance':
-        if (newPoints.length === 2) {
-          updated.value = calculateDistance(newPoints[0], newPoints[1]);
-          completeMeasurement(updated);
-        }
-        break;
+  //   // Calculate value based on tool type
+  //   switch (currentMeasurement.type) {
+  // const calculateMeasurement = (measurementType, newPoints) => {
+  //   const updated = { ...currentMeasurement, points: newPoints };
 
-      case 'area':
-        if (newPoints.length >= 3) {
-          updated.value = calculateArea(newPoints);
-        }
-        break;
+  //   switch (measurementType) {
+  //     case 'distance':
+  //       if (newPoints.length === 2) {
+  //         updated.value = calculateDistance(newPoints[0], newPoints[1]);
+  //         completeMeasurement(updated);
+  //       }
+  //       break;
 
-      case 'pitch':
-        if (newPoints.length === 2) {
-          updated.value = calculatePitch(newPoints[0], newPoints[1]);
-          completeMeasurement(updated);
-        }
-        break;
+  //     case 'area':
+  //       if (newPoints.length >= 3) {
+  //         updated.value = calculateArea(newPoints);
+  //       }
+  //       break;
 
-      case 'perimeter':
-        if (newPoints.length >= 2) {
-          updated.value = calculatePerimeter(newPoints);
-        }
-        break;
-    }
+  //     case 'pitch':
+  //       if (newPoints.length === 2) {
+  //         updated.value = calculatePitch(newPoints[0], newPoints[1]);
+  //         completeMeasurement(updated);
+  //       }
+  //       break;
 
-    setCurrentMeasurement(updated);
-  };
+  //     case 'perimeter':
+  //       if (newPoints.length >= 2) {
+  //         updated.value = calculatePerimeter(newPoints);
+  //       }
+  //       break;
+
+  //     default:
+  //       break;
+  //   }
+
+  //   setCurrentMeasurement(updated);
+  // };
 
   /**
    * Complete current measurement
@@ -117,6 +125,7 @@ export default function MeasurementTools({ className = '' }) {
   /**
    * Calculate area of polygon
    */
+  // eslint-disable-next-line no-unused-vars
   const calculateArea = (points) => {
     if (points.length < 3) return 0;
 
@@ -135,6 +144,7 @@ export default function MeasurementTools({ className = '' }) {
   /**
    * Calculate roof pitch
    */
+  // eslint-disable-next-line no-unused-vars
   const calculatePitch = (p1, p2) => {
     const rise = Math.abs(p2.y - p1.y);
     const run = Math.abs(p2.x - p1.x);
@@ -158,6 +168,7 @@ export default function MeasurementTools({ className = '' }) {
   /**
    * Calculate perimeter of polygon
    */
+  // eslint-disable-next-line no-unused-vars
   const calculatePerimeter = (points) => {
     if (points.length < 2) return 0;
 

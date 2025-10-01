@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Trophy, TrendingUp, Award, Star, Zap, Target } from 'lucide-react';
+import { Trophy, Award, Star, Zap, Target } from 'lucide-react';
 import { useCanvassingStore } from '../../store/canvassingStore';
 import { PROPERTY_STATUS } from '../map/PropertyMarker';
 

@@ -96,6 +96,7 @@ const CanvassingView = ({ leads }) => {
     };
 
     initializeMap();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync leads to properties if not already in store

@@ -1,10 +1,11 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState, useRef } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Sphere, useTexture, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useVisualizationStore } from '../../store/visualizationStore';
 import ProductOverlay from './ProductOverlay';
 import LightingOverlay from './LightingOverlay';
+import { AlertTriangle } from 'lucide-react';
 
 /**
  * Panorama Sphere Component
@@ -96,12 +97,69 @@ function SceneController() {
  */
 export default function House360Viewer({ className = '' }) {
   const { images } = useVisualizationStore();
+  const [webglError, setWebglError] = useState(false);
+  const canvasRef = useRef(null);
+
+  // Handle WebGL context lost/restored
+  useEffect(() => {
+    const handleContextLost = (event) => {
+      event.preventDefault();
+      console.warn('WebGL context lost. Attempting to restore...');
+      setWebglError(true);
+    };
+
+    const handleContextRestored = () => {
+      console.log('WebGL context restored');
+      setWebglError(false);
+    };
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('webglcontextlost', handleContextLost, false);
+      canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+
+      return () => {
+        canvas.removeEventListener('webglcontextlost', handleContextLost);
+        canvas.removeEventListener('webglcontextrestored', handleContextRestored);
+      };
+    }
+  }, []);
+
+  if (webglError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-900">
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-6 max-w-md text-center">
+          <AlertTriangle className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-yellow-900 mb-2">3D Rendering Paused</h3>
+          <p className="text-sm text-yellow-800 mb-4">
+            The 3D renderer encountered an issue. This may happen if your device has limited graphics resources.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`house-360-viewer w-full h-full relative ${className}`}>
+    <div className={`house-360-viewer w-full h-full relative ${className}`} ref={canvasRef}>
       <Canvas
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        gl={{
+          antialias: true,
+          alpha: false,
+          preserveDrawingBuffer: true,
+          powerPreference: 'high-performance',
+          failIfMajorPerformanceCaveat: false
+        }}
         dpr={[1, 2]}
+        onCreated={({ gl }) => {
+          // Suppress THREE.js context lost warnings in console
+          gl.domElement.addEventListener('webglcontextlost', (e) => e.preventDefault());
+        }}
       >
         <PerspectiveCamera makeDefault fov={75} position={[0, 0, 0.1]} />
         <OrbitControls

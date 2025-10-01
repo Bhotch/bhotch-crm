@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Target, Map, Route, Trophy, BarChart3, Settings, X } from 'lucide-react';
+import { Map, Route, Trophy, BarChart3, X } from 'lucide-react';
 import CanvassingView from './CanvassingView';
 import TerritoryDrawingTool from './components/territory/TerritoryDrawingTool';
 import TerritoryManager from './components/territory/TerritoryManager';

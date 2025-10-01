@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Route, Navigation, Clock, MapPin, Zap, Save, Play } from 'lucide-react';
+import { Route, Navigation, Zap, Save, Play } from 'lucide-react';
 import { useCanvassingStore } from '../../store/canvassingStore';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
 import { optimizeRoute, calculateRouteDistance } from '../../utils/geoUtils';

@@ -20,7 +20,7 @@ export default function CameraIntegration({ onComplete, className = '' }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
-  const { photoCapture, addCapturedImage } = useVisualizationStore();
+  const { addCapturedImage } = useVisualizationStore();
 
   // Required photo angles with guidance
   const captureSteps = [
@@ -295,6 +295,7 @@ export default function CameraIntegration({ onComplete, className = '' }) {
         }
       });
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const progress = (capturedPhotos.filter(p => p).length / captureSteps.length) * 100;

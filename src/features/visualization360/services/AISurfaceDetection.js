@@ -196,7 +196,7 @@ export class AISurfaceDetector {
     const regions = [];
 
     // Edge detection using simple gradient
-    const edges = this.detectEdges(pixels, width, height);
+    // const edges = this.detectEdges(pixels, width, height); // Reserved for future use
 
     // Find horizontal edges in upper-middle area (likely eaves)
     const eaveY = height * 0.45;
@@ -226,7 +226,7 @@ export class AISurfaceDetector {
 
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
-        const idx = (y * width + x) * 4;
+        // const idx = (y * width + x) * 4; // Reserved for future use
 
         // Calculate gradient
         const gx = this.getPixelBrightness(pixels, (y * width + x + 1) * 4) -
@@ -474,6 +474,9 @@ export class AISurfaceDetector {
             position: this.boundsToPosition(surface.bounds),
             autoPlaced: true
           });
+          break;
+
+        default:
           break;
       }
     });

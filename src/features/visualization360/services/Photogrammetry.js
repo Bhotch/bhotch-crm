@@ -274,7 +274,7 @@ export class PhotogrammetryService {
     const stepSize = 20;
     for (let y = stepSize; y < height - stepSize; y += stepSize) {
       for (let x = stepSize; x < width - stepSize; x += stepSize) {
-        const idx = (y * width + x) * 4;
+        // const idx = (y * width + x) * 4; // Reserved for future use
 
         // Simple corner detection using gradient
         const gx = this.getGradientX(data, x, y, width);
@@ -373,7 +373,7 @@ export class PhotogrammetryService {
    */
   triangulatePoint(match, photo1, photo2) {
     // Simplified triangulation - real implementation would use camera matrices
-    const baselineDistance = 10; // Assumed distance between photos
+    // const baselineDistance = 10; // Assumed distance between photos - Reserved for future use
 
     return {
       x: (match.point1.x + match.point2.x) / 2,

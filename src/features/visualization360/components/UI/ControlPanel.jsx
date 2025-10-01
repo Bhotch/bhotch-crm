@@ -18,9 +18,9 @@ export default function ControlPanel() {
   const fileInputRef = useRef();
   const [uploadingFile, setUploadingFile] = useState(null);
   const [showValidator, setShowValidator] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [showMeasurement, setShowMeasurement] = useState(false);
-  const [showEstimate, setShowEstimate] = useState(false);
+  // const [showCamera, setShowCamera] = useState(false); // Reserved for future use
+  // const [showMeasurement, setShowMeasurement] = useState(false); // Reserved for future use
+  // const [showEstimate, setShowEstimate] = useState(false); // Reserved for future use
   const [activePanel, setActivePanel] = useState('main'); // 'main', 'camera', 'measurement', 'estimate'
 
   const {
@@ -113,7 +113,7 @@ export default function ControlPanel() {
 
       // Poll for status
       // In production, this would be handled with websockets or polling
-      setShowCamera(false);
+      // setShowCamera(false); // Reserved for future camera integration
       setActivePanel('main');
     } catch (error) {
       console.error('Photo processing failed:', error);

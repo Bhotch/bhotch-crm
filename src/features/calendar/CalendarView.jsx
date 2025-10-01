@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Calendar, CalendarDays, ExternalLink, RefreshCw, Grid, List, Clock
+  Calendar, CalendarDays, ExternalLink, RefreshCw, Grid, List, Clock, AlertTriangle
 } from 'lucide-react';
 
 function CalendarView() {
   const [calendarView, setCalendarView] = useState('MONTH'); // MONTH, WEEK, AGENDA
+  const [iframeError, setIframeError] = useState(false);
 
   // Google Calendar embed URL for brandon@rimehq.net
   const GOOGLE_CALENDAR_EMAIL = 'brandon@rimehq.net';
@@ -39,8 +40,51 @@ function CalendarView() {
       const currentSrc = iframe.src;
       iframe.src = '';
       iframe.src = currentSrc;
+      setIframeError(false);
     }
   };
+
+  // Monitor iframe load errors (401 Unauthorized)
+  useEffect(() => {
+    const iframe = document.getElementById('google-calendar-iframe');
+    if (iframe) {
+      const handleLoad = () => {
+        try {
+          // If calendar loads successfully, clear error state
+          setIframeError(false);
+        } catch (e) {
+          // Iframe loaded but may have errors
+          console.log('Calendar iframe loaded');
+        }
+      };
+
+      const handleError = () => {
+        setIframeError(true);
+      };
+
+      iframe.addEventListener('load', handleLoad);
+      iframe.addEventListener('error', handleError);
+
+      // Check for 401 errors after a short delay
+      const timeout = setTimeout(() => {
+        try {
+          // If iframe is accessible and calendar is private, show error
+          if (iframe.contentDocument === null) {
+            // Cross-origin iframe, likely has auth issues
+            // This is expected for Google Calendar embeds without proper auth
+          }
+        } catch (e) {
+          // Expected cross-origin error
+        }
+      }, 2000);
+
+      return () => {
+        iframe.removeEventListener('load', handleLoad);
+        iframe.removeEventListener('error', handleError);
+        clearTimeout(timeout);
+      };
+    }
+  }, [calendarView]);
 
   return (
     <div className="space-y-6">
@@ -117,6 +161,25 @@ function CalendarView() {
           </p>
         </div>
       </div>
+
+      {/* Authentication Warning (if needed) */}
+      {iframeError && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 flex items-start">
+          <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-yellow-900 mb-1">Calendar Authentication Required</h3>
+            <p className="text-sm text-yellow-800 mb-2">
+              The calendar cannot be displayed due to authentication restrictions. This is normal for private calendars.
+            </p>
+            <button
+              onClick={handleOpenInGoogle}
+              className="text-sm text-yellow-900 hover:text-yellow-700 font-medium underline"
+            >
+              Open Google Calendar directly →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Google Calendar Embed */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">

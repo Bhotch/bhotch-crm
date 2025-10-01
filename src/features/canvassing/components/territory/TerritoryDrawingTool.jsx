@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Pencil, Square, Circle, Trash2, Save, X, Undo, MapPin } from 'lucide-react';
+import { Pencil, Square, Circle, Trash2, Save, X, MapPin } from 'lucide-react';
 import { useCanvassingStore } from '../../store/canvassingStore';
 import { useTerritories } from '../../hooks/useTerritories';
 import { calculateTerritoryArea, getTerritoryCenter } from '../../utils/geoUtils';
@@ -12,7 +12,7 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
   const [drawingMode, setDrawingMode] = useState(null); // 'polygon', 'rectangle', 'circle', null
   const [territoryName, setTerritoryName] = useState('');
   const [territoryColor, setTerritoryColor] = useState('#3B82F6');
-  const [assignedReps, setAssignedReps] = useState([]);
+  // const [assignedReps, setAssignedReps] = useState([]); // Reserved for future use
   const [coordinates, setCoordinates] = useState([]);
   const [stats, setStats] = useState({ area: 0, center: null });
 
@@ -195,7 +195,7 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
       createTerritory({
         name: territoryName,
         coordinates,
-        assignedReps,
+        assignedReps: [], // Reserved for future assignment feature
         color: territoryColor,
         description: `Territory with ${stats.area} sq mi area`,
       });

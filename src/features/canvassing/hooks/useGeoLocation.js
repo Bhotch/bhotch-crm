@@ -10,7 +10,7 @@ export const useGeoLocation = (options = {}) => {
     enableHighAccuracy = true,
     timeout = 10000,
     maximumAge = 30000, // 30 seconds cache
-    updateInterval = 30000, // Update every 30 seconds
+    // updateInterval = 30000, // Update every 30 seconds - Reserved for future use
     distanceFilter = 10, // Minimum distance in meters before update
   } = options;
 

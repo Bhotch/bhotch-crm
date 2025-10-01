@@ -3,3 +3,5 @@
 .env*.local
 node_modules
 nul
+node_modules
+node_modules
