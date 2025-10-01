@@ -15,7 +15,7 @@ import JobCountView from './features/jobcount/JobCountView';
 import MapView from './features/map/MapView';
 import CalendarView from './features/calendar/CalendarView';
 import CommunicationsView from './features/communications/CommunicationsView';
-import HouseVisualization from './features/leads/HouseVisualization';
+import Visualization360 from './features/visualization360/Visualization360';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
 import JobCountFormModal from './features/jobcount/JobCountFormModal';
@@ -245,8 +245,8 @@ function CrmApplication({ onLogout }) {
           />
         )}
         {currentView === 'visualization' && (
-          <div style={{ height: 'calc(100vh - 180px)' }}>
-            <HouseVisualization leadId={null} />
+          <div style={{ height: 'calc(100vh - 120px)' }}>
+            <Visualization360 />
           </div>
         )}
       </main>
