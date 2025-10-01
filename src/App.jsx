@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock, MessageCircle } from 'lucide-react';
+import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock, MessageCircle, Eye } from 'lucide-react';
 
 // Import hooks
 import { useLeads } from './hooks/useLeads';
@@ -15,6 +15,7 @@ import JobCountView from './features/jobcount/JobCountView';
 import MapView from './features/map/MapView';
 import CalendarView from './features/calendar/CalendarView';
 import CommunicationsView from './features/communications/CommunicationsView';
+import HouseVisualization from './features/leads/HouseVisualization';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
 import JobCountFormModal from './features/jobcount/JobCountFormModal';
@@ -155,6 +156,15 @@ function CrmApplication({ onLogout }) {
                 <MessageCircle className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Comms</span>
               </button>
+              <button
+                onClick={() => setCurrentView('visualization')}
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                  currentView === 'visualization' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">360° View</span>
+              </button>
 
               <button
                 onClick={onLogout}
@@ -233,6 +243,11 @@ function CrmApplication({ onLogout }) {
             jobCounts={jobCounts}
             communications={communications}
           />
+        )}
+        {currentView === 'visualization' && (
+          <div style={{ height: 'calc(100vh - 180px)' }}>
+            <HouseVisualization leadId={null} />
+          </div>
         )}
       </main>
 
