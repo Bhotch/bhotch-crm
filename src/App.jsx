@@ -17,7 +17,6 @@ import CalendarView from './features/calendar/CalendarView';
 import CommunicationsView from './features/communications/CommunicationsView';
 import Visualization360 from './features/visualization360/Visualization360';
 import CanvassingViewEnhanced from './features/canvassing/CanvassingViewEnhanced';
-import CanvassingView from './features/canvassing/CanvassingView';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
 import JobCountFormModal from './features/jobcount/JobCountFormModal';

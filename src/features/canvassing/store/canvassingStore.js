@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
 
 /**
  * Canvassing Store - Central state management for door-to-door canvassing
@@ -8,37 +7,38 @@ import { immer } from 'zustand/middleware/immer';
  */
 export const useCanvassingStore = create(
   persist(
-    immer((set, get) => ({
+    (set, get) => ({
       // ==================== TERRITORIES ====================
       territories: [],
       selectedTerritory: null,
 
-      addTerritory: (territory) => set((state) => {
-        state.territories.push({
+      addTerritory: (territory) => set((state) => ({
+        territories: [...state.territories, {
           ...territory,
           id: territory.id || `territory_${Date.now()}`,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        });
-      }),
+        }]
+      })),
 
       updateTerritory: (territoryId, updates) => set((state) => {
         const index = state.territories.findIndex(t => t.id === territoryId);
         if (index !== -1) {
-          state.territories[index] = {
-            ...state.territories[index],
+          const newTerritories = [...state.territories];
+          newTerritories[index] = {
+            ...newTerritories[index],
             ...updates,
             updatedAt: new Date().toISOString(),
           };
+          return { territories: newTerritories };
         }
+        return state;
       }),
 
-      deleteTerritory: (territoryId) => set((state) => {
-        state.territories = state.territories.filter(t => t.id !== territoryId);
-        if (state.selectedTerritory?.id === territoryId) {
-          state.selectedTerritory = null;
-        }
-      }),
+      deleteTerritory: (territoryId) => set((state) => ({
+        territories: state.territories.filter(t => t.id !== territoryId),
+        selectedTerritory: state.selectedTerritory?.id === territoryId ? null : state.selectedTerritory
+      })),
 
       selectTerritory: (territory) => set({ selectedTerritory: territory }),
 
@@ -51,85 +51,93 @@ export const useCanvassingStore = create(
         territory: 'all',
       },
 
-      addProperty: (property) => set((state) => {
-        state.properties.push({
+      addProperty: (property) => set((state) => ({
+        properties: [...state.properties, {
           ...property,
           id: property.id || `property_${Date.now()}`,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           visits: property.visits || [],
-        });
-      }),
+        }]
+      })),
 
       updateProperty: (propertyId, updates) => set((state) => {
         const index = state.properties.findIndex(p => p.id === propertyId);
         if (index !== -1) {
-          state.properties[index] = {
-            ...state.properties[index],
+          const newProperties = [...state.properties];
+          newProperties[index] = {
+            ...newProperties[index],
             ...updates,
             updatedAt: new Date().toISOString(),
           };
+          return { properties: newProperties };
         }
+        return state;
       }),
 
-      deleteProperty: (propertyId) => set((state) => {
-        state.properties = state.properties.filter(p => p.id !== propertyId);
-        if (state.selectedProperty?.id === propertyId) {
-          state.selectedProperty = null;
-        }
-      }),
+      deleteProperty: (propertyId) => set((state) => ({
+        properties: state.properties.filter(p => p.id !== propertyId),
+        selectedProperty: state.selectedProperty?.id === propertyId ? null : state.selectedProperty
+      })),
 
       selectProperty: (property) => set({ selectedProperty: property }),
 
-      setPropertyFilter: (filter) => set((state) => {
-        state.propertyFilter = { ...state.propertyFilter, ...filter };
-      }),
+      setPropertyFilter: (filter) => set((state) => ({
+        propertyFilter: { ...state.propertyFilter, ...filter }
+      })),
 
       // Add visit to property
       addVisit: (propertyId, visit) => set((state) => {
-        const property = state.properties.find(p => p.id === propertyId);
-        if (property) {
-          property.visits = property.visits || [];
-          property.visits.push({
-            ...visit,
-            id: visit.id || `visit_${Date.now()}`,
-            timestamp: new Date().toISOString(),
-          });
-          property.updatedAt = new Date().toISOString();
-          property.lastVisitDate = new Date().toISOString();
+        const index = state.properties.findIndex(p => p.id === propertyId);
+        if (index !== -1) {
+          const newProperties = [...state.properties];
+          const property = newProperties[index];
+          newProperties[index] = {
+            ...property,
+            visits: [...(property.visits || []), {
+              ...visit,
+              id: visit.id || `visit_${Date.now()}`,
+              timestamp: new Date().toISOString(),
+            }],
+            updatedAt: new Date().toISOString(),
+            lastVisitDate: new Date().toISOString(),
+          };
+          return { properties: newProperties };
         }
+        return state;
       }),
 
       // ==================== ROUTES ====================
       routes: [],
       activeRoute: null,
 
-      addRoute: (route) => set((state) => {
-        state.routes.push({
+      addRoute: (route) => set((state) => ({
+        routes: [...state.routes, {
           ...route,
           id: route.id || `route_${Date.now()}`,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        });
-      }),
+        }]
+      })),
 
       updateRoute: (routeId, updates) => set((state) => {
         const index = state.routes.findIndex(r => r.id === routeId);
         if (index !== -1) {
-          state.routes[index] = {
-            ...state.routes[index],
+          const newRoutes = [...state.routes];
+          newRoutes[index] = {
+            ...newRoutes[index],
             ...updates,
             updatedAt: new Date().toISOString(),
           };
+          return { routes: newRoutes };
         }
+        return state;
       }),
 
-      deleteRoute: (routeId) => set((state) => {
-        state.routes = state.routes.filter(r => r.id !== routeId);
-        if (state.activeRoute?.id === routeId) {
-          state.activeRoute = null;
-        }
-      }),
+      deleteRoute: (routeId) => set((state) => ({
+        routes: state.routes.filter(r => r.id !== routeId),
+        activeRoute: state.activeRoute?.id === routeId ? null : state.activeRoute
+      })),
 
       setActiveRoute: (route) => set({ activeRoute: route }),
 
@@ -138,12 +146,15 @@ export const useCanvassingStore = create(
       trackingEnabled: false,
       currentLocation: null,
 
-      updateRepLocation: (repId, location) => set((state) => {
-        state.repLocations[repId] = {
-          ...location,
-          timestamp: new Date().toISOString(),
-        };
-      }),
+      updateRepLocation: (repId, location) => set((state) => ({
+        repLocations: {
+          ...state.repLocations,
+          [repId]: {
+            ...location,
+            timestamp: new Date().toISOString(),
+          }
+        }
+      })),
 
       setCurrentLocation: (location) => set({ currentLocation: location }),
 
@@ -158,15 +169,15 @@ export const useCanvassingStore = create(
         hoursWorked: 0,
       },
 
-      updateAnalytics: (updates) => set((state) => {
-        state.analytics = { ...state.analytics, ...updates };
-      }),
+      updateAnalytics: (updates) => set((state) => ({
+        analytics: { ...state.analytics, ...updates }
+      })),
 
-      incrementMetric: (metric, amount = 1) => set((state) => {
-        if (state.analytics[metric] !== undefined) {
-          state.analytics[metric] += amount;
-        }
-      }),
+      incrementMetric: (metric, amount = 1) => set((state) => ({
+        analytics: state.analytics[metric] !== undefined
+          ? { ...state.analytics, [metric]: state.analytics[metric] + amount }
+          : state.analytics
+      })),
 
       // ==================== UI STATE ====================
       mapView: {
@@ -179,9 +190,9 @@ export const useCanvassingStore = create(
         showRoutes: true,
       },
 
-      updateMapView: (updates) => set((state) => {
-        state.mapView = { ...state.mapView, ...updates };
-      }),
+      updateMapView: (updates) => set((state) => ({
+        mapView: { ...state.mapView, ...updates }
+      })),
 
       // Drawing mode for territories
       drawingMode: null, // null, 'territory', 'route'
@@ -232,7 +243,7 @@ export const useCanvassingStore = create(
           hoursWorked: 0,
         },
       }),
-    })),
+    }),
     {
       name: 'canvassing-storage',
       storage: createJSONStorage(() => localStorage),
