@@ -1,7 +1,20 @@
+# Environment variables
 .env
-.vercel
 .env*.local
+
+# Vercel
+.vercel
+
+# Dependencies
 node_modules
+
+# Build outputs
+/build
+
+# Temp files
 nul
-node_modules
-node_modules
+.tmp.driveupload
+
+# IDE
+.vscode
+.idea
