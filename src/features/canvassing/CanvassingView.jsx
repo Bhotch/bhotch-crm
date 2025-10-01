@@ -1,0 +1,441 @@
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  Navigation,
+  Filter,
+  Target,
+  Play,
+  Square,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
+import { loadGoogleMaps } from '../../services/googleMapsService';
+import { useCanvassingStore } from './store/canvassingStore';
+import { useGeoLocation } from './hooks/useGeoLocation';
+import { createPropertyMarkerIcon, PROPERTY_STATUS } from './components/map/PropertyMarker';
+import PropertyDetailSheet from './components/property/PropertyDetailSheet';
+
+/**
+ * CanvassingView Component
+ * Main door-to-door canvassing interface with advanced mapping features
+ */
+const CanvassingView = ({ leads }) => {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+  const trafficLayerRef = useRef(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showPropertySheet, setShowPropertySheet] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Store state
+  const {
+    mapView,
+    updateMapView,
+    properties,
+    addProperty,
+    propertyFilter,
+    setPropertyFilter,
+    getFilteredProperties,
+    setTrackingEnabled,
+  } = useCanvassingStore();
+
+  // Geolocation
+  const { location, isTracking, startTracking, stopTracking } = useGeoLocation({
+    updateInterval: 30000, // 30 seconds
+  });
+
+  // Initialize map
+  useEffect(() => {
+    const initializeMap = async () => {
+      try {
+        const google = await loadGoogleMaps();
+        if (!mapRef.current) return;
+
+        const mapInstance = new google.maps.Map(mapRef.current, {
+          center: mapView.center,
+          zoom: mapView.zoom,
+          mapTypeId: mapView.mapType,
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+          zoomControl: true,
+          styles: [
+            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+            { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
+          ],
+        });
+
+        // Traffic layer
+        trafficLayerRef.current = new google.maps.TrafficLayer();
+        if (mapView.showTraffic) {
+          trafficLayerRef.current.setMap(mapInstance);
+        }
+
+        mapInstanceRef.current = mapInstance;
+
+        // Save map position changes
+        mapInstance.addListener('center_changed', () => {
+          const center = mapInstance.getCenter();
+          updateMapView({
+            center: { lat: center.lat(), lng: center.lng() },
+          });
+        });
+
+        mapInstance.addListener('zoom_changed', () => {
+          updateMapView({ zoom: mapInstance.getZoom() });
+        });
+
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    initializeMap();
+  }, []);
+
+  // Sync leads to properties if not already in store
+  useEffect(() => {
+    if (!leads || leads.length === 0) return;
+
+    leads.forEach((lead) => {
+      if (lead.latitude && lead.longitude) {
+        const exists = properties.find((p) => p.leadId === lead.id);
+        if (!exists) {
+          addProperty({
+            leadId: lead.id,
+            address: lead.address,
+            customerName: lead.customerName,
+            phoneNumber: lead.phoneNumber,
+            email: lead.email,
+            latitude: lead.latitude,
+            longitude: lead.longitude,
+            quality: lead.quality,
+            status: PROPERTY_STATUS.NOT_CONTACTED,
+            visits: [],
+          });
+        }
+      }
+    });
+  }, [leads, properties, addProperty]);
+
+  // Render property markers
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.google) return;
+
+    // Clear existing markers
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
+
+    const filteredProperties = getFilteredProperties();
+
+    // Create new markers
+    filteredProperties.forEach((property) => {
+      if (!property.latitude || !property.longitude) return;
+
+      const marker = new window.google.maps.Marker({
+        position: { lat: property.latitude, lng: property.longitude },
+        map: mapInstanceRef.current,
+        title: property.address,
+        icon: createPropertyMarkerIcon(property),
+        animation: window.google.maps.Animation.DROP,
+      });
+
+      marker.addListener('click', () => {
+        setSelectedProperty(property);
+        setShowPropertySheet(true);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [properties, propertyFilter, getFilteredProperties]);
+
+  // Current location marker
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.google || !location) return;
+
+    // Create or update current location marker
+    const currentLocationMarker = new window.google.maps.Marker({
+      position: { lat: location.lat, lng: location.lng },
+      map: mapInstanceRef.current,
+      title: 'Your Location',
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#4285F4',
+        fillOpacity: 1,
+        strokeColor: '#FFFFFF',
+        strokeWeight: 3,
+      },
+      zIndex: 10000,
+    });
+
+    // Create accuracy circle
+    const accuracyCircle = new window.google.maps.Circle({
+      map: mapInstanceRef.current,
+      center: { lat: location.lat, lng: location.lng },
+      radius: location.accuracy,
+      fillColor: '#4285F4',
+      fillOpacity: 0.1,
+      strokeColor: '#4285F4',
+      strokeOpacity: 0.3,
+      strokeWeight: 1,
+    });
+
+    return () => {
+      currentLocationMarker.setMap(null);
+      accuracyCircle.setMap(null);
+    };
+  }, [location]);
+
+  // Toggle tracking
+  const handleToggleTracking = () => {
+    if (isTracking) {
+      stopTracking();
+      setTrackingEnabled(false);
+    } else {
+      startTracking();
+      setTrackingEnabled(true);
+    }
+  };
+
+  // Filter stats
+  const filterStats = useMemo(() => {
+    const filtered = getFilteredProperties();
+    return {
+      total: filtered.length,
+      notContacted: filtered.filter((p) => p.status === PROPERTY_STATUS.NOT_CONTACTED).length,
+      interested: filtered.filter((p) => p.status === PROPERTY_STATUS.INTERESTED).length,
+      appointments: filtered.filter((p) => p.status === PROPERTY_STATUS.APPOINTMENT).length,
+      sold: filtered.filter((p) => p.status === PROPERTY_STATUS.SOLD).length,
+    };
+  }, [getFilteredProperties]);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-3" />
+          <p className="text-gray-600 text-lg">Loading Canvassing Map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center bg-red-50">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Map Error</h3>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Target className="w-6 h-6 text-blue-600" />
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Door-to-Door Canvassing</h2>
+            <p className="text-sm text-gray-600">{filterStats.total} properties</p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {/* Location Tracking Toggle */}
+          <button
+            onClick={handleToggleTracking}
+            className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isTracking
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {isTracking ? (
+              <><Square className="w-4 h-4 mr-2" /> Stop Tracking</>
+            ) : (
+              <><Play className="w-4 h-4 mr-2" /> Start Tracking</>
+            )}
+          </button>
+
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`p-2 rounded-lg transition-colors ${
+              showFilters ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Filter className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="bg-white border-b px-4 py-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <select
+                value={propertyFilter.status}
+                onChange={(e) => setPropertyFilter({ status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Statuses</option>
+                {Object.values(PROPERTY_STATUS).map((status) => (
+                  <option key={status} value={status}>
+                    {status.replace('_', ' ').toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Quality Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Lead Quality</label>
+              <select
+                value={propertyFilter.quality}
+                onChange={(e) => setPropertyFilter({ quality: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Qualities</option>
+                <option value="hot">Hot</option>
+                <option value="warm">Warm</option>
+                <option value="cold">Cold</option>
+              </select>
+            </div>
+
+            {/* Map Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Map Type</label>
+              <select
+                value={mapView.mapType}
+                onChange={(e) => {
+                  updateMapView({ mapType: e.target.value });
+                  if (mapInstanceRef.current) {
+                    mapInstanceRef.current.setMapTypeId(e.target.value);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="roadmap">Road Map</option>
+                <option value="satellite">Satellite</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="terrain">Terrain</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="mt-4 grid grid-cols-5 gap-3">
+            <div className="bg-gray-50 px-3 py-2 rounded-lg text-center">
+              <p className="text-xs text-gray-600">Not Contacted</p>
+              <p className="text-lg font-bold text-gray-900">{filterStats.notContacted}</p>
+            </div>
+            <div className="bg-green-50 px-3 py-2 rounded-lg text-center">
+              <p className="text-xs text-green-600">Interested</p>
+              <p className="text-lg font-bold text-green-700">{filterStats.interested}</p>
+            </div>
+            <div className="bg-blue-50 px-3 py-2 rounded-lg text-center">
+              <p className="text-xs text-blue-600">Appointments</p>
+              <p className="text-lg font-bold text-blue-700">{filterStats.appointments}</p>
+            </div>
+            <div className="bg-purple-50 px-3 py-2 rounded-lg text-center">
+              <p className="text-xs text-purple-600">Sold</p>
+              <p className="text-lg font-bold text-purple-700">{filterStats.sold}</p>
+            </div>
+            <div className="bg-gray-50 px-3 py-2 rounded-lg text-center">
+              <p className="text-xs text-gray-600">Total</p>
+              <p className="text-lg font-bold text-gray-900">{filterStats.total}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Container */}
+      <div className="flex-1 relative">
+        <div ref={mapRef} className="w-full h-full" />
+
+        {/* Floating Action Button - Center on My Location */}
+        {location && (
+          <button
+            onClick={() => {
+              if (mapInstanceRef.current) {
+                mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
+                mapInstanceRef.current.setZoom(16);
+              }
+            }}
+            className="absolute bottom-6 right-6 p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-shadow"
+            title="Center on my location"
+          >
+            <Navigation className="w-5 h-5 text-blue-600" />
+          </button>
+        )}
+
+        {/* Legend */}
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-xs">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Status Legend</h3>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+              <span>Not Contacted</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+              <span>Interested</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+              <span>Appointment</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+              <span>Sold</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+              <span>Callback</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+              <span>Not Interested</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Property Detail Sheet */}
+      {showPropertySheet && selectedProperty && (
+        <PropertyDetailSheet
+          property={selectedProperty}
+          onClose={() => {
+            setShowPropertySheet(false);
+            setSelectedProperty(null);
+          }}
+          onEdit={(property) => {
+            // Handle edit
+            console.log('Edit property:', property);
+          }}
+          onDelete={(property) => {
+            if (window.confirm('Delete this property from canvassing list?')) {
+              // Handle delete
+              console.log('Delete property:', property);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default CanvassingView;
