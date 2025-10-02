@@ -372,8 +372,8 @@ function addJobCount(jobCountData) {
       throw new Error('Invalid job count data provided');
     }
 
-    const sheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const jobCountSheet = getSheetSafely(JOB_COUNT_SHEET_NAME);
+    const jobCountHeaders = jobCountSheet.getRange(1, 1, 1, jobCountSheet.getLastColumn()).getValues()[0];
 
     // Generate unique ID and set timestamps
     jobCountData.id = `jobcount_${Date.now()}`;
@@ -396,7 +396,8 @@ function addJobCount(jobCountData) {
       jobCountData.date = new Date().toISOString().split('T')[0];
     }
 
-    const rowData = headers.map(header => {
+    // Prepare row data for Job Count sheet
+    const jobCountRowData = jobCountHeaders.map(header => {
       const camelCaseHeader = convertToCamelCase(header);
       const value = jobCountData[camelCaseHeader] || '';
 
@@ -412,10 +413,54 @@ function addJobCount(jobCountData) {
       return value;
     });
 
-    sheet.appendRow(rowData);
+    // Append to Job Count sheet
+    jobCountSheet.appendRow(jobCountRowData);
+
+    // Also duplicate this entry to Bhotchleads sheet
+    try {
+      const leadsSheet = getSheetSafely(LEADS_SHEET_NAME);
+      const leadsHeaders = leadsSheet.getRange(1, 1, 1, leadsSheet.getLastColumn()).getValues()[0];
+
+      // Create a lead entry from the job count data
+      const leadData = {
+        id: `lead_from_jobcount_${Date.now()}`,
+        customerName: jobCountData.customerName || `${jobCountData.firstName || ''} ${jobCountData.lastName || ''}`.trim(),
+        firstName: jobCountData.firstName || '',
+        lastName: jobCountData.lastName || '',
+        phoneNumber: jobCountData.phoneNumber || '',
+        email: jobCountData.email || '',
+        address: jobCountData.address || '',
+        quality: jobCountData.quality || 'Cold',
+        leadSource: jobCountData.leadSource || 'Door Knock',
+        disposition: jobCountData.disposition || 'New',
+        roofAge: jobCountData.roofAge || '',
+        roofType: jobCountData.roofType || '',
+        dabellaQuote: jobCountData.dabellaQuote || '',
+        notes: jobCountData.notes || '',
+        date: jobCountData.date || new Date().toISOString().split('T')[0],
+        createdDate: new Date().toISOString(),
+        status: 'new',
+        // Include job count measurements if columns exist in Bhotchleads
+        sqFt: jobCountData.sqFt || '',
+        ridgeLf: jobCountData.ridgeLf || '',
+        valleyLf: jobCountData.valleyLf || '',
+        eavesLf: jobCountData.eavesLf || ''
+      };
+
+      const leadRowData = leadsHeaders.map(header => {
+        const camelCaseHeader = convertToCamelCase(header);
+        return leadData[camelCaseHeader] || '';
+      });
+
+      leadsSheet.appendRow(leadRowData);
+      logMessage(`Successfully duplicated job count to Bhotchleads as lead ID: ${leadData.id}`);
+    } catch (leadsError) {
+      logMessage(`Warning: Failed to duplicate to Bhotchleads: ${leadsError.toString()}`, 'WARN');
+      // Don't fail the entire operation if just the duplication fails
+    }
 
     logMessage(`Successfully added job count ID: ${jobCountData.id}`);
-    return createResponse({ jobCount: jobCountData }, true, 'Job count added successfully');
+    return createResponse({ jobCount: jobCountData }, true, 'Job count added successfully and duplicated to Bhotchleads');
   } catch (error) {
     logMessage(`addJobCount Error: ${error.toString()}`, 'ERROR');
     return createResponse({}, false, `Failed to add job count: ${error.message}`);

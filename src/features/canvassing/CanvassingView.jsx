@@ -55,18 +55,20 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     try {
       console.log('[Canvassing] Initializing canvassing map...');
 
-      // Wait for map container to be available
-      if (!mapRef.current) {
-        console.warn('[Canvassing] Map container ref not ready, waiting...');
-        // Give React time to render the DOM
+      // Wait for map container to be available with multiple retries
+      let retries = 0;
+      const maxRetries = 10;
+      while (!mapRef.current && retries < maxRetries) {
+        console.warn(`[Canvassing] Map container ref not ready, waiting... (attempt ${retries + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 100));
-
-        if (!mapRef.current) {
-          throw new Error('Map container element not found. Please refresh the page.');
-        }
+        retries++;
       }
 
-      console.log('[Canvassing] Loading Google Maps API...');
+      if (!mapRef.current) {
+        throw new Error('Map container element not found after multiple attempts. Please refresh the page.');
+      }
+
+      console.log('[Canvassing] Map container found, loading Google Maps API...');
       const google = await loadGoogleMaps();
       console.log('[Canvassing] Google Maps API loaded successfully');
 
@@ -129,10 +131,18 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   };
 
   useEffect(() => {
-    // Small delay to ensure DOM is ready
+    // Ensure DOM is ready before initializing map
     const timer = setTimeout(() => {
-      initializeMap();
-    }, 50);
+      if (mapRef.current) {
+        initializeMap();
+      } else {
+        console.warn('[Canvassing] Map ref not ready on first attempt, retrying...');
+        // Retry after a longer delay
+        setTimeout(() => {
+          initializeMap();
+        }, 200);
+      }
+    }, 100);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
