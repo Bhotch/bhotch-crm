@@ -51,10 +51,31 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   const initializeMap = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const google = await loadGoogleMaps();
-      if (!mapRef.current) return;
 
+    try {
+      console.log('[Canvassing] Initializing canvassing map...');
+
+      // Wait for map container to be available
+      if (!mapRef.current) {
+        console.warn('[Canvassing] Map container ref not ready, waiting...');
+        // Give React time to render the DOM
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!mapRef.current) {
+          throw new Error('Map container element not found. Please refresh the page.');
+        }
+      }
+
+      console.log('[Canvassing] Loading Google Maps API...');
+      const google = await loadGoogleMaps();
+      console.log('[Canvassing] Google Maps API loaded successfully');
+
+      // Double check container still exists
+      if (!mapRef.current) {
+        throw new Error('Map container was removed during initialization.');
+      }
+
+      console.log('[Canvassing] Creating map instance...');
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: mapView.center,
         zoom: mapView.zoom,
@@ -69,6 +90,8 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         ],
       });
 
+      console.log('[Canvassing] Map instance created successfully');
+
       // Traffic layer
       trafficLayerRef.current = new google.maps.TrafficLayer();
       if (mapView.showTraffic) {
@@ -80,9 +103,11 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       // Save map position changes
       mapInstance.addListener('center_changed', () => {
         const center = mapInstance.getCenter();
-        updateMapView({
-          center: { lat: center.lat(), lng: center.lng() },
-        });
+        if (center) {
+          updateMapView({
+            center: { lat: center.lat(), lng: center.lng() },
+          });
+        }
       });
 
       mapInstance.addListener('zoom_changed', () => {
@@ -94,16 +119,22 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         onMapLoad(mapInstance);
       }
 
+      console.log('[Canvassing] Map initialization complete');
       setLoading(false);
     } catch (err) {
-      console.error('Google Maps initialization error:', err);
-      setError(err.message);
+      console.error('[Canvassing] Map initialization error:', err);
+      setError(err.message || 'Failed to initialize map');
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    initializeMap();
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      initializeMap();
+    }, 50);
+
+    return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -379,7 +410,11 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
       {/* Map Container */}
       <div className="flex-1 relative">
-        <div ref={mapRef} className="w-full h-full" />
+        <div
+          ref={mapRef}
+          className="w-full h-full"
+          style={{ minHeight: '400px' }}
+        />
 
         {/* Floating Action Button - Center on My Location */}
         {location && (

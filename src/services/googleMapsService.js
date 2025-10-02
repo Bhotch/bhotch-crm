@@ -1,14 +1,29 @@
 const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-const LOAD_TIMEOUT = 10000; // 10 second timeout
+const LOAD_TIMEOUT = 15000; // 15 second timeout
 let googleMapsLoaded = false;
+let loadingPromise = null;
 
 export const loadGoogleMaps = () => {
-  return new Promise((resolve, reject) => {
+  // If already loaded, return immediately
+  if (googleMapsLoaded && window.google?.maps) {
+    return Promise.resolve(window.google);
+  }
+
+  // If already loading, return the existing promise
+  if (loadingPromise) {
+    return loadingPromise;
+  }
+
+  loadingPromise = new Promise((resolve, reject) => {
     if (!GOOGLE_MAPS_API_KEY) {
-        return reject(new Error('Google Maps API key is not configured. Please check your environment variables.'));
+      loadingPromise = null;
+      return reject(new Error('Google Maps API key is not configured. Please check your environment variables.'));
     }
 
-    if (googleMapsLoaded && window.google?.maps) {
+    // Double check if loaded while we were waiting
+    if (window.google?.maps) {
+      googleMapsLoaded = true;
+      loadingPromise = null;
       return resolve(window.google);
     }
 
@@ -17,50 +32,54 @@ export const loadGoogleMaps = () => {
 
     // Set up timeout for loading
     const timeoutId = setTimeout(() => {
+      loadingPromise = null;
       const script = document.getElementById(scriptId);
-      if (script) {
+      if (script && document.head.contains(script)) {
         document.head.removeChild(script);
       }
       reject(new Error('Google Maps loading timed out. Please check your internet connection and try again.'));
     }, LOAD_TIMEOUT);
 
-    if (existingScript) {
-      // Script is already loading, wait for it
-      const handleLoad = () => {
-        clearTimeout(timeoutId);
-        googleMapsLoaded = true;
-        resolve(window.google);
-      };
-      const handleError = () => {
-        clearTimeout(timeoutId);
-        reject(new Error('Failed to load Google Maps. Please check your API key and internet connection.'));
-      };
+    const handleSuccess = () => {
+      clearTimeout(timeoutId);
+      googleMapsLoaded = true;
+      loadingPromise = null;
+      resolve(window.google);
+    };
 
-      existingScript.addEventListener('load', handleLoad, { once: true });
-      existingScript.addEventListener('error', handleError, { once: true });
+    const handleFailure = (error) => {
+      clearTimeout(timeoutId);
+      loadingPromise = null;
+      const script = document.getElementById(scriptId);
+      if (script && document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+      reject(error || new Error('Failed to load Google Maps. Please check your API key and internet connection.'));
+    };
+
+    if (existingScript) {
+      // Script is already in DOM, wait for it to load
+      if (window.google?.maps) {
+        handleSuccess();
+      } else {
+        existingScript.addEventListener('load', handleSuccess, { once: true });
+        existingScript.addEventListener('error', () => handleFailure(), { once: true });
+      }
       return;
     }
 
+    // Create new script
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places,drawing&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places,drawing`;
     script.async = true;
     script.defer = true;
 
-    script.onload = () => {
-        clearTimeout(timeoutId);
-        googleMapsLoaded = true;
-        resolve(window.google);
-    };
-
-    script.onerror = () => {
-      clearTimeout(timeoutId);
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-      reject(new Error('Failed to load Google Maps. Please check your API key and internet connection.'));
-    };
+    script.onload = handleSuccess;
+    script.onerror = () => handleFailure();
 
     document.head.appendChild(script);
   });
+
+  return loadingPromise;
 };

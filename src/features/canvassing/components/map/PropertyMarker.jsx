@@ -218,6 +218,14 @@ export const createPropertyMarkerIcon = (property, isSelected = false) => {
     </svg>
   `;
 
+  // Check if Google Maps API is loaded
+  if (!window.google?.maps) {
+    console.warn('[PropertyMarker] Google Maps not loaded yet, using basic icon');
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    };
+  }
+
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
     scaledSize: new window.google.maps.Size(size, size),
