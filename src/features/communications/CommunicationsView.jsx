@@ -110,9 +110,14 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
     } else {
       setActiveAction(action);
       if (action === 'call') {
-        // Open Google Voice dialer
+        // Open Google Voice dialer for brandon@rimehq.net
         const phoneNumber = selectedCustomer.phone.replace(/\D/g, '');
-        window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${phoneNumber}`, '_blank');
+        // Using authuser parameter to ensure correct account
+        window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${phoneNumber}&authuser=brandon@rimehq.net`, '_blank');
+      } else if (action === 'sms') {
+        // Open Google Voice SMS for brandon@rimehq.net
+        const phoneNumber = selectedCustomer.phone.replace(/\D/g, '');
+        window.open(`https://voice.google.com/u/0/messages?itemId=t.%2B1${phoneNumber}&authuser=brandon@rimehq.net`, '_blank');
       }
     }
   };
@@ -130,9 +135,9 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
       timestamp: new Date().toISOString()
     });
 
-    // Open Google Voice if sending SMS
+    // Open Google Voice if sending SMS for brandon@rimehq.net
     if (quickOutcome === 'sent') {
-      window.open(`https://voice.google.com/u/0/messages?itemId=t.%2B1${phoneNumber}`, '_blank');
+      window.open(`https://voice.google.com/u/0/messages?itemId=t.%2B1${phoneNumber}&authuser=brandon@rimehq.net`, '_blank');
     }
 
     setMessageContent('');

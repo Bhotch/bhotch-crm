@@ -18,7 +18,7 @@ import PropertyDetailSheet from './components/property/PropertyDetailSheet';
  * CanvassingView Component
  * Main door-to-door canvassing interface with advanced mapping features
  */
-const CanvassingView = ({ leads }) => {
+const CanvassingView = ({ leads, onMapLoad }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -48,53 +48,61 @@ const CanvassingView = ({ leads }) => {
   });
 
   // Initialize map
-  useEffect(() => {
-    const initializeMap = async () => {
-      try {
-        const google = await loadGoogleMaps();
-        if (!mapRef.current) return;
+  const initializeMap = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const google = await loadGoogleMaps();
+      if (!mapRef.current) return;
 
-        const mapInstance = new google.maps.Map(mapRef.current, {
-          center: mapView.center,
-          zoom: mapView.zoom,
-          mapTypeId: mapView.mapType,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true,
-          zoomControl: true,
-          styles: [
-            { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-            { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
-          ],
-        });
+      const mapInstance = new google.maps.Map(mapRef.current, {
+        center: mapView.center,
+        zoom: mapView.zoom,
+        mapTypeId: mapView.mapType,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+        zoomControl: true,
+        styles: [
+          { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+          { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
+        ],
+      });
 
-        // Traffic layer
-        trafficLayerRef.current = new google.maps.TrafficLayer();
-        if (mapView.showTraffic) {
-          trafficLayerRef.current.setMap(mapInstance);
-        }
-
-        mapInstanceRef.current = mapInstance;
-
-        // Save map position changes
-        mapInstance.addListener('center_changed', () => {
-          const center = mapInstance.getCenter();
-          updateMapView({
-            center: { lat: center.lat(), lng: center.lng() },
-          });
-        });
-
-        mapInstance.addListener('zoom_changed', () => {
-          updateMapView({ zoom: mapInstance.getZoom() });
-        });
-
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
+      // Traffic layer
+      trafficLayerRef.current = new google.maps.TrafficLayer();
+      if (mapView.showTraffic) {
+        trafficLayerRef.current.setMap(mapInstance);
       }
-    };
 
+      mapInstanceRef.current = mapInstance;
+
+      // Save map position changes
+      mapInstance.addListener('center_changed', () => {
+        const center = mapInstance.getCenter();
+        updateMapView({
+          center: { lat: center.lat(), lng: center.lng() },
+        });
+      });
+
+      mapInstance.addListener('zoom_changed', () => {
+        updateMapView({ zoom: mapInstance.getZoom() });
+      });
+
+      // Notify parent component that map is loaded
+      if (onMapLoad) {
+        onMapLoad(mapInstance);
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Google Maps initialization error:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     initializeMap();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -233,7 +241,13 @@ const CanvassingView = ({ leads }) => {
         <div className="text-center max-w-md">
           <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-red-800 mb-2">Map Error</h3>
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={initializeMap}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

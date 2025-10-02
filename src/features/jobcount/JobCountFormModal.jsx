@@ -118,14 +118,38 @@ const initialFormData = {
     permanentLighting: ''
 };
 
-function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
+function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, leads = [] }) {
     const [formData, setFormData] = useState(() => initialData || initialFormData);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedLeadId, setSelectedLeadId] = useState('');
 
     const handleChange = useCallback((e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     }, []);
+
+    // Handle lead selection to auto-fill customer information
+    const handleLeadSelect = useCallback((e) => {
+        const leadId = e.target.value;
+        setSelectedLeadId(leadId);
+
+        if (!leadId) return;
+
+        const selectedLead = leads.find(lead => lead.id === leadId);
+        if (selectedLead) {
+            setFormData(prev => ({
+                ...prev,
+                customerName: selectedLead.customerName || '',
+                firstName: selectedLead.firstName || selectedLead.customerName?.split(' ')[0] || '',
+                lastName: selectedLead.lastName || selectedLead.customerName?.split(' ').slice(1).join(' ') || '',
+                phoneNumber: selectedLead.phoneNumber || '',
+                email: selectedLead.email || '',
+                address: selectedLead.address || '',
+                quality: selectedLead.quality || prev.quality,
+                leadSource: selectedLead.leadSource || prev.leadSource
+            }));
+        }
+    }, [leads]);
 
     const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
@@ -174,6 +198,16 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false }) 
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Customer Information */}
                         <FormSection title="Customer Information">
+                            <FormField label="Select from Leads" fullWidth>
+                                <SelectInput value={selectedLeadId} onChange={handleLeadSelect}>
+                                    <option value="">-- Select a Lead or Add New Customer --</option>
+                                    {leads.map(lead => (
+                                        <option key={lead.id} value={lead.id}>
+                                            {lead.customerName || 'Unnamed'} - {lead.phoneNumber || 'No Phone'} - {lead.address || 'No Address'}
+                                        </option>
+                                    ))}
+                                </SelectInput>
+                            </FormField>
                             <FormField label="First Name" required>
                                 <TextInput
                                     name="firstName"

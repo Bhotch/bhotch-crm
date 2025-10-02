@@ -39,11 +39,46 @@ export default function ControlPanel() {
   } = useVisualizationStore();
 
   const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    setUploadingFile(file);
-    setShowValidator(true);
+    // For single file, use existing validation flow
+    if (files.length === 1) {
+      setUploadingFile(files[0]);
+      setShowValidator(true);
+      return;
+    }
+
+    // For multiple files (up to 8), process directly
+    const maxFiles = Math.min(files.length, 8);
+    alert(`Processing ${maxFiles} photos for 3D reconstruction...`);
+
+    setLoading(true);
+    try {
+      const photoArray = [];
+      for (let i = 0; i < maxFiles; i++) {
+        const compressed = await compressImage(files[i], 2048, 0.9);
+        photoArray.push({
+          id: Date.now() + i,
+          angle: `photo-${i + 1}`,
+          name: `Photo ${i + 1}`,
+          file: compressed.file,
+          preview: compressed.url,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Process through photogrammetry
+      await handlePhotoCaptureComplete(photoArray);
+
+      // Set the first image as the before image for visualization
+      setBeforeImage(photoArray[0].preview);
+    } catch (error) {
+      console.error('Multiple image upload error:', error);
+      alert('Failed to process images: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleValidationComplete = async (result) => {
@@ -178,6 +213,7 @@ export default function ControlPanel() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
+          multiple
           onChange={handleImageUpload}
           className="hidden"
         />
@@ -187,13 +223,16 @@ export default function ControlPanel() {
           className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Upload className="w-4 h-4" />
-          {images.before ? 'Change Image' : 'Upload House Photo'}
+          {images.before ? 'Change Image' : 'Upload Photo(s) - Up to 8'}
         </button>
         {images.before && (
           <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
             ✓ Image loaded successfully
           </p>
         )}
+        <p className="text-xs text-gray-500 mt-1">
+          Single photo or multiple photos (max 8, 10MB each) for 3D reconstruction
+        </p>
       </div>
 
       {/* Image Validation */}

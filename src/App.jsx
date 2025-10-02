@@ -231,6 +231,7 @@ function CrmApplication({ onLogout }) {
         {currentView === 'jobcount' && (
           <JobCountView
             jobCounts={jobCounts}
+            leads={leads}
             onAddJobCount={() => setShowAddJobCountForm(true)}
             onEditJobCount={setEditingJobCount}
             onDeleteJobCount={deleteJobCount}
@@ -302,12 +303,14 @@ function CrmApplication({ onLogout }) {
       {/* Job Count Modals */}
       {showAddJobCountForm && (
         <JobCountFormModal
+          leads={leads}
           onSubmit={handleAddJobCountSubmit}
           onCancel={() => setShowAddJobCountForm(false)}
         />
       )}
       {editingJobCount && (
         <JobCountFormModal
+          leads={leads}
           initialData={editingJobCount}
           onSubmit={handleUpdateJobCountSubmit}
           onCancel={() => setEditingJobCount(null)}

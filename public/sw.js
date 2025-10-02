@@ -22,6 +22,17 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Skip caching for chrome-extension, chrome://, and other non-http(s) schemes
+  const url = new URL(event.request.url);
+  if (!url.protocol.startsWith('http')) {
+    return; // Don't handle non-HTTP requests
+  }
+
+  // Skip caching for external domains (Google Calendar, etc.)
+  if (url.hostname !== self.location.hostname && !url.hostname.endsWith('.vercel.app')) {
+    return; // Let browser handle external requests normally
+  }
+
   if (event.request.method === 'GET') {
     // Network-first strategy for HTML and JS files to always get fresh content
     if (event.request.destination === 'document' ||
@@ -34,7 +45,10 @@ self.addEventListener('fetch', (event) => {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME)
                 .then((cache) => {
-                  cache.put(event.request, responseToCache);
+                  cache.put(event.request, responseToCache).catch((err) => {
+                    // Silently handle cache errors for unsupported schemes
+                    console.debug('Cache put failed:', err.message);
+                  });
                 });
             }
             return response;
@@ -55,7 +69,10 @@ self.addEventListener('fetch', (event) => {
               const responseToCache = response.clone();
               caches.open(CACHE_NAME)
                 .then((cache) => {
-                  cache.put(event.request, responseToCache);
+                  cache.put(event.request, responseToCache).catch((err) => {
+                    // Silently handle cache errors for unsupported schemes
+                    console.debug('Cache put failed:', err.message);
+                  });
                 });
               return response;
             });
