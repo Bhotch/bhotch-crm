@@ -132,19 +132,30 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
   useEffect(() => {
     // Ensure DOM is ready before initializing map
-    const timer = setTimeout(() => {
-      if (mapRef.current) {
-        initializeMap();
-      } else {
-        console.warn('[Canvassing] Map ref not ready on first attempt, retrying...');
-        // Retry after a longer delay
-        setTimeout(() => {
-          initializeMap();
-        }, 200);
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
+    // Use requestAnimationFrame to ensure DOM has fully rendered
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const timer = setTimeout(() => {
+          if (mapRef.current) {
+            initializeMap();
+          } else {
+            console.warn('[Canvassing] Map ref not ready on first attempt, retrying...');
+            // Retry after a longer delay
+            const retryTimer = setTimeout(() => {
+              if (mapRef.current) {
+                initializeMap();
+              } else {
+                console.error('[Canvassing] Map ref still not ready after retry');
+                setError('Map container failed to initialize. Please refresh the page.');
+                setLoading(false);
+              }
+            }, 500);
+            return () => clearTimeout(retryTimer);
+          }
+        }, 100);
+        return () => clearTimeout(timer);
+      });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -422,8 +433,9 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       <div className="flex-1 relative">
         <div
           ref={mapRef}
-          className="w-full h-full"
-          style={{ minHeight: '400px' }}
+          id="canvassing-map-container"
+          className="w-full h-full absolute inset-0"
+          style={{ minHeight: '400px', zIndex: 1 }}
         />
 
         {/* Floating Action Button - Center on My Location */}

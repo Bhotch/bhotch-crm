@@ -96,91 +96,92 @@ function CrmApplication({ onLogout }) {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-blue-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">Bhotch CRM</h1>
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-3">
+            <div className="flex items-center shrink-0">
+              <DollarSign className="h-7 w-7 text-blue-600 mr-2" />
+              <h1 className="text-xl font-bold text-gray-900">Bhotch CRM</h1>
             </div>
-            <nav className="flex space-x-1 sm:space-x-2">
+            <nav className="flex items-center space-x-1 overflow-x-auto">
               <button
                 onClick={() => setCurrentView('dashboard')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <Home className="w-4 h-4 mr-1" />
+                <Home className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
               </button>
               <button
                 onClick={() => setCurrentView('leads')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'leads' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <ClipboardList className="w-4 h-4 mr-1" />
+                <ClipboardList className="w-4 h-4" />
                 <span className="hidden sm:inline">Leads</span>
               </button>
               <button
                 onClick={() => setCurrentView('jobcount')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'jobcount' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <Calculator className="w-4 h-4 mr-1" />
+                <Calculator className="w-4 h-4" />
                 <span className="hidden sm:inline">Job Count</span>
               </button>
               <button
                 onClick={() => setCurrentView('map')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'map' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <Map className="w-4 h-4 mr-1" />
+                <Map className="w-4 h-4" />
                 <span className="hidden sm:inline">Map</span>
               </button>
               <button
                 onClick={() => setCurrentView('calendar')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'calendar' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <Calendar className="w-4 h-4 mr-1" />
+                <Calendar className="w-4 h-4" />
                 <span className="hidden sm:inline">Calendar</span>
               </button>
               <button
                 onClick={() => setCurrentView('communications')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'communications' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <MessageCircle className="w-4 h-4 mr-1" />
+                <MessageCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Comms</span>
               </button>
               <button
                 onClick={() => setCurrentView('visualization')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'visualization' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <Eye className="w-4 h-4 mr-1" />
+                <Eye className="w-4 h-4" />
                 <span className="hidden sm:inline">360° View</span>
               </button>
               <button
                 onClick={() => setCurrentView('canvassing')}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap ${
                   currentView === 'canvassing' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >
-                <Target className="w-4 h-4 mr-1" />
+                <Target className="w-4 h-4" />
                 <span className="hidden sm:inline">Canvassing</span>
               </button>
 
               <button
                 onClick={onLogout}
-                className="p-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                className="p-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors ml-1 shrink-0"
+                title="Logout"
               >
-                <XCircle className="w-5 h-5" />
+                <XCircle className="w-4 h-4" />
               </button>
             </nav>
           </div>
