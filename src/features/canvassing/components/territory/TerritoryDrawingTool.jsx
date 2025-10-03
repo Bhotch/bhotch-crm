@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Pencil, Square, Circle, Trash2, Save, X, MapPin } from 'lucide-react';
 import { useCanvassingStore } from '../../store/canvassingStore';
 import { useTerritories } from '../../hooks/useTerritories';
@@ -12,81 +12,132 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
   const [drawingMode, setDrawingMode] = useState(null); // 'polygon', 'rectangle', 'circle', null
   const [territoryName, setTerritoryName] = useState('');
   const [territoryColor, setTerritoryColor] = useState('#3B82F6');
-  // const [assignedReps, setAssignedReps] = useState([]); // Reserved for future use
   const [coordinates, setCoordinates] = useState([]);
   const [stats, setStats] = useState({ area: 0, center: null });
 
   const currentShapeRef = useRef(null);
+  const listenersRef = useRef([]);
 
   const { createTerritory } = useTerritories();
   const { setDrawingMode: setStoreDrawingMode } = useCanvassingStore();
 
-  // Initialize custom drawing functionality (replacing deprecated Drawing library)
-  useEffect(() => {
-    if (!map || !window.google) return;
+  // Update coordinates when shape is edited - memoized to prevent recreating on every render
+  const updateCoordinates = useCallback(() => {
+    if (!currentShapeRef.current) return;
 
-    let clickListener;
+    try {
+      const path = currentShapeRef.current.getPath();
+      if (!path) return;
+
+      const pathArray = path.getArray();
+      const coords = pathArray.map((latLng) => [latLng.lng(), latLng.lat()]);
+      coords.push(coords[0]);
+
+      setCoordinates(coords);
+
+      const area = calculateTerritoryArea(coords);
+      const center = getTerritoryCenter(coords);
+      setStats({ area, center });
+    } catch (error) {
+      console.error('Error updating coordinates:', error);
+    }
+  }, []);
+
+  // Initialize custom drawing functionality
+  useEffect(() => {
+    if (!map || !window.google || !drawingMode) return;
+
+    // Check for geometry library
+    if (!window.google.maps.geometry) {
+      console.error('Google Maps Geometry library not loaded');
+      return;
+    }
+
+    // Clear previous listeners
+    listenersRef.current.forEach(listener => {
+      try {
+        window.google.maps.event.removeListener(listener);
+      } catch (e) {
+        console.error('Error removing listener:', e);
+      }
+    });
+    listenersRef.current = [];
+
     let polygon;
     const polygonPath = [];
 
-    const startDrawing = () => {
-      if (!map || !drawingMode) return;
+    if (drawingMode === 'polygon') {
+      // Custom polygon drawing with click events
+      const clickListener = map.addListener('click', (event) => {
+        if (!event.latLng) return;
 
-      if (drawingMode === 'polygon') {
-        // Custom polygon drawing with click events
-        clickListener = map.addListener('click', (event) => {
-          polygonPath.push(event.latLng);
+        polygonPath.push(event.latLng);
 
-          if (!polygon) {
-            polygon = new window.google.maps.Polygon({
-              map: map,
-              paths: polygonPath,
-              fillColor: territoryColor,
-              fillOpacity: 0.3,
-              strokeWeight: 2,
-              strokeColor: territoryColor,
-              editable: true,
-              draggable: true,
-            });
-            currentShapeRef.current = polygon;
-          } else {
-            polygon.setPath(polygonPath);
-          }
-        });
+        if (!polygon) {
+          polygon = new window.google.maps.Polygon({
+            map: map,
+            paths: polygonPath,
+            fillColor: territoryColor,
+            fillOpacity: 0.3,
+            strokeWeight: 2,
+            strokeColor: territoryColor,
+            editable: true,
+            draggable: true,
+          });
+          currentShapeRef.current = polygon;
+        } else {
+          polygon.setPath(polygonPath);
+        }
+      });
+      listenersRef.current.push(clickListener);
 
-        // Double-click to finish
-        const dblClickListener = map.addListener('dblclick', () => {
-          if (polygon && polygonPath.length >= 3) {
-            const coords = polygonPath.map((latLng) => [latLng.lng(), latLng.lat()]);
-            coords.push(coords[0]); // Close the polygon
-            setCoordinates(coords);
+      // Double-click to finish
+      const dblClickListener = map.addListener('dblclick', () => {
+        if (polygon && polygonPath.length >= 3) {
+          const coords = polygonPath.map((latLng) => [latLng.lng(), latLng.lat()]);
+          coords.push(coords[0]); // Close the polygon
+          setCoordinates(coords);
 
-            // Calculate stats
+          // Calculate stats
+          try {
             const area = calculateTerritoryArea(coords);
             const center = getTerritoryCenter(coords);
             setStats({ area, center });
-
-            // Add listeners for editing
-            window.google.maps.event.addListener(polygon.getPath(), 'set_at', updateCoordinates);
-            window.google.maps.event.addListener(polygon.getPath(), 'insert_at', updateCoordinates);
-
-            // Stop drawing
-            setDrawingMode(null);
-            window.google.maps.event.removeListener(clickListener);
-            window.google.maps.event.removeListener(dblClickListener);
+          } catch (error) {
+            console.error('Error calculating stats:', error);
           }
-        });
-      } else if (drawingMode === 'rectangle') {
-        // Rectangle drawing with drag
-        let startLatLng;
-        let rectangle;
 
-        const mouseDownListener = map.addListener('mousedown', (event) => {
+          // Add listeners for editing
+          try {
+            const path = polygon.getPath();
+            const setAtListener = window.google.maps.event.addListener(path, 'set_at', updateCoordinates);
+            const insertAtListener = window.google.maps.event.addListener(path, 'insert_at', updateCoordinates);
+            listenersRef.current.push(setAtListener, insertAtListener);
+          } catch (error) {
+            console.error('Error adding edit listeners:', error);
+          }
+
+          // Stop drawing
+          setDrawingMode(null);
+        }
+      });
+      listenersRef.current.push(dblClickListener);
+
+    } else if (drawingMode === 'rectangle') {
+      // Rectangle drawing with drag
+      let startLatLng;
+      let rectangle;
+
+      const mouseDownListener = map.addListener('mousedown', (event) => {
+        if (event.latLng) {
           startLatLng = event.latLng;
-        });
+        }
+      });
+      listenersRef.current.push(mouseDownListener);
 
-        const mouseMoveListener = map.addListener('mousemove', (event) => {
-          if (startLatLng) {
+      const mouseMoveListener = map.addListener('mousemove', (event) => {
+        if (startLatLng && event.latLng) {
+          try {
             const bounds = new window.google.maps.LatLngBounds(startLatLng, event.latLng);
 
             if (!rectangle) {
@@ -103,12 +154,18 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
             } else {
               rectangle.setBounds(bounds);
             }
+          } catch (error) {
+            console.error('Error drawing rectangle:', error);
           }
-        });
+        }
+      });
+      listenersRef.current.push(mouseMoveListener);
 
-        const mouseUpListener = map.addListener('mouseup', () => {
-          if (rectangle) {
-            currentShapeRef.current = rectangle;
+      const mouseUpListener = map.addListener('mouseup', () => {
+        if (rectangle) {
+          currentShapeRef.current = rectangle;
+
+          try {
             const bounds = rectangle.getBounds();
             const ne = bounds.getNorthEast();
             const sw = bounds.getSouthWest();
@@ -125,25 +182,32 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
             const area = calculateTerritoryArea(coords);
             const center = getTerritoryCenter(coords);
             setStats({ area, center });
-
-            // Stop drawing
-            setDrawingMode(null);
-            window.google.maps.event.removeListener(mouseDownListener);
-            window.google.maps.event.removeListener(mouseMoveListener);
-            window.google.maps.event.removeListener(mouseUpListener);
+          } catch (error) {
+            console.error('Error processing rectangle:', error);
           }
-        });
-      } else if (drawingMode === 'circle') {
-        // Circle drawing with drag
-        let startLatLng;
-        let circle;
 
-        const mouseDownListener = map.addListener('mousedown', (event) => {
+          // Stop drawing
+          setDrawingMode(null);
+          startLatLng = null;
+        }
+      });
+      listenersRef.current.push(mouseUpListener);
+
+    } else if (drawingMode === 'circle') {
+      // Circle drawing with drag
+      let startLatLng;
+      let circle;
+
+      const mouseDownListener = map.addListener('mousedown', (event) => {
+        if (event.latLng) {
           startLatLng = event.latLng;
-        });
+        }
+      });
+      listenersRef.current.push(mouseDownListener);
 
-        const mouseMoveListener = map.addListener('mousemove', (event) => {
-          if (startLatLng) {
+      const mouseMoveListener = map.addListener('mousemove', (event) => {
+        if (startLatLng && event.latLng) {
+          try {
             const radius = window.google.maps.geometry.spherical.computeDistanceBetween(startLatLng, event.latLng);
 
             if (!circle) {
@@ -161,12 +225,18 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
             } else {
               circle.setRadius(radius);
             }
+          } catch (error) {
+            console.error('Error drawing circle:', error);
           }
-        });
+        }
+      });
+      listenersRef.current.push(mouseMoveListener);
 
-        const mouseUpListener = map.addListener('mouseup', () => {
-          if (circle) {
-            currentShapeRef.current = circle;
+      const mouseUpListener = map.addListener('mouseup', () => {
+        if (circle) {
+          currentShapeRef.current = circle;
+
+          try {
             const center = circle.getCenter();
             const radius = circle.getRadius();
 
@@ -186,41 +256,30 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
             const area = calculateTerritoryArea(coords);
             const centerPoint = getTerritoryCenter(coords);
             setStats({ area, center: centerPoint });
-
-            // Stop drawing
-            setDrawingMode(null);
-            window.google.maps.event.removeListener(mouseDownListener);
-            window.google.maps.event.removeListener(mouseMoveListener);
-            window.google.maps.event.removeListener(mouseUpListener);
+          } catch (error) {
+            console.error('Error processing circle:', error);
           }
-        });
-      }
-    };
 
-    startDrawing();
+          // Stop drawing
+          setDrawingMode(null);
+          startLatLng = null;
+        }
+      });
+      listenersRef.current.push(mouseUpListener);
+    }
 
+    // Cleanup function - remove all listeners
     return () => {
-      if (clickListener) {
-        window.google.maps.event.removeListener(clickListener);
-      }
+      listenersRef.current.forEach(listener => {
+        try {
+          window.google.maps.event.removeListener(listener);
+        } catch (e) {
+          console.error('Error cleaning up listener:', e);
+        }
+      });
+      listenersRef.current = [];
     };
-  }, [map, drawingMode, territoryColor]);
-
-  // Update coordinates when shape is edited
-  const updateCoordinates = () => {
-    if (!currentShapeRef.current) return;
-
-    const path = currentShapeRef.current.getPath();
-    const pathArray = path.getArray();
-    const coords = pathArray.map((latLng) => [latLng.lng(), latLng.lat()]);
-    coords.push(coords[0]);
-
-    setCoordinates(coords);
-
-    const area = calculateTerritoryArea(coords);
-    const center = getTerritoryCenter(coords);
-    setStats({ area, center });
-  };
+  }, [map, drawingMode, territoryColor, updateCoordinates]);
 
   // Handle drawing mode changes
   const handleDrawingModeChange = (mode) => {
@@ -229,7 +288,11 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
 
     // Clear existing shape
     if (currentShapeRef.current) {
-      currentShapeRef.current.setMap(null);
+      try {
+        currentShapeRef.current.setMap(null);
+      } catch (e) {
+        console.error('Error clearing shape:', e);
+      }
       currentShapeRef.current = null;
     }
 
@@ -240,7 +303,11 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
   // Clear current drawing
   const handleClear = () => {
     if (currentShapeRef.current) {
-      currentShapeRef.current.setMap(null);
+      try {
+        currentShapeRef.current.setMap(null);
+      } catch (e) {
+        console.error('Error clearing shape:', e);
+      }
       currentShapeRef.current = null;
     }
     setCoordinates([]);
@@ -264,7 +331,7 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
       createTerritory({
         name: territoryName,
         coordinates,
-        assignedReps: [], // Reserved for future assignment feature
+        assignedReps: [],
         color: territoryColor,
         description: `Territory with ${stats.area} sq mi area`,
       });
@@ -273,6 +340,7 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
       handleClear();
       onClose();
     } catch (error) {
+      console.error('Error creating territory:', error);
       alert('Error creating territory: ' + error.message);
     }
   };

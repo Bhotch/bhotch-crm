@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Route, Navigation, Zap, Save, Play } from 'lucide-react';
 import { useCanvassingStore } from '../../store/canvassingStore';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
@@ -22,40 +22,59 @@ const RouteOptimizer = ({ map }) => {
     (p) => p.status === PROPERTY_STATUS.NOT_CONTACTED || p.status === PROPERTY_STATUS.CALLBACK
   );
 
-  // Auto-optimize when properties selected
-  useEffect(() => {
-    if (selectedProperties.length > 0 && location) {
-      optimizeSelectedRoute();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProperties, location]);
-
-  const optimizeSelectedRoute = () => {
+  // Memoize optimization function to fix dependency issues
+  const optimizeSelectedRoute = useCallback(() => {
     if (selectedProperties.length === 0) return;
 
     setIsOptimizing(true);
 
     setTimeout(() => {
-      const startPoint = location || currentLocation || { lat: 40.7608, lng: -111.8910 };
+      try {
+        const startPoint = location || currentLocation || { lat: 40.7608, lng: -111.8910 };
 
-      const waypoints = selectedProperties.map((p) => ({
-        ...p,
-        lat: p.latitude,
-        lng: p.longitude,
-      }));
+        // Validate start point
+        if (!startPoint || !startPoint.lat || !startPoint.lng) {
+          console.warn('Invalid start point for route optimization');
+          setIsOptimizing(false);
+          return;
+        }
 
-      const optimized = optimizeRoute(startPoint, waypoints);
-      const distance = calculateRouteDistance([startPoint, ...optimized]);
+        const waypoints = selectedProperties
+          .filter(p => p && p.latitude && p.longitude)
+          .map((p) => ({
+            ...p,
+            lat: p.latitude,
+            lng: p.longitude,
+          }));
 
-      setOptimizedRoute({
-        properties: optimized,
-        distance,
-        estimatedTime: (parseFloat(distance) * 8).toFixed(0), // ~8 min per mile with stops
-      });
+        if (waypoints.length === 0) {
+          console.warn('No valid waypoints for route');
+          setIsOptimizing(false);
+          return;
+        }
 
-      setIsOptimizing(false);
+        const optimized = optimizeRoute(startPoint, waypoints);
+        const distance = calculateRouteDistance([startPoint, ...optimized]);
+
+        setOptimizedRoute({
+          properties: optimized,
+          distance,
+          estimatedTime: (parseFloat(distance) * 8).toFixed(0), // ~8 min per mile with stops
+        });
+      } catch (error) {
+        console.error('Error optimizing route:', error);
+      } finally {
+        setIsOptimizing(false);
+      }
     }, 500);
-  };
+  }, [selectedProperties, location, currentLocation]);
+
+  // Auto-optimize when properties selected
+  useEffect(() => {
+    if (selectedProperties.length > 0 && location) {
+      optimizeSelectedRoute();
+    }
+  }, [selectedProperties, location, optimizeSelectedRoute]);
 
   const togglePropertySelection = (property) => {
     setSelectedProperties((prev) => {

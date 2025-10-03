@@ -13,34 +13,38 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
 
   // Combine leads and job counts into unified customer list
   const allCustomers = useMemo(() => {
-    const leadCustomers = leads.map((lead, index) => ({
-      id: `lead-${lead.id || index}`,
-      type: 'lead',
-      name: lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.name || 'Unknown',
-      address: lead.address,
-      phone: lead.phoneNumber || lead.phone || '', // Use phoneNumber property from leads
-      email: lead.email || '',
-      notes: lead.notes || '',
-      quality: lead.quality,
-      disposition: lead.disposition,
-      lastContact: lead.lastContact || null,
-      source: 'Bhotchleads',
-      uniqueKey: `lead-${lead.id || index}-${lead.customerName || index}` // Ensure uniqueness
-    }));
+    const leadCustomers = (leads || [])
+      .filter(lead => lead != null)
+      .map((lead, index) => ({
+        id: `lead-${lead.id || index}`,
+        type: 'lead',
+        name: lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.name || 'Unknown',
+        address: lead.address || '',
+        phone: lead.phoneNumber || lead.phone || '', // Use phoneNumber property from leads
+        email: lead.email || '',
+        notes: lead.notes || '',
+        quality: lead.quality,
+        disposition: lead.disposition,
+        lastContact: lead.lastContact || null,
+        source: 'Bhotchleads',
+        uniqueKey: `lead-${lead.id || index}-${index}-${Date.now()}` // Ensure uniqueness with timestamp
+      }));
 
-    const jobCountCustomers = jobCounts.map((job, index) => ({
-      id: `job-${job.id || index}`,
-      type: 'jobcount',
-      name: job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown',
-      address: job.address,
-      phone: job.phoneNumber || job.phone || '', // Use phoneNumber property from job counts
-      email: job.email || '',
-      notes: job.notes || '',
-      sqFt: job.sqFt,
-      status: job.status,
-      source: 'Job Count',
-      uniqueKey: `job-${job.id || index}-${job.customerName || index}` // Ensure uniqueness
-    }));
+    const jobCountCustomers = (jobCounts || [])
+      .filter(job => job != null)
+      .map((job, index) => ({
+        id: `job-${job.id || index}`,
+        type: 'jobcount',
+        name: job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown',
+        address: job.address || '',
+        phone: job.phoneNumber || job.phone || '', // Use phoneNumber property from job counts
+        email: job.email || '',
+        notes: job.notes || '',
+        sqFt: job.sqFt,
+        status: job.status,
+        source: 'Job Count',
+        uniqueKey: `job-${job.id || index}-${index}-${Date.now()}` // Ensure uniqueness with timestamp
+      }));
 
     return [...leadCustomers, ...jobCountCustomers];
   }, [leads, jobCounts]);
@@ -643,7 +647,15 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
                         </div>
                         <div className="flex items-center text-xs text-gray-600 bg-white px-2 py-1 rounded-full border border-gray-200">
                           <Clock className="w-3 h-3 mr-1" />
-                          {new Date(comm.timestamp).toLocaleDateString()} {new Date(comm.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {(() => {
+                            try {
+                              const date = new Date(comm.timestamp);
+                              if (isNaN(date.getTime())) return 'Invalid date';
+                              return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                            } catch (e) {
+                              return 'Invalid date';
+                            }
+                          })()}
                         </div>
                       </div>
                       {comm.notes && (

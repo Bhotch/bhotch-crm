@@ -246,7 +246,14 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }
                     <Calendar className="w-4 h-4 mr-3 text-gray-400" />
                     <span className="text-gray-600">Last Visit:</span>
                     <span className="ml-2 text-gray-900">
-                      {format(new Date(property.lastVisitDate), 'MMM d, yyyy')}
+                      {(() => {
+                        try {
+                          const date = new Date(property.lastVisitDate);
+                          return isNaN(date.getTime()) ? 'Invalid date' : format(date, 'MMM d, yyyy');
+                        } catch (e) {
+                          return 'Invalid date';
+                        }
+                      })()}
                     </span>
                   </div>
                 )}
@@ -277,10 +284,17 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }
             <div className="space-y-3">
               {property.visits && property.visits.length > 0 ? (
                 property.visits.map((visit, index) => (
-                  <div key={visit.id || index} className="bg-gray-50 p-4 rounded-lg">
+                  <div key={`visit-${property.id}-${index}-${visit.timestamp || Date.now()}`} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <span className="text-xs font-medium text-gray-500">
-                        {format(new Date(visit.timestamp), 'MMM d, yyyy h:mm a')}
+                        {(() => {
+                          try {
+                            const date = new Date(visit.timestamp);
+                            return isNaN(date.getTime()) ? 'Invalid date' : format(date, 'MMM d, yyyy h:mm a');
+                          } catch (e) {
+                            return 'Invalid date';
+                          }
+                        })()}
                       </span>
                       <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
                         {visit.type?.replace('_', ' ') || 'Visit'}

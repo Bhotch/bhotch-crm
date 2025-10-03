@@ -212,54 +212,73 @@ export const useGeofence = (territory, onEnter, onExit) => {
   const { currentLocation } = useCanvassingStore();
   const [isInside, setIsInside] = useState(false);
   const wasInsideRef = useRef(false);
+  const onEnterRef = useRef(onEnter);
+  const onExitRef = useRef(onExit);
+
+  // Keep callback refs up to date without adding to dependencies
+  useEffect(() => {
+    onEnterRef.current = onEnter;
+    onExitRef.current = onExit;
+  });
 
   useEffect(() => {
     if (!currentLocation || !territory?.coordinates) return;
 
     // Import geoUtils to check if point is in territory
-    import('../utils/geoUtils').then(({ isPointInTerritory }) => {
-      const inside = isPointInTerritory(currentLocation, territory.coordinates);
+    import('../utils/geoUtils')
+      .then(({ isPointInTerritory }) => {
+        const inside = isPointInTerritory(currentLocation, territory.coordinates);
 
-      setIsInside(inside);
+        setIsInside(inside);
 
-      // Trigger callbacks on state change
-      if (inside && !wasInsideRef.current) {
-        onEnter?.();
-      } else if (!inside && wasInsideRef.current) {
-        onExit?.();
-      }
+        // Trigger callbacks on state change
+        if (inside && !wasInsideRef.current) {
+          onEnterRef.current?.();
+        } else if (!inside && wasInsideRef.current) {
+          onExitRef.current?.();
+        }
 
-      wasInsideRef.current = inside;
-    });
-  }, [currentLocation, territory, onEnter, onExit]);
+        wasInsideRef.current = inside;
+      })
+      .catch(error => {
+        console.error('Failed to load geoUtils:', error);
+      });
+  }, [currentLocation, territory]);
 
   return isInside;
 };
 
 /**
- * Hook for distance tracking
+ * Hook for distance tracking - Fixed to prevent infinite loop
  */
 export const useDistanceTracking = () => {
   const [totalDistance, setTotalDistance] = useState(0);
-  const [lastPosition, setLastPosition] = useState(null);
   const { currentLocation } = useCanvassingStore();
+  const lastPositionRef = useRef(null);
 
   useEffect(() => {
     if (!currentLocation) return;
 
-    if (lastPosition) {
-      import('../utils/geoUtils').then(({ calculateDistance }) => {
-        const distance = parseFloat(calculateDistance(lastPosition, currentLocation));
-        setTotalDistance(prev => prev + distance);
-      });
+    if (lastPositionRef.current) {
+      import('../utils/geoUtils')
+        .then(({ calculateDistance }) => {
+          const distance = parseFloat(calculateDistance(lastPositionRef.current, currentLocation));
+          if (!isNaN(distance) && distance > 0) {
+            setTotalDistance(prev => prev + distance);
+          }
+        })
+        .catch(error => {
+          console.error('Failed to calculate distance:', error);
+        });
     }
 
-    setLastPosition(currentLocation);
-  }, [currentLocation, lastPosition]);
+    // Update last position using ref to avoid dependency loop
+    lastPositionRef.current = currentLocation;
+  }, [currentLocation]); // Remove lastPosition from dependencies
 
   const resetDistance = useCallback(() => {
     setTotalDistance(0);
-    setLastPosition(null);
+    lastPositionRef.current = null;
   }, []);
 
   return {

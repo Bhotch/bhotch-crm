@@ -196,46 +196,61 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
     // Create new markers
     filteredProperties.forEach((property) => {
-      if (!property.latitude || !property.longitude) return;
+      if (!property || !property.latitude || !property.longitude) return;
 
-      let marker;
+      try {
+        let marker;
 
-      // Use AdvancedMarkerElement if available (Google Maps v3.56+)
-      if (window.google.maps.marker?.AdvancedMarkerElement) {
-        // Create a div element for the custom marker content
-        const content = document.createElement('div');
-        content.innerHTML = createPropertyMarkerIcon(property).url.replace('data:image/svg+xml;charset=UTF-8,', '');
-        content.style.cursor = 'pointer';
+        // Use AdvancedMarkerElement if available (Google Maps v3.56+)
+        if (window.google.maps.marker?.AdvancedMarkerElement) {
+          // Create a div element for the custom marker content - FIX: Safely handle SVG without innerHTML
+          const content = document.createElement('div');
+          const iconData = createPropertyMarkerIcon(property);
 
-        marker = new window.google.maps.marker.AdvancedMarkerElement({
-          map: mapInstanceRef.current,
-          position: { lat: property.latitude, lng: property.longitude },
-          title: property.address,
-          content: content,
-        });
+          if (iconData && iconData.url) {
+            // Create image element instead of using innerHTML to avoid SVG injection
+            const img = document.createElement('img');
+            img.src = iconData.url;
+            img.style.width = '36px';
+            img.style.height = '36px';
+            img.style.cursor = 'pointer';
+            content.appendChild(img);
+          }
 
-        // Add click listener
-        marker.content.addEventListener('click', () => {
-          setSelectedProperty(property);
-          setShowPropertySheet(true);
-        });
-      } else {
-        // Fallback to legacy Marker
-        marker = new window.google.maps.Marker({
-          position: { lat: property.latitude, lng: property.longitude },
-          map: mapInstanceRef.current,
-          title: property.address,
-          icon: createPropertyMarkerIcon(property),
-          animation: window.google.maps.Animation.DROP,
-        });
+          marker = new window.google.maps.marker.AdvancedMarkerElement({
+            map: mapInstanceRef.current,
+            position: { lat: property.latitude, lng: property.longitude },
+            title: property.address || 'Property',
+            content: content,
+          });
 
-        marker.addListener('click', () => {
-          setSelectedProperty(property);
-          setShowPropertySheet(true);
-        });
+          // Add click listener
+          content.addEventListener('click', () => {
+            setSelectedProperty(property);
+            setShowPropertySheet(true);
+          });
+        } else {
+          // Fallback to legacy Marker
+          marker = new window.google.maps.Marker({
+            position: { lat: property.latitude, lng: property.longitude },
+            map: mapInstanceRef.current,
+            title: property.address || 'Property',
+            icon: createPropertyMarkerIcon(property),
+            animation: window.google.maps.Animation.DROP,
+          });
+
+          marker.addListener('click', () => {
+            setSelectedProperty(property);
+            setShowPropertySheet(true);
+          });
+        }
+
+        if (marker) {
+          markersRef.current.push(marker);
+        }
+      } catch (error) {
+        console.error('Error creating marker for property:', property.id, error);
       }
-
-      markersRef.current.push(marker);
     });
   }, [properties, propertyFilter, getFilteredProperties]);
 
@@ -293,10 +308,22 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     });
 
     return () => {
-      if (currentLocationMarker.setMap) {
-        currentLocationMarker.setMap(null);
+      if (currentLocationMarker) {
+        if (currentLocationMarker.setMap) {
+          try {
+            currentLocationMarker.setMap(null);
+          } catch (e) {
+            console.error('Error clearing location marker:', e);
+          }
+        }
       }
-      accuracyCircle.setMap(null);
+      if (accuracyCircle) {
+        try {
+          accuracyCircle.setMap(null);
+        } catch (e) {
+          console.error('Error clearing accuracy circle:', e);
+        }
+      }
     };
   }, [location]);
 
