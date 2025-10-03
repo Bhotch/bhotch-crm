@@ -49,7 +49,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   });
 
   // Initialize map with simplified, robust retry logic
-  const initializeMap = useRef(async (attempt = 0) => {
+  const initializeMapFunction = async (attempt = 0) => {
     const maxAttempts = 5;
     const delays = [100, 300, 500, 1000, 2000];
 
@@ -61,7 +61,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         if (attempt < maxAttempts - 1) {
           console.warn(`[Canvassing] Container not ready, retrying in ${delays[attempt]}ms...`);
           await new Promise(resolve => setTimeout(resolve, delays[attempt]));
-          return initializeMap.current(attempt + 1);
+          return initializeMapFunction(attempt + 1);
         }
         throw new Error('Map container not found after multiple attempts. Please refresh the page.');
       }
@@ -126,9 +126,9 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       setError(err.message || 'Failed to initialize map');
       setLoading(false);
     }
-  }).current;
+  };
 
-  // Initialize map on mount - use useLayoutEffect for guaranteed DOM readiness
+  // Initialize map on mount
   useEffect(() => {
     let mounted = true;
 
@@ -136,7 +136,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       if (mounted) {
         setLoading(true);
         setError(null);
-        await initializeMap();
+        await initializeMapFunction();
       }
     };
 
@@ -295,7 +295,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
               onClick={() => {
                 setError(null);
                 setLoading(true);
-                initializeMap();
+                initializeMapFunction();
               }}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
