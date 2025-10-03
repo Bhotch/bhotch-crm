@@ -188,11 +188,12 @@ const RouteOptimizer = ({ map }) => {
               No available properties for routing
             </div>
           ) : (
-            availableProperties.slice(0, 50).map((property) => {
+            availableProperties.slice(0, 50).map((property, index) => {
               const isSelected = selectedProperties.find((p) => p.id === property.id);
+              const uniqueKey = `${property.id}-${index}-${property.address?.substring(0, 10) || ''}`;
               return (
                 <div
-                  key={property.id}
+                  key={uniqueKey}
                   onClick={() => togglePropertySelection(property)}
                   className={`p-3 cursor-pointer transition-colors ${
                     isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-50'

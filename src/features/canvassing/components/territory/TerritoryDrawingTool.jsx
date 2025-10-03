@@ -16,112 +16,195 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
   const [coordinates, setCoordinates] = useState([]);
   const [stats, setStats] = useState({ area: 0, center: null });
 
-  const drawingManagerRef = useRef(null);
   const currentShapeRef = useRef(null);
 
   const { createTerritory } = useTerritories();
   const { setDrawingMode: setStoreDrawingMode } = useCanvassingStore();
 
-  // Initialize Google Maps Drawing Manager
+  // Initialize custom drawing functionality (replacing deprecated Drawing library)
   useEffect(() => {
     if (!map || !window.google) return;
 
-    const drawingManager = new window.google.maps.drawing.DrawingManager({
-      drawingMode: null,
-      drawingControl: false,
-      polygonOptions: {
-        fillColor: territoryColor,
-        fillOpacity: 0.3,
-        strokeWeight: 2,
-        strokeColor: territoryColor,
-        editable: true,
-        draggable: true,
-      },
-      rectangleOptions: {
-        fillColor: territoryColor,
-        fillOpacity: 0.3,
-        strokeWeight: 2,
-        strokeColor: territoryColor,
-        editable: true,
-        draggable: true,
-      },
-      circleOptions: {
-        fillColor: territoryColor,
-        fillOpacity: 0.3,
-        strokeWeight: 2,
-        strokeColor: territoryColor,
-        editable: true,
-        draggable: true,
-      },
-    });
+    let clickListener;
+    let polygon;
+    const polygonPath = [];
 
-    drawingManager.setMap(map);
-    drawingManagerRef.current = drawingManager;
+    const startDrawing = () => {
+      if (!map || !drawingMode) return;
 
-    // Listen for shape completion
-    window.google.maps.event.addListener(drawingManager, 'overlaycomplete', (event) => {
-      const shape = event.overlay;
-      currentShapeRef.current = shape;
+      if (drawingMode === 'polygon') {
+        // Custom polygon drawing with click events
+        clickListener = map.addListener('click', (event) => {
+          polygonPath.push(event.latLng);
 
-      // Extract coordinates based on shape type
-      let coords = [];
-      if (event.type === 'polygon') {
-        const path = shape.getPath();
-        const pathArray = path.getArray();
-        coords = pathArray.map((latLng) => [latLng.lng(), latLng.lat()]);
-        coords.push(coords[0]); // Close the polygon
-      } else if (event.type === 'rectangle') {
-        const bounds = shape.getBounds();
-        const ne = bounds.getNorthEast();
-        const sw = bounds.getSouthWest();
-        coords = [
-          [sw.lng(), ne.lat()],
-          [ne.lng(), ne.lat()],
-          [ne.lng(), sw.lat()],
-          [sw.lng(), sw.lat()],
-          [sw.lng(), ne.lat()],
-        ];
-      } else if (event.type === 'circle') {
-        // Convert circle to polygon approximation
-        const center = shape.getCenter();
-        const radius = shape.getRadius();
-        const numPoints = 32;
-        for (let i = 0; i < numPoints; i++) {
-          const angle = (i / numPoints) * 2 * Math.PI;
-          const lat = center.lat() + (radius / 111000) * Math.cos(angle);
-          const lng = center.lng() + (radius / (111000 * Math.cos(center.lat() * Math.PI / 180))) * Math.sin(angle);
-          coords.push([lng, lat]);
-        }
-        coords.push(coords[0]);
-      }
+          if (!polygon) {
+            polygon = new window.google.maps.Polygon({
+              map: map,
+              paths: polygonPath,
+              fillColor: territoryColor,
+              fillOpacity: 0.3,
+              strokeWeight: 2,
+              strokeColor: territoryColor,
+              editable: true,
+              draggable: true,
+            });
+            currentShapeRef.current = polygon;
+          } else {
+            polygon.setPath(polygonPath);
+          }
+        });
 
-      setCoordinates(coords);
+        // Double-click to finish
+        const dblClickListener = map.addListener('dblclick', () => {
+          if (polygon && polygonPath.length >= 3) {
+            const coords = polygonPath.map((latLng) => [latLng.lng(), latLng.lat()]);
+            coords.push(coords[0]); // Close the polygon
+            setCoordinates(coords);
 
-      // Calculate stats
-      if (coords.length > 0) {
-        const area = calculateTerritoryArea(coords);
-        const center = getTerritoryCenter(coords);
-        setStats({ area, center });
-      }
+            // Calculate stats
+            const area = calculateTerritoryArea(coords);
+            const center = getTerritoryCenter(coords);
+            setStats({ area, center });
 
-      // Stop drawing
-      setDrawingMode(null);
-      drawingManager.setDrawingMode(null);
+            // Add listeners for editing
+            window.google.maps.event.addListener(polygon.getPath(), 'set_at', updateCoordinates);
+            window.google.maps.event.addListener(polygon.getPath(), 'insert_at', updateCoordinates);
 
-      // Add event listeners for editing
-      if (event.type === 'polygon') {
-        window.google.maps.event.addListener(shape.getPath(), 'set_at', updateCoordinates);
-        window.google.maps.event.addListener(shape.getPath(), 'insert_at', updateCoordinates);
-      }
-    });
+            // Stop drawing
+            setDrawingMode(null);
+            window.google.maps.event.removeListener(clickListener);
+            window.google.maps.event.removeListener(dblClickListener);
+          }
+        });
+      } else if (drawingMode === 'rectangle') {
+        // Rectangle drawing with drag
+        let startLatLng;
+        let rectangle;
 
-    return () => {
-      if (drawingManager) {
-        window.google.maps.event.clearInstanceListeners(drawingManager);
-        drawingManager.setMap(null);
+        const mouseDownListener = map.addListener('mousedown', (event) => {
+          startLatLng = event.latLng;
+        });
+
+        const mouseMoveListener = map.addListener('mousemove', (event) => {
+          if (startLatLng) {
+            const bounds = new window.google.maps.LatLngBounds(startLatLng, event.latLng);
+
+            if (!rectangle) {
+              rectangle = new window.google.maps.Rectangle({
+                map: map,
+                bounds: bounds,
+                fillColor: territoryColor,
+                fillOpacity: 0.3,
+                strokeWeight: 2,
+                strokeColor: territoryColor,
+                editable: true,
+                draggable: true,
+              });
+            } else {
+              rectangle.setBounds(bounds);
+            }
+          }
+        });
+
+        const mouseUpListener = map.addListener('mouseup', () => {
+          if (rectangle) {
+            currentShapeRef.current = rectangle;
+            const bounds = rectangle.getBounds();
+            const ne = bounds.getNorthEast();
+            const sw = bounds.getSouthWest();
+            const coords = [
+              [sw.lng(), ne.lat()],
+              [ne.lng(), ne.lat()],
+              [ne.lng(), sw.lat()],
+              [sw.lng(), sw.lat()],
+              [sw.lng(), ne.lat()],
+            ];
+            setCoordinates(coords);
+
+            // Calculate stats
+            const area = calculateTerritoryArea(coords);
+            const center = getTerritoryCenter(coords);
+            setStats({ area, center });
+
+            // Stop drawing
+            setDrawingMode(null);
+            window.google.maps.event.removeListener(mouseDownListener);
+            window.google.maps.event.removeListener(mouseMoveListener);
+            window.google.maps.event.removeListener(mouseUpListener);
+          }
+        });
+      } else if (drawingMode === 'circle') {
+        // Circle drawing with drag
+        let startLatLng;
+        let circle;
+
+        const mouseDownListener = map.addListener('mousedown', (event) => {
+          startLatLng = event.latLng;
+        });
+
+        const mouseMoveListener = map.addListener('mousemove', (event) => {
+          if (startLatLng) {
+            const radius = window.google.maps.geometry.spherical.computeDistanceBetween(startLatLng, event.latLng);
+
+            if (!circle) {
+              circle = new window.google.maps.Circle({
+                map: map,
+                center: startLatLng,
+                radius: radius,
+                fillColor: territoryColor,
+                fillOpacity: 0.3,
+                strokeWeight: 2,
+                strokeColor: territoryColor,
+                editable: true,
+                draggable: true,
+              });
+            } else {
+              circle.setRadius(radius);
+            }
+          }
+        });
+
+        const mouseUpListener = map.addListener('mouseup', () => {
+          if (circle) {
+            currentShapeRef.current = circle;
+            const center = circle.getCenter();
+            const radius = circle.getRadius();
+
+            // Convert circle to polygon approximation
+            const coords = [];
+            const numPoints = 32;
+            for (let i = 0; i < numPoints; i++) {
+              const angle = (i / numPoints) * 2 * Math.PI;
+              const lat = center.lat() + (radius / 111000) * Math.cos(angle);
+              const lng = center.lng() + (radius / (111000 * Math.cos(center.lat() * Math.PI / 180))) * Math.sin(angle);
+              coords.push([lng, lat]);
+            }
+            coords.push(coords[0]);
+            setCoordinates(coords);
+
+            // Calculate stats
+            const area = calculateTerritoryArea(coords);
+            const centerPoint = getTerritoryCenter(coords);
+            setStats({ area, center: centerPoint });
+
+            // Stop drawing
+            setDrawingMode(null);
+            window.google.maps.event.removeListener(mouseDownListener);
+            window.google.maps.event.removeListener(mouseMoveListener);
+            window.google.maps.event.removeListener(mouseUpListener);
+          }
+        });
       }
     };
-  }, [map, territoryColor]);
+
+    startDrawing();
+
+    return () => {
+      if (clickListener) {
+        window.google.maps.event.removeListener(clickListener);
+      }
+    };
+  }, [map, drawingMode, territoryColor]);
 
   // Update coordinates when shape is edited
   const updateCoordinates = () => {
@@ -141,8 +224,6 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
 
   // Handle drawing mode changes
   const handleDrawingModeChange = (mode) => {
-    if (!drawingManagerRef.current) return;
-
     setDrawingMode(mode);
     setStoreDrawingMode(mode);
 
@@ -154,15 +235,6 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
 
     setCoordinates([]);
     setStats({ area: 0, center: null });
-
-    // Set drawing mode
-    const modeMap = {
-      polygon: window.google.maps.drawing.OverlayType.POLYGON,
-      rectangle: window.google.maps.drawing.OverlayType.RECTANGLE,
-      circle: window.google.maps.drawing.OverlayType.CIRCLE,
-    };
-
-    drawingManagerRef.current.setDrawingMode(modeMap[mode] || null);
   };
 
   // Clear current drawing
@@ -174,9 +246,6 @@ const TerritoryDrawingTool = ({ map, onClose }) => {
     setCoordinates([]);
     setStats({ area: 0, center: null });
     setDrawingMode(null);
-    if (drawingManagerRef.current) {
-      drawingManagerRef.current.setDrawingMode(null);
-    }
   };
 
   // Save territory

@@ -180,12 +180,16 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     });
   }, [leads, properties, addProperty]);
 
-  // Render property markers
+  // Render property markers using AdvancedMarkerElement (or fallback to Marker)
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
 
     // Clear existing markers
-    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current.forEach((marker) => {
+      if (marker.setMap) {
+        marker.setMap(null);
+      }
+    });
     markersRef.current = [];
 
     const filteredProperties = getFilteredProperties();
@@ -194,18 +198,42 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     filteredProperties.forEach((property) => {
       if (!property.latitude || !property.longitude) return;
 
-      const marker = new window.google.maps.Marker({
-        position: { lat: property.latitude, lng: property.longitude },
-        map: mapInstanceRef.current,
-        title: property.address,
-        icon: createPropertyMarkerIcon(property),
-        animation: window.google.maps.Animation.DROP,
-      });
+      let marker;
 
-      marker.addListener('click', () => {
-        setSelectedProperty(property);
-        setShowPropertySheet(true);
-      });
+      // Use AdvancedMarkerElement if available (Google Maps v3.56+)
+      if (window.google.maps.marker?.AdvancedMarkerElement) {
+        // Create a div element for the custom marker content
+        const content = document.createElement('div');
+        content.innerHTML = createPropertyMarkerIcon(property).url.replace('data:image/svg+xml;charset=UTF-8,', '');
+        content.style.cursor = 'pointer';
+
+        marker = new window.google.maps.marker.AdvancedMarkerElement({
+          map: mapInstanceRef.current,
+          position: { lat: property.latitude, lng: property.longitude },
+          title: property.address,
+          content: content,
+        });
+
+        // Add click listener
+        marker.content.addEventListener('click', () => {
+          setSelectedProperty(property);
+          setShowPropertySheet(true);
+        });
+      } else {
+        // Fallback to legacy Marker
+        marker = new window.google.maps.Marker({
+          position: { lat: property.latitude, lng: property.longitude },
+          map: mapInstanceRef.current,
+          title: property.address,
+          icon: createPropertyMarkerIcon(property),
+          animation: window.google.maps.Animation.DROP,
+        });
+
+        marker.addListener('click', () => {
+          setSelectedProperty(property);
+          setShowPropertySheet(true);
+        });
+      }
 
       markersRef.current.push(marker);
     });
@@ -215,21 +243,42 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google || !location) return;
 
-    // Create or update current location marker
-    const currentLocationMarker = new window.google.maps.Marker({
-      position: { lat: location.lat, lng: location.lng },
-      map: mapInstanceRef.current,
-      title: 'Your Location',
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#4285F4',
-        fillOpacity: 1,
-        strokeColor: '#FFFFFF',
-        strokeWeight: 3,
-      },
-      zIndex: 10000,
-    });
+    let currentLocationMarker;
+
+    // Use AdvancedMarkerElement if available, otherwise fallback to Marker
+    if (window.google.maps.marker?.AdvancedMarkerElement) {
+      // Create custom div element for current location
+      const locationDiv = document.createElement('div');
+      locationDiv.style.width = '20px';
+      locationDiv.style.height = '20px';
+      locationDiv.style.borderRadius = '50%';
+      locationDiv.style.backgroundColor = '#4285F4';
+      locationDiv.style.border = '3px solid #FFFFFF';
+      locationDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+
+      currentLocationMarker = new window.google.maps.marker.AdvancedMarkerElement({
+        map: mapInstanceRef.current,
+        position: { lat: location.lat, lng: location.lng },
+        title: 'Your Location',
+        content: locationDiv,
+      });
+    } else {
+      // Fallback to legacy Marker
+      currentLocationMarker = new window.google.maps.Marker({
+        position: { lat: location.lat, lng: location.lng },
+        map: mapInstanceRef.current,
+        title: 'Your Location',
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#4285F4',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 3,
+        },
+        zIndex: 10000,
+      });
+    }
 
     // Create accuracy circle
     const accuracyCircle = new window.google.maps.Circle({
@@ -244,7 +293,9 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     });
 
     return () => {
-      currentLocationMarker.setMap(null);
+      if (currentLocationMarker.setMap) {
+        currentLocationMarker.setMap(null);
+      }
       accuracyCircle.setMap(null);
     };
   }, [location]);

@@ -13,8 +13,8 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
 
   // Combine leads and job counts into unified customer list
   const allCustomers = useMemo(() => {
-    const leadCustomers = leads.map(lead => ({
-      id: `lead-${lead.id}`,
+    const leadCustomers = leads.map((lead, index) => ({
+      id: `lead-${lead.id || index}`,
       type: 'lead',
       name: lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.name || 'Unknown',
       address: lead.address,
@@ -24,11 +24,12 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
       quality: lead.quality,
       disposition: lead.disposition,
       lastContact: lead.lastContact || null,
-      source: 'Bhotchleads'
+      source: 'Bhotchleads',
+      uniqueKey: `lead-${lead.id || index}-${lead.customerName || index}` // Ensure uniqueness
     }));
 
-    const jobCountCustomers = jobCounts.map(job => ({
-      id: `job-${job.id}`,
+    const jobCountCustomers = jobCounts.map((job, index) => ({
+      id: `job-${job.id || index}`,
       type: 'jobcount',
       name: job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown',
       address: job.address,
@@ -37,7 +38,8 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
       notes: job.notes || '',
       sqFt: job.sqFt,
       status: job.status,
-      source: 'Job Count'
+      source: 'Job Count',
+      uniqueKey: `job-${job.id || index}-${job.customerName || index}` // Ensure uniqueness
     }));
 
     return [...leadCustomers, ...jobCountCustomers];
@@ -236,7 +238,7 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
           ) : (
             filteredCustomers.map(customer => (
               <div
-                key={customer.id}
+                key={customer.uniqueKey}
                 onClick={() => handleCustomerSelect(customer)}
                 className={`p-4 border-b hover:bg-blue-50 cursor-pointer transition-all ${
                   selectedCustomer?.id === customer.id ? 'bg-blue-100 border-l-4 border-l-blue-600' : ''

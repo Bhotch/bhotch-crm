@@ -183,17 +183,36 @@ function CalendarView() {
 
       {/* Google Calendar Embed */}
       <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
-        <iframe
-          id="google-calendar-iframe"
-          src={getCalendarEmbedUrl()}
-          style={{ border: 0 }}
-          width="100%"
-          height="700"
-          frameBorder="0"
-          scrolling="no"
-          title="Google Calendar"
-          className="w-full"
-        ></iframe>
+        {!iframeError ? (
+          <iframe
+            id="google-calendar-iframe"
+            src={getCalendarEmbedUrl()}
+            style={{ border: 0 }}
+            width="100%"
+            height="700"
+            frameBorder="0"
+            scrolling="no"
+            title="Google Calendar"
+            className="w-full"
+            onError={() => setIframeError(true)}
+          ></iframe>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-16 bg-gray-50">
+            <AlertTriangle className="w-16 h-16 text-yellow-600 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Calendar Requires Authentication</h3>
+            <p className="text-gray-600 text-center mb-6 max-w-md">
+              This calendar is private and requires Google authentication to view.
+              Please use the button below to access it directly in Google Calendar.
+            </p>
+            <button
+              onClick={handleOpenInGoogle}
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+            >
+              <ExternalLink className="w-5 h-5 mr-2" />
+              Open Google Calendar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions Footer */}

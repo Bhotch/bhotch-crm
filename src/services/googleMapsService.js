@@ -68,10 +68,12 @@ export const loadGoogleMaps = () => {
       return;
     }
 
-    // Create new script
+    // Create new script with loading=async parameter to follow best practices
+    // Include marker library for AdvancedMarkerElement support
+    // Note: Drawing library removed as it's deprecated - using custom drawing implementation
     const script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places,drawing`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places,marker&loading=async`;
     script.async = true;
     script.defer = true;
 
