@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Navigation,
   Filter,
@@ -48,36 +48,23 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     updateInterval: 30000, // 30 seconds
   });
 
-  // Initialize map with simplified, robust retry logic
+  // Initialize map with retry logic
   const initializeMapFunction = async (attempt = 0) => {
     const maxAttempts = 3;
     const delays = [100, 500, 1000];
 
     try {
-      console.log(`[Canvassing] Initializing map (attempt ${attempt + 1}/${maxAttempts})...`);
-      console.log(`[Canvassing] mapRef.current exists:`, !!mapRef.current);
-
       // Check if map container exists
       if (!mapRef.current) {
         if (attempt < maxAttempts - 1) {
-          console.warn(`[Canvassing] Container not ready, retrying in ${delays[attempt]}ms...`);
           await new Promise(resolve => setTimeout(resolve, delays[attempt]));
           return initializeMapFunction(attempt + 1);
         }
-        throw new Error('Map container not found after multiple attempts. Please refresh the page.');
+        throw new Error('Map container not found. Please refresh the page.');
       }
 
-      console.log('[Canvassing] Container found, dimensions:', {
-        width: mapRef.current.offsetWidth,
-        height: mapRef.current.offsetHeight,
-        clientWidth: mapRef.current.clientWidth,
-        clientHeight: mapRef.current.clientHeight
-      });
-
       // Load Google Maps API
-      console.log('[Canvassing] Loading Google Maps API...');
       const google = await loadGoogleMaps();
-      console.log('[Canvassing] Google Maps API loaded:', !!google?.maps);
 
       // Verify container still exists after async load
       if (!mapRef.current) {
@@ -85,7 +72,6 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       }
 
       // Create map instance
-      console.log('[Canvassing] Creating map instance with center:', mapView.center);
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: mapView.center,
         zoom: mapView.zoom,
@@ -99,7 +85,6 @@ const CanvassingView = ({ leads, onMapLoad }) => {
           { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
         ],
       });
-      console.log('[Canvassing] Map instance created:', !!mapInstance);
 
       // Traffic layer
       trafficLayerRef.current = new google.maps.TrafficLayer();
@@ -128,7 +113,6 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         onMapLoad(mapInstance);
       }
 
-      console.log('[Canvassing] Map initialized successfully - setting loading to false');
       setLoading(false);
       setError(null);
     } catch (err) {
@@ -138,24 +122,30 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     }
   };
 
-  // Initialize map on mount - useLayoutEffect ensures DOM is ready
-  useLayoutEffect(() => {
+  // Initialize map on mount
+  useEffect(() => {
     let mounted = true;
+    let timeoutId;
 
     const init = async () => {
-      if (mounted && mapRef.current) {
-        setLoading(true);
-        setError(null);
-        // Longer initial delay to ensure parent containers are rendered
-        await new Promise(resolve => setTimeout(resolve, 200));
-        await initializeMapFunction();
-      }
+      if (!mounted) return;
+
+      setLoading(true);
+      setError(null);
+
+      // Wait for DOM to be ready
+      timeoutId = setTimeout(async () => {
+        if (mounted) {
+          await initializeMapFunction();
+        }
+      }, 100);
     };
 
     init();
 
     return () => {
       mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
       // Cleanup map instance
       if (mapInstanceRef.current) {
         window.google?.maps?.event?.clearInstanceListeners(mapInstanceRef.current);
@@ -282,52 +272,49 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     };
   }, [getFilteredProperties]);
 
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-3" />
-          <p className="text-gray-600 text-lg">Loading Canvassing Map...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="h-full flex items-center justify-center bg-red-50">
-        <div className="text-center max-w-md px-4">
-          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Map Initialization Error</h3>
-          <p className="text-red-600 mb-6 text-sm">{error}</p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => {
-                setError(null);
-                setLoading(true);
-                initializeMapFunction();
-              }}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Retry
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-            >
-              Refresh Page
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-4">
-            If the issue persists, please check your internet connection and Google Maps API configuration.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col bg-gray-50">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-3" />
+            <p className="text-gray-600 text-lg">Loading Canvassing Map...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Overlay */}
+      {error && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-red-50">
+          <div className="text-center max-w-md px-4">
+            <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Map Initialization Error</h3>
+            <p className="text-red-600 mb-6 text-sm">{error}</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  initializeMapFunction();
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Refresh Page
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-4">
+              If the issue persists, please check your internet connection and Google Maps API configuration.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-3">
