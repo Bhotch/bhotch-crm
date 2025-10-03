@@ -13,6 +13,7 @@ import { useCanvassingStore } from './store/canvassingStore';
 import { useGeoLocation } from './hooks/useGeoLocation';
 import { createPropertyMarkerIcon, PROPERTY_STATUS } from './components/map/PropertyMarker';
 import PropertyDetailSheet from './components/property/PropertyDetailSheet';
+import './CanvassingView.css';
 
 /**
  * CanvassingView Component
@@ -47,36 +48,34 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     updateInterval: 30000, // 30 seconds
   });
 
-  // Initialize map
-  const initializeMap = async () => {
-    setLoading(true);
-    setError(null);
+  // Initialize map with simplified, robust retry logic
+  const initializeMap = useRef(async (attempt = 0) => {
+    const maxAttempts = 5;
+    const delays = [100, 300, 500, 1000, 2000];
 
     try {
-      console.log('[Canvassing] Initializing canvassing map...');
+      console.log(`[Canvassing] Initializing map (attempt ${attempt + 1}/${maxAttempts})...`);
 
-      // Wait for map container to be available with multiple retries
-      let retries = 0;
-      const maxRetries = 10;
-      while (!mapRef.current && retries < maxRetries) {
-        console.warn(`[Canvassing] Map container ref not ready, waiting... (attempt ${retries + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        retries++;
-      }
-
+      // Check if map container exists
       if (!mapRef.current) {
-        throw new Error('Map container element not found after multiple attempts. Please refresh the page.');
+        if (attempt < maxAttempts - 1) {
+          console.warn(`[Canvassing] Container not ready, retrying in ${delays[attempt]}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+          return initializeMap.current(attempt + 1);
+        }
+        throw new Error('Map container not found after multiple attempts. Please refresh the page.');
       }
 
-      console.log('[Canvassing] Map container found, loading Google Maps API...');
+      // Load Google Maps API
+      console.log('[Canvassing] Loading Google Maps API...');
       const google = await loadGoogleMaps();
-      console.log('[Canvassing] Google Maps API loaded successfully');
 
-      // Double check container still exists
+      // Verify container still exists after async load
       if (!mapRef.current) {
         throw new Error('Map container was removed during initialization.');
       }
 
+      // Create map instance
       console.log('[Canvassing] Creating map instance...');
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: mapView.center,
@@ -91,8 +90,6 @@ const CanvassingView = ({ leads, onMapLoad }) => {
           { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
         ],
       });
-
-      console.log('[Canvassing] Map instance created successfully');
 
       // Traffic layer
       trafficLayerRef.current = new google.maps.TrafficLayer();
@@ -116,46 +113,45 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         updateMapView({ zoom: mapInstance.getZoom() });
       });
 
-      // Notify parent component that map is loaded
+      // Notify parent component
       if (onMapLoad) {
         onMapLoad(mapInstance);
       }
 
-      console.log('[Canvassing] Map initialization complete');
+      console.log('[Canvassing] Map initialized successfully');
       setLoading(false);
+      setError(null);
     } catch (err) {
       console.error('[Canvassing] Map initialization error:', err);
       setError(err.message || 'Failed to initialize map');
       setLoading(false);
     }
-  };
+  }).current;
 
+  // Initialize map on mount - use useLayoutEffect for guaranteed DOM readiness
   useEffect(() => {
-    // Ensure DOM is ready before initializing map
-    // Use requestAnimationFrame to ensure DOM has fully rendered
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const timer = setTimeout(() => {
-          if (mapRef.current) {
-            initializeMap();
-          } else {
-            console.warn('[Canvassing] Map ref not ready on first attempt, retrying...');
-            // Retry after a longer delay
-            const retryTimer = setTimeout(() => {
-              if (mapRef.current) {
-                initializeMap();
-              } else {
-                console.error('[Canvassing] Map ref still not ready after retry');
-                setError('Map container failed to initialize. Please refresh the page.');
-                setLoading(false);
-              }
-            }, 500);
-            return () => clearTimeout(retryTimer);
-          }
-        }, 100);
-        return () => clearTimeout(timer);
-      });
-    });
+    let mounted = true;
+
+    const init = async () => {
+      if (mounted) {
+        setLoading(true);
+        setError(null);
+        await initializeMap();
+      }
+    };
+
+    // Small delay to ensure DOM is fully rendered
+    const timer = setTimeout(init, 50);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      // Cleanup map instance
+      if (mapInstanceRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(mapInstanceRef.current);
+        mapInstanceRef.current = null;
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -290,16 +286,31 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   if (error) {
     return (
       <div className="h-full flex items-center justify-center bg-red-50">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md px-4">
           <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Map Error</h3>
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={initializeMap}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Retry
-          </button>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Map Initialization Error</h3>
+          <p className="text-red-600 mb-6 text-sm">{error}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                initializeMap();
+              }}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              Refresh Page
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">
+            If the issue persists, please check your internet connection and Google Maps API configuration.
+          </p>
         </div>
       </div>
     );

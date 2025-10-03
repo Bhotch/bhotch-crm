@@ -198,6 +198,19 @@ export const useCanvassingStore = create(
       drawingMode: null, // null, 'territory', 'route'
       setDrawingMode: (mode) => set({ drawingMode: mode }),
 
+      // ==================== ERROR STATE ====================
+      mapError: null,
+      setMapError: (error) => set({ mapError: error }),
+      clearMapError: () => set({ mapError: null }),
+
+      // Recovery action
+      recoverFromError: () => {
+        set({
+          mapError: null,
+        });
+        console.log('[Canvassing Store] Attempting error recovery...');
+      },
+
       // ==================== UTILITY METHODS ====================
       getFilteredProperties: () => {
         const { properties, propertyFilter } = get();
