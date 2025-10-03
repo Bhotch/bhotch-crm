@@ -18,7 +18,7 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
       type: 'lead',
       name: lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.name || 'Unknown',
       address: lead.address,
-      phone: lead.phone,
+      phone: lead.phoneNumber || lead.phone || '', // Use phoneNumber property from leads
       email: lead.email || '',
       notes: lead.notes || '',
       quality: lead.quality,
@@ -33,7 +33,7 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
       type: 'jobcount',
       name: job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown',
       address: job.address,
-      phone: job.phone || '',
+      phone: job.phoneNumber || job.phone || '', // Use phoneNumber property from job counts
       email: job.email || '',
       notes: job.notes || '',
       sqFt: job.sqFt,
@@ -112,21 +112,32 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
     } else {
       setActiveAction(action);
       if (action === 'call') {
-        // Open Google Voice dialer for brandon@rimehq.net
-        const phoneNumber = selectedCustomer.phone.replace(/\D/g, '');
-        // Using authuser parameter to ensure correct account
-        window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${phoneNumber}&authuser=brandon@rimehq.net`, '_blank');
+        // Open Google Voice dialer for brandon@rimehq.net with number 801-228-0678
+        const phoneNumber = selectedCustomer.phone ? selectedCustomer.phone.replace(/\D/g, '') : '';
+        if (phoneNumber) {
+          // Call specific number
+          window.open(`https://voice.google.com/u/0/calls?a=nc,%2B1${phoneNumber}`, '_blank');
+        } else {
+          // Open Google Voice without specific number
+          window.open('https://voice.google.com/u/0/calls', '_blank');
+        }
       } else if (action === 'sms') {
-        // Open Google Voice SMS for brandon@rimehq.net
-        const phoneNumber = selectedCustomer.phone.replace(/\D/g, '');
-        window.open(`https://voice.google.com/u/0/messages?itemId=t.%2B1${phoneNumber}&authuser=brandon@rimehq.net`, '_blank');
+        // Open Google Voice SMS for brandon@rimehq.net with number 801-228-0678
+        const phoneNumber = selectedCustomer.phone ? selectedCustomer.phone.replace(/\D/g, '') : '';
+        if (phoneNumber) {
+          // SMS specific number
+          window.open(`https://voice.google.com/u/0/messages?a=nc,%2B1${phoneNumber}`, '_blank');
+        } else {
+          // Open Google Voice messages
+          window.open('https://voice.google.com/u/0/messages', '_blank');
+        }
       }
     }
   };
 
   const handleSendSMS = () => {
     if (!messageContent.trim() || !quickOutcome) return;
-    const phoneNumber = selectedCustomer.phone.replace(/\D/g, '');
+    const phoneNumber = selectedCustomer.phone ? selectedCustomer.phone.replace(/\D/g, '') : '';
 
     // Log the communication (you can pass this to parent component via props)
     console.log({
@@ -134,12 +145,17 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
       type: 'sms',
       outcome: quickOutcome,
       notes: messageContent,
+      phoneNumber: phoneNumber || 'No phone number',
       timestamp: new Date().toISOString()
     });
 
-    // Open Google Voice if sending SMS for brandon@rimehq.net
+    // Open Google Voice if sending SMS
     if (quickOutcome === 'sent') {
-      window.open(`https://voice.google.com/u/0/messages?itemId=t.%2B1${phoneNumber}&authuser=brandon@rimehq.net`, '_blank');
+      if (phoneNumber) {
+        window.open(`https://voice.google.com/u/0/messages?a=nc,%2B1${phoneNumber}`, '_blank');
+      } else {
+        window.open('https://voice.google.com/u/0/messages', '_blank');
+      }
     }
 
     setMessageContent('');
@@ -362,24 +378,24 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-3">
               <button
                 onClick={() => handleActionClick('call')}
-                disabled={!selectedCustomer.phone}
                 className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 shadow-sm ${
                   activeAction === 'call'
                     ? 'bg-blue-600 text-white shadow-lg scale-105 ring-2 ring-blue-300'
-                    : 'bg-white text-gray-700 border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                    : 'bg-white text-gray-700 border-2 border-blue-200 hover:border-blue-400 hover:bg-blue-50'
                 }`}
+                title={selectedCustomer.phone ? `Call ${selectedCustomer.phone}` : 'Open Google Voice'}
               >
                 <PhoneCall className="w-4 h-4 lg:w-5 lg:h-5" />
                 <span>📞 Call</span>
               </button>
               <button
                 onClick={() => handleActionClick('sms')}
-                disabled={!selectedCustomer.phone}
                 className={`py-2 lg:py-3 px-2 lg:px-4 rounded-lg text-xs lg:text-sm font-medium transition-all flex flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2 shadow-sm ${
                   activeAction === 'sms'
                     ? 'bg-green-600 text-white shadow-lg scale-105 ring-2 ring-green-300'
-                    : 'bg-white text-gray-700 border-2 border-green-200 hover:border-green-400 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed'
+                    : 'bg-white text-gray-700 border-2 border-green-200 hover:border-green-400 hover:bg-green-50'
                 }`}
+                title={selectedCustomer.phone ? `Text ${selectedCustomer.phone}` : 'Open Google Voice'}
               >
                 <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5" />
                 <span>💬 SMS</span>
@@ -392,6 +408,7 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
                     ? 'bg-purple-600 text-white shadow-lg scale-105 ring-2 ring-purple-300'
                     : 'bg-white text-gray-700 border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
+                title={selectedCustomer.email ? `Email ${selectedCustomer.email}` : 'No email available'}
               >
                 <Mail className="w-4 h-4 lg:w-5 lg:h-5" />
                 <span>✉️ Email</span>
@@ -542,10 +559,17 @@ export default function CommunicationsView({ leads, jobCounts, communications = 
                     </div>
                   </div>
                   <p className="text-lg font-semibold text-gray-800 mb-2">Google Voice Call Window Opened</p>
-                  <p className="text-blue-600 font-medium text-lg mb-1">{selectedCustomer.phone}</p>
-                  <p className="text-sm text-gray-600">{selectedCustomer.name}</p>
+                  <p className="text-blue-600 font-medium text-lg mb-1">
+                    {selectedCustomer.phone || 'No phone number on file'}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-2">{selectedCustomer.name}</p>
                   <div className="mt-4 pt-4 border-t border-blue-200">
-                    <p className="text-xs text-gray-500">Complete the call in the Google Voice window</p>
+                    <p className="text-xs text-gray-500 mb-2">
+                      {selectedCustomer.phone
+                        ? 'Complete the call in the Google Voice window'
+                        : 'Enter phone number manually in Google Voice (brandon@rimehq.net)'}
+                    </p>
+                    <p className="text-xs text-blue-600 font-medium">Your Google Voice: 801-228-0678</p>
                   </div>
                 </div>
               )}
