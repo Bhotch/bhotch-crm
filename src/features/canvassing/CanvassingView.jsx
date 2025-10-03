@@ -50,11 +50,12 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
   // Initialize map with simplified, robust retry logic
   const initializeMapFunction = async (attempt = 0) => {
-    const maxAttempts = 5;
-    const delays = [100, 300, 500, 1000, 2000];
+    const maxAttempts = 3;
+    const delays = [100, 500, 1000];
 
     try {
       console.log(`[Canvassing] Initializing map (attempt ${attempt + 1}/${maxAttempts})...`);
+      console.log(`[Canvassing] mapRef.current exists:`, !!mapRef.current);
 
       // Check if map container exists
       if (!mapRef.current) {
@@ -66,9 +67,17 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         throw new Error('Map container not found after multiple attempts. Please refresh the page.');
       }
 
+      console.log('[Canvassing] Container found, dimensions:', {
+        width: mapRef.current.offsetWidth,
+        height: mapRef.current.offsetHeight,
+        clientWidth: mapRef.current.clientWidth,
+        clientHeight: mapRef.current.clientHeight
+      });
+
       // Load Google Maps API
       console.log('[Canvassing] Loading Google Maps API...');
       const google = await loadGoogleMaps();
+      console.log('[Canvassing] Google Maps API loaded:', !!google?.maps);
 
       // Verify container still exists after async load
       if (!mapRef.current) {
@@ -76,7 +85,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       }
 
       // Create map instance
-      console.log('[Canvassing] Creating map instance...');
+      console.log('[Canvassing] Creating map instance with center:', mapView.center);
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: mapView.center,
         zoom: mapView.zoom,
@@ -90,6 +99,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
           { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
         ],
       });
+      console.log('[Canvassing] Map instance created:', !!mapInstance);
 
       // Traffic layer
       trafficLayerRef.current = new google.maps.TrafficLayer();
@@ -118,7 +128,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         onMapLoad(mapInstance);
       }
 
-      console.log('[Canvassing] Map initialized successfully');
+      console.log('[Canvassing] Map initialized successfully - setting loading to false');
       setLoading(false);
       setError(null);
     } catch (err) {

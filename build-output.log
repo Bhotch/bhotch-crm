@@ -1,0 +1,43 @@
+
+> bhotch-crm@2.0.0 prebuild
+> chmod +x ./node_modules/.bin/react-scripts
+
+
+> bhotch-crm@2.0.0 build
+> react-scripts build
+
+Creating an optimized production build...
+
+
+Source path: c:\Users\PC_User\Desktop\free-crm\bhotch-crm\src\index.css
+Setting up new context...
+Finding changed files: 11.303ms
+Reading changed files: 177.644ms
+Sorting candidates: 5.852ms
+Generate rules: 153.271ms
+Build stylesheet: 3.407ms
+Potential classes:  9964
+Active contexts:  1
+JIT TOTAL: 465.044ms
+
+
+Compiled successfully.
+
+File sizes after gzip:
+
+  225.02 kB  build\static\js\main.ac86a7b7.js
+  9.49 kB    build\static\css\main.891842b1.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+
