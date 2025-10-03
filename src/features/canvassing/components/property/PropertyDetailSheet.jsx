@@ -66,6 +66,10 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }
       [PROPERTY_STATUS.NOT_INTERESTED]: 'bg-red-100 text-red-800',
       [PROPERTY_STATUS.DNC]: 'bg-gray-900 text-white',
       [PROPERTY_STATUS.NOT_CONTACTED]: 'bg-gray-50 text-gray-600',
+      [PROPERTY_STATUS.NEEDS_INSPECTION]: 'bg-orange-100 text-orange-800',
+      [PROPERTY_STATUS.KNOCK_NOT_HOME]: 'bg-gray-100 text-gray-700',
+      [PROPERTY_STATUS.FOLLOW_UP_NEEDED]: 'bg-yellow-100 text-yellow-800',
+      [PROPERTY_STATUS.DOOR_HANGER]: 'bg-purple-100 text-purple-700',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };

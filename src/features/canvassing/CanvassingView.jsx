@@ -7,12 +7,14 @@ import {
   Square,
   Loader2,
   AlertCircle,
+  ClipboardList,
 } from 'lucide-react';
 import { loadGoogleMaps } from '../../services/googleMapsService';
 import { useCanvassingStore } from './store/canvassingStore';
 import { useGeoLocation } from './hooks/useGeoLocation';
 import { createPropertyMarkerIcon, PROPERTY_STATUS } from './components/map/PropertyMarker';
 import PropertyDetailSheet from './components/property/PropertyDetailSheet';
+import DaySummary from './components/summary/DaySummary';
 import './CanvassingView.css';
 
 /**
@@ -30,6 +32,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showPropertySheet, setShowPropertySheet] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showDaySummary, setShowDaySummary] = useState(false);
 
   // Store state
   const {
@@ -47,6 +50,23 @@ const CanvassingView = ({ leads, onMapLoad }) => {
   const { location, isTracking, startTracking, stopTracking } = useGeoLocation({
     updateInterval: 30000, // 30 seconds
   });
+
+  // Auto-start location tracking on mount
+  useEffect(() => {
+    startTracking();
+    setTrackingEnabled(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-zoom to user location on first load
+  const hasZoomedToLocation = useRef(false);
+  useEffect(() => {
+    if (location && mapInstanceRef.current && !hasZoomedToLocation.current) {
+      hasZoomedToLocation.current = true;
+      mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
+      mapInstanceRef.current.setZoom(19); // Street-level zoom
+    }
+  }, [location]);
 
   // Initialize map with retry logic
   const initializeMapFunction = async (attempt = 0) => {
@@ -106,6 +126,68 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
       mapInstance.addListener('zoom_changed', () => {
         updateMapView({ zoom: mapInstance.getZoom() });
+      });
+
+      // Add click listener to drop pins on the map
+      mapInstance.addListener('click', async (event) => {
+        const lat = event.latLng.lat();
+        const lng = event.latLng.lng();
+
+        try {
+          // Reverse geocode to get address
+          const geocoder = new google.maps.Geocoder();
+          const result = await geocoder.geocode({ location: { lat, lng } });
+
+          if (result.results && result.results[0]) {
+            const address = result.results[0].formatted_address;
+
+            // Extract address components
+            const addressComponents = result.results[0].address_components;
+            let streetNumber = '';
+            let streetName = '';
+
+            addressComponents.forEach(component => {
+              if (component.types.includes('street_number')) {
+                streetNumber = component.long_name;
+              }
+              if (component.types.includes('route')) {
+                streetName = component.long_name;
+              }
+            });
+
+            // Create new property at clicked location
+            addProperty({
+              address: address,
+              streetAddress: streetNumber && streetName ? `${streetNumber} ${streetName}` : address,
+              latitude: lat,
+              longitude: lng,
+              status: PROPERTY_STATUS.NOT_CONTACTED,
+              visits: [],
+              createdBy: 'map_click',
+            });
+          } else {
+            // No address found, still create property with coordinates
+            addProperty({
+              address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+              latitude: lat,
+              longitude: lng,
+              status: PROPERTY_STATUS.NOT_CONTACTED,
+              visits: [],
+              createdBy: 'map_click',
+            });
+          }
+        } catch (error) {
+          console.error('Error geocoding location:', error);
+          // Still create property even if geocoding fails
+          addProperty({
+            address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+            latitude: lat,
+            longitude: lng,
+            status: PROPERTY_STATUS.NOT_CONTACTED,
+            visits: [],
+            createdBy: 'map_click',
+          });
+        }
       });
 
       // Notify parent component
@@ -404,6 +486,16 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Day Summary Toggle */}
+          <button
+            onClick={() => setShowDaySummary(!showDaySummary)}
+            className="flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+            title="View Day Summary"
+          >
+            <ClipboardList className="w-4 h-4 mr-2" />
+            Day Summary
+          </button>
+
           {/* Location Tracking Toggle */}
           <button
             onClick={handleToggleTracking}
@@ -530,7 +622,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
             onClick={() => {
               if (mapInstanceRef.current) {
                 mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
-                mapInstanceRef.current.setZoom(16);
+                mapInstanceRef.current.setZoom(19); // Street-level zoom to show house numbers
               }
             }}
             className="absolute bottom-6 right-6 p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-shadow"
@@ -541,13 +633,26 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         )}
 
         {/* Legend */}
-        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-xs">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Status Legend</h3>
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-xs max-h-[80vh] overflow-y-auto">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Canvassing Status</h3>
           <div className="space-y-2 text-xs">
             <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
-              <span>Not Contacted</span>
+              <div className="w-3 h-3 rounded-full bg-[#F97316] mr-2"></div>
+              <span>Needs Inspection</span>
             </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-[#9CA3AF] mr-2"></div>
+              <span>Knock Not Home</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-[#EAB308] mr-2"></div>
+              <span>Follow-up Needed</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-[#A855F7] mr-2"></div>
+              <span>Door Hanger</span>
+            </div>
+            <hr className="my-2" />
             <div className="flex items-center">
               <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
               <span>Interested</span>
@@ -561,14 +666,11 @@ const CanvassingView = ({ leads, onMapLoad }) => {
               <span>Sold</span>
             </div>
             <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-              <span>Callback</span>
-            </div>
-            <div className="flex items-center">
               <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
               <span>Not Interested</span>
             </div>
           </div>
+          <p className="text-[10px] text-gray-500 mt-3 pt-2 border-t">Click anywhere on map to drop a pin</p>
         </div>
       </div>
 
@@ -590,6 +692,13 @@ const CanvassingView = ({ leads, onMapLoad }) => {
               console.log('Delete property:', property);
             }
           }}
+        />
+      )}
+
+      {/* Day Summary Modal */}
+      {showDaySummary && (
+        <DaySummary
+          onClose={() => setShowDaySummary(false)}
         />
       )}
     </div>

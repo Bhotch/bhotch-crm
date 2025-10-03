@@ -182,7 +182,7 @@ export const useCanvassingStore = create(
       // ==================== UI STATE ====================
       mapView: {
         center: { lat: 40.7608, lng: -111.8910 }, // Default to Salt Lake City
-        zoom: 13,
+        zoom: 18, // Street-level zoom to show house numbers
         mapType: 'roadmap',
         showTraffic: false,
         showHeatmap: false,

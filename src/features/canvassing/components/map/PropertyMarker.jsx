@@ -13,6 +13,10 @@ export const PROPERTY_STATUS = {
   SOLD: 'sold',
   DNC: 'dnc', // Do Not Contact
   NOT_HOME: 'not_home',
+  NEEDS_INSPECTION: 'needs_inspection',
+  KNOCK_NOT_HOME: 'knock_not_home',
+  FOLLOW_UP_NEEDED: 'follow_up_needed',
+  DOOR_HANGER: 'door_hanger',
 };
 
 /**
@@ -35,6 +39,15 @@ const getMarkerColor = (status, quality) => {
       return '#EF4444'; // Red
     case PROPERTY_STATUS.DNC:
       return '#1F2937'; // Dark gray
+    // New canvassing-specific statuses
+    case PROPERTY_STATUS.NEEDS_INSPECTION:
+      return '#F97316'; // Orange
+    case PROPERTY_STATUS.KNOCK_NOT_HOME:
+      return '#9CA3AF'; // Gray
+    case PROPERTY_STATUS.FOLLOW_UP_NEEDED:
+      return '#EAB308'; // Yellow
+    case PROPERTY_STATUS.DOOR_HANGER:
+      return '#A855F7'; // Purple
     default:
       // Use quality for not contacted
       switch (quality?.toLowerCase()) {
