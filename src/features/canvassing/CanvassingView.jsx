@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   Navigation,
   Filter,
@@ -128,24 +128,24 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     }
   };
 
-  // Initialize map on mount
-  useEffect(() => {
+  // Initialize map on mount - useLayoutEffect ensures DOM is ready
+  useLayoutEffect(() => {
     let mounted = true;
 
     const init = async () => {
-      if (mounted) {
+      if (mounted && mapRef.current) {
         setLoading(true);
         setError(null);
+        // Longer initial delay to ensure parent containers are rendered
+        await new Promise(resolve => setTimeout(resolve, 200));
         await initializeMapFunction();
       }
     };
 
-    // Small delay to ensure DOM is fully rendered
-    const timer = setTimeout(init, 50);
+    init();
 
     return () => {
       mounted = false;
-      clearTimeout(timer);
       // Cleanup map instance
       if (mapInstanceRef.current) {
         window.google?.maps?.event?.clearInstanceListeners(mapInstanceRef.current);
