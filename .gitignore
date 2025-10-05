@@ -18,3 +18,11 @@ nul
 # IDE
 .vscode
 .idea
+
+# Supabase
+supabase/.branches
+supabase/.temp
+supabase/config.toml
+
+# Data migration
+data-export/

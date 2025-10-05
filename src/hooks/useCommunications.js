@@ -8,6 +8,8 @@ import {
   saveToLocalStorage,
   getFromLocalStorage
 } from '../services/communicationsService';
+import { communicationsService as supabaseCommunicationsService } from '../api/supabaseService';
+import { isSupabaseEnabled } from '../lib/supabase';
 
 /**
  * Custom hook for managing communications
@@ -16,6 +18,7 @@ export function useCommunications(addNotification) {
   const [communications, setCommunications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState(null);
+  const useSupabase = isSupabaseEnabled();
 
   /**
    * Load communications from local storage on initialization
@@ -31,10 +34,12 @@ export function useCommunications(addNotification) {
     }
   }, []);
 
-  // Load communications on mount
+  // Load communications on mount (only if not using Supabase)
   useEffect(() => {
-    loadFromLocal();
-  }, [loadFromLocal]);
+    if (!useSupabase) {
+      loadFromLocal();
+    }
+  }, [loadFromLocal, useSupabase]);
 
   /**
    * Add a new communication
@@ -42,20 +47,41 @@ export function useCommunications(addNotification) {
   const addCommunication = useCallback(async (communication) => {
     setLoading(true);
     try {
-      // Try to save to backend
-      await logCommunication(communication);
+      if (useSupabase) {
+        // Use Supabase
+        const result = await supabaseCommunicationsService.create({
+          lead_id: communication.leadId,
+          type: communication.communicationType?.toLowerCase() || 'call',
+          direction: communication.direction || 'outbound',
+          outcome: communication.status,
+          message_content: communication.notes,
+          duration_seconds: communication.duration ? parseInt(communication.duration) * 60 : null,
+          timestamp: communication.dateTime || new Date().toISOString()
+        });
 
-      // Also save to local storage as backup
-      const result = saveToLocalStorage(communication);
+        setCommunications(prev => [...prev, result]);
 
-      // Update state
-      setCommunications(prev => [...prev, result.data]);
+        if (addNotification) {
+          addNotification('Communication logged successfully', 'success');
+        }
 
-      if (addNotification) {
-        addNotification('Communication logged successfully', 'success');
+        return result;
+      } else {
+        // Try to save to backend
+        await logCommunication(communication);
+
+        // Also save to local storage as backup
+        const result = saveToLocalStorage(communication);
+
+        // Update state
+        setCommunications(prev => [...prev, result.data]);
+
+        if (addNotification) {
+          addNotification('Communication logged successfully', 'success');
+        }
+
+        return result.data;
       }
-
-      return result.data;
     } catch (error) {
       console.error('Error adding communication:', error);
 
@@ -78,7 +104,7 @@ export function useCommunications(addNotification) {
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, [addNotification, useSupabase]);
 
   /**
    * Get communications for a specific lead
