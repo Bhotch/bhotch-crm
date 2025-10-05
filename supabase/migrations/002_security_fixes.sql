@@ -67,11 +67,10 @@ CREATE TRIGGER increment_visit_count AFTER INSERT ON property_visits
 -- Fix 3: Replace SECURITY DEFINER view with regular view
 -- The dashboard_stats view should use the querying user's permissions
 -- not the view creator's permissions
+-- Note: SECURITY INVOKER is default behavior for views (no need to specify in PostgreSQL <15)
 DROP VIEW IF EXISTS dashboard_stats;
 
-CREATE OR REPLACE VIEW dashboard_stats
-SECURITY INVOKER
-AS
+CREATE OR REPLACE VIEW dashboard_stats AS
 SELECT
     -- Lead statistics
     COUNT(*) FILTER (WHERE deleted_at IS NULL) AS total_leads,
