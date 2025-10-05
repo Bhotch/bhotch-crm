@@ -2,6 +2,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: '.env.local' });
 
 // Get the Apps Script URL from environment
 const APPS_SCRIPT_URL = process.env.REACT_APP_GAS_WEB_APP_URL;
