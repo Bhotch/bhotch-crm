@@ -9,10 +9,15 @@ import {
   getFromLocalStorage
 } from '../services/communicationsService';
 import { communicationsService as supabaseCommunicationsService } from '../api/supabaseService';
-import { isSupabaseEnabled } from '../lib/supabase';
+import { supabase, isSupabaseEnabled } from '../lib/supabase';
 
 /**
- * Custom hook for managing communications
+ * Custom hook for managing communications with Supabase support
+ * Features:
+ * - Dual-mode: Supabase (primary) + Google Sheets/localStorage (fallback)
+ * - Real-time subscriptions for live updates
+ * - Automatic column name mapping
+ * - Comprehensive error handling
  */
 export function useCommunications(addNotification) {
   const [communications, setCommunications] = useState([]);
@@ -21,7 +26,22 @@ export function useCommunications(addNotification) {
   const useSupabase = isSupabaseEnabled();
 
   /**
-   * Load communications from local storage on initialization
+   * Map Supabase communication to frontend format
+   */
+  const mapSupabaseToCommunication = useCallback((comm) => ({
+    id: comm.id,
+    leadId: comm.lead_id,
+    communicationType: comm.type?.charAt(0).toUpperCase() + comm.type?.slice(1),
+    direction: comm.direction,
+    status: comm.outcome,
+    notes: comm.message_content,
+    duration: comm.duration_seconds ? Math.round(comm.duration_seconds / 60) : null,
+    dateTime: comm.timestamp,
+    customerName: comm.leads?.customer_name
+  }), []);
+
+  /**
+   * Load communications from local storage
    */
   const loadFromLocal = useCallback(() => {
     try {
@@ -34,12 +54,68 @@ export function useCommunications(addNotification) {
     }
   }, []);
 
-  // Load communications on mount (only if not using Supabase)
+  /**
+   * Load all communications from Supabase
+   */
+  const loadAllCommunications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await supabaseCommunicationsService.getAll();
+      const mapped = data.map(mapSupabaseToCommunication);
+      setCommunications(mapped);
+      return mapped;
+    } catch (error) {
+      console.error('Error loading communications from Supabase:', error);
+      // Fallback to local storage
+      loadFromLocal();
+    } finally {
+      setLoading(false);
+    }
+  }, [loadFromLocal, mapSupabaseToCommunication]);
+
+  /**
+   * Load communications on mount
+   */
   useEffect(() => {
-    if (!useSupabase) {
+    if (useSupabase) {
+      loadAllCommunications();
+    } else {
       loadFromLocal();
     }
-  }, [loadFromLocal, useSupabase]);
+  }, [useSupabase, loadAllCommunications, loadFromLocal]);
+
+  /**
+   * Set up real-time subscriptions for Supabase
+   */
+  useEffect(() => {
+    if (useSupabase) {
+      const subscription = supabase
+        .channel('communications-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'communications'
+        }, (payload) => {
+          console.log('Communication changed:', payload);
+
+          if (payload.eventType === 'INSERT') {
+            const newComm = mapSupabaseToCommunication(payload.new);
+            setCommunications(prev => [newComm, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setCommunications(prev => prev.map(comm =>
+              comm.id === payload.new.id ? mapSupabaseToCommunication(payload.new) : comm
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setCommunications(prev => prev.filter(comm => comm.id !== payload.old.id));
+          }
+        })
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [useSupabase, mapSupabaseToCommunication]);
 
   /**
    * Add a new communication
@@ -59,13 +135,14 @@ export function useCommunications(addNotification) {
           timestamp: communication.dateTime || new Date().toISOString()
         });
 
-        setCommunications(prev => [...prev, result]);
+        const mapped = mapSupabaseToCommunication(result);
+        setCommunications(prev => [mapped, ...prev]);
 
         if (addNotification) {
           addNotification('Communication logged successfully', 'success');
         }
 
-        return result;
+        return mapped;
       } else {
         // Try to save to backend
         await logCommunication(communication);
@@ -74,7 +151,7 @@ export function useCommunications(addNotification) {
         const result = saveToLocalStorage(communication);
 
         // Update state
-        setCommunications(prev => [...prev, result.data]);
+        setCommunications(prev => [result.data, ...prev]);
 
         if (addNotification) {
           addNotification('Communication logged successfully', 'success');
@@ -88,7 +165,7 @@ export function useCommunications(addNotification) {
       // Fallback to local storage only
       try {
         const result = saveToLocalStorage(communication);
-        setCommunications(prev => [...prev, result.data]);
+        setCommunications(prev => [result.data, ...prev]);
 
         if (addNotification) {
           addNotification('Communication saved locally (offline mode)', 'warning');
@@ -104,7 +181,7 @@ export function useCommunications(addNotification) {
     } finally {
       setLoading(false);
     }
-  }, [addNotification, useSupabase]);
+  }, [addNotification, useSupabase, mapSupabaseToCommunication]);
 
   /**
    * Get communications for a specific lead
@@ -112,27 +189,32 @@ export function useCommunications(addNotification) {
   const getForLead = useCallback(async (leadId) => {
     setLoading(true);
     try {
-      // Try to fetch from backend
-      const data = await getCommunicationsForLead(leadId);
-
-      // If backend returns empty, try local storage
-      if (!data || data.length === 0) {
-        const localComms = getFromLocalStorage();
-        const filtered = localComms.filter(comm => comm.leadId === leadId);
-        return filtered;
+      if (useSupabase) {
+        const data = await supabaseCommunicationsService.getByLeadId(leadId);
+        const mapped = data.map(mapSupabaseToCommunication);
+        return mapped;
+      } else {
+        // Try to fetch from backend
+        try {
+          const data = await getCommunicationsForLead(leadId);
+          if (!data || data.length === 0) {
+            const localComms = getFromLocalStorage();
+            return localComms.filter(comm => comm.leadId === leadId);
+          }
+          return data;
+        } catch (error) {
+          const localComms = getFromLocalStorage();
+          return localComms.filter(comm => comm.leadId === leadId);
+        }
       }
-
-      return data;
     } catch (error) {
       console.error('Error fetching communications for lead:', error);
-
-      // Fallback to local storage
       const localComms = getFromLocalStorage();
       return localComms.filter(comm => comm.leadId === leadId);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [useSupabase, mapSupabaseToCommunication]);
 
   /**
    * Get recent communications
@@ -140,43 +222,51 @@ export function useCommunications(addNotification) {
   const getRecent = useCallback(async (days = 7) => {
     setLoading(true);
     try {
-      // Try to fetch from backend
-      const data = await getRecentCommunications(days);
-
-      // If backend returns empty, try local storage
-      if (!data || data.length === 0) {
-        const localComms = getFromLocalStorage();
+      if (useSupabase) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
-        const filtered = localComms.filter(comm =>
-          new Date(comm.dateTime) >= cutoffDate
-        );
+        const data = await supabaseCommunicationsService.getAll();
+        const filtered = data
+          .filter(comm => new Date(comm.timestamp) >= cutoffDate)
+          .map(mapSupabaseToCommunication);
 
         setCommunications(filtered);
         return filtered;
+      } else {
+        // Try to fetch from backend
+        try {
+          const data = await getRecentCommunications(days);
+          if (!data || data.length === 0) {
+            const localComms = getFromLocalStorage();
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - days);
+            const filtered = localComms.filter(comm =>
+              new Date(comm.dateTime) >= cutoffDate
+            );
+            setCommunications(filtered);
+            return filtered;
+          }
+          setCommunications(data);
+          return data;
+        } catch (error) {
+          const localComms = getFromLocalStorage();
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - days);
+          const filtered = localComms.filter(comm =>
+            new Date(comm.dateTime) >= cutoffDate
+          );
+          setCommunications(filtered);
+          return filtered;
+        }
       }
-
-      setCommunications(data);
-      return data;
     } catch (error) {
       console.error('Error fetching recent communications:', error);
-
-      // Fallback to local storage
-      const localComms = getFromLocalStorage();
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - days);
-
-      const filtered = localComms.filter(comm =>
-        new Date(comm.dateTime) >= cutoffDate
-      );
-
-      setCommunications(filtered);
-      return filtered;
+      return [];
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [useSupabase, mapSupabaseToCommunication]);
 
   /**
    * Get communication statistics
@@ -184,34 +274,64 @@ export function useCommunications(addNotification) {
   const getStats = useCallback(async () => {
     setLoading(true);
     try {
-      // Try to fetch from backend
-      const data = await getCommunicationStats();
-
-      // If backend returns null, calculate from local storage
-      if (!data) {
-        const localComms = getFromLocalStorage();
+      if (useSupabase) {
+        const data = await supabaseCommunicationsService.getAll();
         const calculated = {
-          totalCalls: localComms.filter(c => c.communicationType === 'Call').length,
-          totalSMS: localComms.filter(c => c.communicationType === 'SMS').length,
-          totalEmails: localComms.filter(c => c.communicationType === 'Email').length,
-          appointmentsConfirmed: localComms.filter(c => c.status === 'Completed' && c.notes?.includes('confirmed')).length,
-          noAnswers: localComms.filter(c => c.status === 'No Answer').length,
-          voicemailsLeft: localComms.filter(c => c.status === 'Left Voicemail').length,
+          totalCalls: data.filter(c => c.type === 'call').length,
+          totalSMS: data.filter(c => c.type === 'sms').length,
+          totalEmails: data.filter(c => c.type === 'email').length,
+          appointmentsConfirmed: data.filter(c =>
+            c.outcome === 'Completed' || c.message_content?.includes('confirmed')
+          ).length,
+          noAnswers: data.filter(c => c.outcome === 'No Answer').length,
+          voicemailsLeft: data.filter(c => c.outcome === 'Left Voicemail').length,
         };
-
         setStats(calculated);
         return calculated;
+      } else {
+        // Try to fetch from backend
+        try {
+          const data = await getCommunicationStats();
+          if (!data) {
+            const localComms = getFromLocalStorage();
+            const calculated = {
+              totalCalls: localComms.filter(c => c.communicationType === 'Call').length,
+              totalSMS: localComms.filter(c => c.communicationType === 'SMS').length,
+              totalEmails: localComms.filter(c => c.communicationType === 'Email').length,
+              appointmentsConfirmed: localComms.filter(c =>
+                c.status === 'Completed' && c.notes?.includes('confirmed')
+              ).length,
+              noAnswers: localComms.filter(c => c.status === 'No Answer').length,
+              voicemailsLeft: localComms.filter(c => c.status === 'Left Voicemail').length,
+            };
+            setStats(calculated);
+            return calculated;
+          }
+          setStats(data);
+          return data;
+        } catch (error) {
+          const localComms = getFromLocalStorage();
+          const calculated = {
+            totalCalls: localComms.filter(c => c.communicationType === 'Call').length,
+            totalSMS: localComms.filter(c => c.communicationType === 'SMS').length,
+            totalEmails: localComms.filter(c => c.communicationType === 'Email').length,
+            appointmentsConfirmed: localComms.filter(c =>
+              c.status === 'Completed' && c.notes?.includes('confirmed')
+            ).length,
+            noAnswers: localComms.filter(c => c.status === 'No Answer').length,
+            voicemailsLeft: localComms.filter(c => c.status === 'Left Voicemail').length,
+          };
+          setStats(calculated);
+          return calculated;
+        }
       }
-
-      setStats(data);
-      return data;
     } catch (error) {
       console.error('Error fetching communication stats:', error);
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [useSupabase]);
 
   /**
    * Delete a communication
@@ -219,27 +339,37 @@ export function useCommunications(addNotification) {
   const removeCommunication = useCallback(async (communicationId) => {
     setLoading(true);
     try {
-      // Try to delete from backend
-      await deleteCommunication(communicationId);
+      if (useSupabase) {
+        // Supabase delete
+        const { error } = await supabase
+          .from('communications')
+          .delete()
+          .eq('id', communicationId);
 
-      // Update state
-      setCommunications(prev => prev.filter(c => c.id !== communicationId));
+        if (error) throw error;
 
-      if (addNotification) {
-        addNotification('Communication deleted', 'success');
+        setCommunications(prev => prev.filter(c => c.id !== communicationId));
+        if (addNotification) {
+          addNotification('Communication deleted', 'success');
+        }
+      } else {
+        // Fallback to backend
+        await deleteCommunication(communicationId);
+        setCommunications(prev => prev.filter(c => c.id !== communicationId));
+        if (addNotification) {
+          addNotification('Communication deleted', 'success');
+        }
       }
     } catch (error) {
       console.error('Error deleting communication:', error);
-
       if (addNotification) {
         addNotification('Failed to delete communication', 'error');
       }
-
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [addNotification]);
+  }, [addNotification, useSupabase]);
 
   return {
     communications,

@@ -30,10 +30,7 @@ CREATE TABLE leads (
 
     -- Lead classification
     quality TEXT CHECK (quality IN ('Hot', 'Warm', 'Cold')),
-    disposition TEXT CHECK (disposition IN (
-        'New', 'Scheduled', 'Insurance', 'Quoted',
-        'Follow Up', 'Closed Sold', 'Closed Lost'
-    )),
+    disposition TEXT,  -- Allow any value from Google Sheets
     lead_source TEXT,
     status TEXT,
 

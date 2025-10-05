@@ -75,7 +75,7 @@ const DaySummary = ({ onClose, date = new Date() }) => {
       interested: groupedByStatus[PROPERTY_STATUS.INTERESTED]?.length || 0,
       appointments: groupedByStatus[PROPERTY_STATUS.APPOINTMENT]?.length || 0,
     };
-  }, [groupedByStatus]);
+  }, [groupedByStatus, todayProperties.length]);
 
   const exportSummary = () => {
     const dateStr = format(date, 'yyyy-MM-dd');

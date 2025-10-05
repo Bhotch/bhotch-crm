@@ -27,6 +27,7 @@
     "date-fns": "^4.1.0",
     "dexie": "^4.2.0",
     "dexie-react-hooks": "^4.2.0",
+    "dotenv": "^17.2.3",
     "firebase": "^10.14.1",
     "framer-motion": "^12.23.15",
     "fuse.js": "^7.1.0",

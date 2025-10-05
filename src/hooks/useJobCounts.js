@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { googleSheetsService } from '../api/googleSheetsService';
 import { jobCountsService } from '../api/supabaseService';
-import { isSupabaseEnabled } from '../lib/supabase';
+import { supabase, isSupabaseEnabled } from '../lib/supabase';
 
 export function useJobCounts(addNotification) {
     const [jobCounts, setJobCounts] = useState([]);
@@ -66,6 +66,28 @@ export function useJobCounts(addNotification) {
     useEffect(() => {
         loadJobCountsData();
     }, [loadJobCountsData]);
+
+    // Set up real-time subscription if using Supabase
+    useEffect(() => {
+        if (useSupabase) {
+            const subscription = supabase
+                .channel('job-counts-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'job_counts'
+                }, async (payload) => {
+                    console.log('Job count changed:', payload);
+                    // Refresh to get joined lead data
+                    await loadJobCountsData(true);
+                })
+                .subscribe();
+
+            return () => {
+                subscription.unsubscribe();
+            };
+        }
+    }, [loadJobCountsData, useSupabase]);
 
     // Add new job count
     const addJobCount = useCallback(async (jobCountData) => {
