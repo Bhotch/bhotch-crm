@@ -1,753 +1,439 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, Edit2, Eye, RefreshCw, Search, Calendar, Calculator, Users, TrendingUp, ChevronUp, ChevronDown, Filter, X, ChevronLeft, ChevronRight, Settings, Save } from 'lucide-react';
+import { Plus, Search, Calculator, Save, X } from 'lucide-react';
 
-function JobCountView({ jobCounts, onAddJobCount, onEditJobCount, onDeleteJobCount, onRefreshJobCounts, onSelectJobCount }) {
+function JobCountView({ leads, onUpdateLead, onAddLead }) {
+    const [selectedCustomerId, setSelectedCustomerId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterDate, setFilterDate] = useState('');
-    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-    const [columnFilters, setColumnFilters] = useState({});
-    const [showFilters, setShowFilters] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(25);
-    const [showColumnSettings, setShowColumnSettings] = useState(false);
+    const [isAddingNew, setIsAddingNew] = useState(false);
+    const [formData, setFormData] = useState({});
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-    // Default column visibility settings
-    const defaultVisibleColumns = {
-        date: true,
-        customer: true,
-        phone: true,
-        address: true,
-        email: false,
-        sqFt: true,
-        ridgeLf: true,
-        valleyLf: true,
-        eavesLf: false,
-        quote: true,
-        quality: true,
-        disposition: true,
-        leadSource: true,
-        roofAge: false,
-        roofType: false,
-        ridgeVents: false,
-        turbine: false,
-        rimeFlow: false,
-        highProfileRidgeCap: false,
-        valleyMetal: false,
-        pipes1Half: false,
-        pipes2: false,
-        pipes3: false,
-        pipes4: false,
-        gables: false,
-        turtleBacks: false,
-        satellite: false,
-        chimney: false,
-        solar: false,
-        swampCooler: false,
-        guttersLf: false,
-        downspouts: false,
-        gutterGuardLf: false,
-        permanentLighting: false
-    };
+    // Filter leads for dropdown based on search term
+    const filteredLeads = useMemo(() => {
+        if (!searchTerm) return leads;
+        return leads.filter(lead =>
+            lead.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lead.phoneNumber?.includes(searchTerm)
+        );
+    }, [leads, searchTerm]);
 
-    // Load saved column preferences from localStorage
-    const loadSavedColumns = () => {
-        try {
-            const saved = localStorage.getItem('jobCountVisibleColumns');
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (error) {
-            console.error('Error loading saved columns:', error);
-        }
-        return defaultVisibleColumns;
-    };
+    // Get selected customer data
+    const selectedCustomer = useMemo(() => {
+        return leads.find(lead => lead.id === selectedCustomerId);
+    }, [leads, selectedCustomerId]);
 
-    const [visibleColumns, setVisibleColumns] = useState(loadSavedColumns);
-    const [tempVisibleColumns, setTempVisibleColumns] = useState(loadSavedColumns);
+    // Initialize form data when customer is selected
+    const handleCustomerSelect = useCallback((customerId) => {
+        setSelectedCustomerId(customerId);
+        setIsAddingNew(false);
+        setHasUnsavedChanges(false);
+        const customer = leads.find(lead => lead.id === customerId);
+        if (customer) {
+            setFormData({
+                // Core measurements
+                sqft: customer.sqft || '',
+                ridgeLf: customer.ridgeLf || '',
+                valleyLf: customer.valleyLf || '',
+                eavesLf: customer.eavesLf || '',
 
-    // Save column preferences to localStorage when save button is clicked
-    const handleSaveColumns = useCallback(() => {
-        try {
-            localStorage.setItem('jobCountVisibleColumns', JSON.stringify(tempVisibleColumns));
-            setVisibleColumns(tempVisibleColumns);
-            setShowColumnSettings(false);
-        } catch (error) {
-            console.error('Error saving columns:', error);
-        }
-    }, [tempVisibleColumns]);
+                // Ventilation
+                ridgeVents: customer.ridgeVents || 0,
+                turbineVents: customer.turbineVents || 0,
+                rimeFlow: customer.rimeFlow || '',
 
-    const formatNumber = useCallback((value) => {
-        if (!value || value === '0' || value === '-') return '-';
-        return Number(value).toLocaleString();
-    }, []);
+                // Pipes
+                pipe15Inch: customer.pipe15Inch || 0,
+                pipe2Inch: customer.pipe2Inch || 0,
+                pipe3Inch: customer.pipe3Inch || 0,
+                pipe4Inch: customer.pipe4Inch || 0,
 
-    const formatDate = useCallback((dateString) => {
-        if (!dateString) return '-';
-        try {
-            return new Date(dateString).toLocaleDateString();
-        } catch {
-            return dateString;
-        }
-    }, []);
+                // Roof features
+                gables: customer.gables || 0,
+                turtleBacks: customer.turtleBacks || 0,
+                satellite: customer.satellite || false,
+                chimney: customer.chimney || false,
+                solar: customer.solar || false,
+                swampCooler: customer.swampCooler || false,
 
-    const formatPhone = useCallback((phone) => {
-        if (!phone) return '-';
-        const cleaned = phone.toString().replace(/\D/g, '');
-        if (cleaned.length === 10) {
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-        }
-        return phone;
-    }, []);
+                // Gutters
+                gutterLf: customer.gutterLf || '',
+                downspouts: customer.downspouts || 0,
+                gutterGuardLf: customer.gutterGuardLf || '',
 
-    const handleSort = useCallback((key) => {
-        setSortConfig(prevConfig => ({
-            key,
-            direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
-        }));
-    }, []);
-
-    const availableColumns = useMemo(() => [
-        { key: 'date', label: 'Date', type: 'date', category: 'Basic' },
-        { key: 'customer', label: 'Customer', type: 'text', category: 'Basic' },
-        { key: 'phone', label: 'Phone', type: 'text', category: 'Basic' },
-        { key: 'email', label: 'Email', type: 'text', category: 'Basic' },
-        { key: 'address', label: 'Address', type: 'text', category: 'Basic' },
-        { key: 'quality', label: 'Quality', type: 'text', category: 'Job Info' },
-        { key: 'disposition', label: 'Disposition', type: 'text', category: 'Job Info' },
-        { key: 'leadSource', label: 'Lead Source', type: 'text', category: 'Job Info' },
-        { key: 'roofAge', label: 'Roof Age', type: 'text', category: 'Job Info' },
-        { key: 'roofType', label: 'Roof Type', type: 'text', category: 'Job Info' },
-        { key: 'sqFt', label: 'SQ FT', type: 'number', category: 'Measurements' },
-        { key: 'ridgeLf', label: 'Ridge LF', type: 'number', category: 'Measurements' },
-        { key: 'valleyLf', label: 'Valley LF', type: 'number', category: 'Measurements' },
-        { key: 'eavesLf', label: 'Eaves LF', type: 'number', category: 'Measurements' },
-        { key: 'quote', label: 'Quote', type: 'number', category: 'Financial' },
-        { key: 'ridgeVents', label: 'Ridge Vents', type: 'number', category: 'Ventilation' },
-        { key: 'turbine', label: 'Turbine', type: 'number', category: 'Ventilation' },
-        { key: 'rimeFlow', label: 'Rime Flow', type: 'number', category: 'Ventilation' },
-        { key: 'highProfileRidgeCap', label: 'High Profile Ridge Cap', type: 'number', category: 'Components' },
-        { key: 'valleyMetal', label: 'Valley Metal', type: 'number', category: 'Components' },
-        { key: 'pipes1Half', label: 'Pipes 1.5"', type: 'number', category: 'Pipes' },
-        { key: 'pipes2', label: 'Pipes 2"', type: 'number', category: 'Pipes' },
-        { key: 'pipes3', label: 'Pipes 3"', type: 'number', category: 'Pipes' },
-        { key: 'pipes4', label: 'Pipes 4"', type: 'number', category: 'Pipes' },
-        { key: 'gables', label: 'Gables', type: 'number', category: 'Features' },
-        { key: 'turtleBacks', label: 'Turtle Backs', type: 'number', category: 'Features' },
-        { key: 'satellite', label: 'Satellite', type: 'number', category: 'Features' },
-        { key: 'chimney', label: 'Chimney', type: 'number', category: 'Features' },
-        { key: 'solar', label: 'Solar', type: 'number', category: 'Features' },
-        { key: 'swampCooler', label: 'Swamp Cooler', type: 'number', category: 'Features' },
-        { key: 'guttersLf', label: 'Gutters LF', type: 'number', category: 'Gutters' },
-        { key: 'downspouts', label: 'Downspouts', type: 'number', category: 'Gutters' },
-        { key: 'gutterGuardLf', label: 'Gutter Guard LF', type: 'number', category: 'Gutters' },
-        { key: 'permanentLighting', label: 'Permanent Lighting', type: 'number', category: 'Additional' }
-    ], []);
-
-    const getSortValue = useCallback((job, key) => {
-        const column = availableColumns.find(col => col.key === key);
-
-        if (key === 'customer') {
-            return job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown';
-        }
-        if (key === 'phone') {
-            return job.phoneNumber || '';
-        }
-        if (key === 'quote') {
-            return parseFloat(job.dabellaQuote) || 0;
-        }
-
-        if (column?.type === 'number') {
-            return parseFloat(job[key]) || 0;
-        }
-
-        return job[key] || '';
-    }, [availableColumns]);
-
-    const toggleColumnVisibility = useCallback((columnKey) => {
-        setTempVisibleColumns(prev => ({
-            ...prev,
-            [columnKey]: !prev[columnKey]
-        }));
-    }, []);
-
-    const updateColumnFilter = useCallback((column, value) => {
-        setColumnFilters(prev => {
-            const newFilters = { ...prev };
-            if (value === '' || value === null || value === undefined) {
-                delete newFilters[column];
-            } else {
-                newFilters[column] = value;
-            }
-            setCurrentPage(1); // Reset to first page when filtering
-            return newFilters;
-        });
-    }, []);
-
-    const clearAllFilters = useCallback(() => {
-        setColumnFilters({});
-        setSearchTerm('');
-        setFilterDate('');
-        setCurrentPage(1);
-    }, []);
-
-    const filteredAndSortedJobCounts = useMemo(() => {
-        let filtered = jobCounts.filter(job => {
-            // Global search filter
-            const matchesSearch = !searchTerm || [
-                job.firstName,
-                job.lastName,
-                job.customerName,
-                job.phoneNumber?.toString(),
-                job.address,
-                job.quality,
-                job.disposition,
-                job.leadSource
-            ].some(field => field?.toLowerCase().includes(searchTerm.toLowerCase()));
-
-            // Date filter
-            const matchesDate = !filterDate || job.date === filterDate;
-
-            // Column-specific filters
-            const matchesColumnFilters = Object.entries(columnFilters).every(([column, filterValue]) => {
-                if (!filterValue) return true;
-
-                let jobValue;
-                if (column === 'customer') {
-                    jobValue = job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim();
-                } else if (column === 'phone') {
-                    jobValue = job.phoneNumber?.toString() || '';
-                } else if (column === 'quote') {
-                    jobValue = parseFloat(job.dabellaQuote) || 0;
-                } else {
-                    const columnConfig = availableColumns.find(col => col.key === column);
-                    if (columnConfig?.type === 'number') {
-                        jobValue = parseFloat(job[column]) || 0;
-                    } else {
-                        jobValue = job[column] || '';
-                    }
-                }
-
-                const columnConfig = availableColumns.find(col => col.key === column);
-                if (columnConfig?.type === 'number') {
-                    return jobValue >= parseFloat(filterValue);
-                } else {
-                    return jobValue.toString().toLowerCase().includes(filterValue.toLowerCase());
-                }
-            });
-
-            return matchesSearch && matchesDate && matchesColumnFilters;
-        });
-
-        if (sortConfig.key) {
-            filtered.sort((a, b) => {
-                const aValue = getSortValue(a, sortConfig.key);
-                const bValue = getSortValue(b, sortConfig.key);
-
-                if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-                    return sortConfig.direction === 'asc' ? comparison : -comparison;
-                } else {
-                    const comparison = aValue - bValue;
-                    return sortConfig.direction === 'asc' ? comparison : -comparison;
-                }
+                // Additional
+                permanentLighting: customer.permanentLighting || '',
+                quoteAmount: customer.quoteAmount || '',
+                quoteNotes: customer.quoteNotes || ''
             });
         }
+    }, [leads]);
 
-        return filtered;
-    }, [jobCounts, searchTerm, filterDate, columnFilters, sortConfig, getSortValue, availableColumns]);
+    const handleStartAddNew = () => {
+        setIsAddingNew(true);
+        setSelectedCustomerId('');
+        setHasUnsavedChanges(false);
+        setFormData({
+            // Customer info
+            customerName: '',
+            firstName: '',
+            lastName: '',
+            phoneNumber: '',
+            email: '',
+            address: '',
 
-    const paginatedJobCounts = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        return filteredAndSortedJobCounts.slice(startIndex, endIndex);
-    }, [filteredAndSortedJobCounts, currentPage, itemsPerPage]);
-
-    const totalPages = Math.ceil(filteredAndSortedJobCounts.length / itemsPerPage);
-
-    const hasActiveFilters = useMemo(() => {
-        return searchTerm || filterDate || Object.keys(columnFilters).length > 0;
-    }, [searchTerm, filterDate, columnFilters]);
-
-    const summaryStats = useMemo(() => {
-        return filteredAndSortedJobCounts.reduce((stats, job) => {
-            stats.totalJobs += 1;
-            stats.totalSqFt += parseFloat(job.sqFt) || 0;
-            stats.totalRidgeLf += parseFloat(job.ridgeLf) || 0;
-            stats.totalValleyLf += parseFloat(job.valleyLf) || 0;
-            return stats;
-        }, { totalJobs: 0, totalSqFt: 0, totalRidgeLf: 0, totalValleyLf: 0 });
-    }, [filteredAndSortedJobCounts]);
-
-    const SortableHeader = ({ sortKey, children, className = "" }) => {
-        const hasFilter = columnFilters[sortKey];
-        return (
-            <th className={`px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
-                <div className="space-y-2">
-                    <div
-                        className="flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors select-none p-1 rounded"
-                        onClick={() => handleSort(sortKey)}
-                    >
-                        <span className={hasFilter ? 'text-blue-600 font-semibold' : ''}>{children}</span>
-                        <div className="flex items-center space-x-1">
-                            {hasFilter && <Filter className="w-3 h-3 text-blue-600" />}
-                            <div className="flex flex-col">
-                                <ChevronUp
-                                    className={`w-3 h-3 ${sortConfig.key === sortKey && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-gray-300'}`}
-                                />
-                                <ChevronDown
-                                    className={`w-3 h-3 -mt-1 ${sortConfig.key === sortKey && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-gray-300'}`}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    {showFilters && (
-                        <ColumnFilter
-                            column={sortKey}
-                            value={columnFilters[sortKey] || ''}
-                            onChange={(value) => updateColumnFilter(sortKey, value)}
-                            type={availableColumns.find(col => col.key === sortKey)?.type || 'text'}
-                        />
-                    )}
-                </div>
-            </th>
-        );
+            // Job count fields
+            sqft: '',
+            ridgeLf: '',
+            valleyLf: '',
+            eavesLf: '',
+            ridgeVents: 0,
+            turbineVents: 0,
+            rimeFlow: '',
+            pipe15Inch: 0,
+            pipe2Inch: 0,
+            pipe3Inch: 0,
+            pipe4Inch: 0,
+            gables: 0,
+            turtleBacks: 0,
+            satellite: false,
+            chimney: false,
+            solar: false,
+            swampCooler: false,
+            gutterLf: '',
+            downspouts: 0,
+            gutterGuardLf: '',
+            permanentLighting: '',
+            quoteAmount: '',
+            quoteNotes: ''
+        });
     };
 
-    const ColumnFilter = ({ column, value, onChange, type }) => {
-        const placeholder = type === 'number' ? 'Min value...' : 'Filter...';
-        return (
-            <div className="relative">
-                <input
-                    type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    onClick={(e) => e.stopPropagation()}
-                />
-                {value && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onChange('');
-                        }}
-                        className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                        <X className="w-3 h-3" />
-                    </button>
-                )}
-            </div>
-        );
+    const handleFieldChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        setHasUnsavedChanges(true);
     };
+
+    const handleSave = async () => {
+        if (isAddingNew) {
+            // Create new lead with job count data
+            const newLead = {
+                customerName: formData.customerName || `${formData.firstName || ''} ${formData.lastName || ''}`.trim(),
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phoneNumber: formData.phoneNumber,
+                email: formData.email,
+                address: formData.address,
+
+                // Job count data
+                sqft: parseFloat(formData.sqft) || null,
+                ridgeLf: parseFloat(formData.ridgeLf) || null,
+                valleyLf: parseFloat(formData.valleyLf) || null,
+                eavesLf: parseFloat(formData.eavesLf) || null,
+                ridgeVents: parseInt(formData.ridgeVents) || 0,
+                turbineVents: parseInt(formData.turbineVents) || 0,
+                rimeFlow: parseFloat(formData.rimeFlow) || null,
+                pipe15Inch: parseInt(formData.pipe15Inch) || 0,
+                pipe2Inch: parseInt(formData.pipe2Inch) || 0,
+                pipe3Inch: parseInt(formData.pipe3Inch) || 0,
+                pipe4Inch: parseInt(formData.pipe4Inch) || 0,
+                gables: parseInt(formData.gables) || 0,
+                turtleBacks: parseInt(formData.turtleBacks) || 0,
+                satellite: Boolean(formData.satellite),
+                chimney: Boolean(formData.chimney),
+                solar: Boolean(formData.solar),
+                swampCooler: Boolean(formData.swampCooler),
+                gutterLf: parseFloat(formData.gutterLf) || null,
+                downspouts: parseInt(formData.downspouts) || 0,
+                gutterGuardLf: parseFloat(formData.gutterGuardLf) || null,
+                permanentLighting: formData.permanentLighting,
+                quoteAmount: parseFloat(formData.quoteAmount) || null,
+                quoteNotes: formData.quoteNotes
+            };
+
+            await onAddLead(newLead);
+            setIsAddingNew(false);
+            setHasUnsavedChanges(false);
+        } else {
+            // Update existing lead
+            const updatedLead = {
+                ...selectedCustomer,
+                sqft: parseFloat(formData.sqft) || null,
+                ridgeLf: parseFloat(formData.ridgeLf) || null,
+                valleyLf: parseFloat(formData.valleyLf) || null,
+                eavesLf: parseFloat(formData.eavesLf) || null,
+                ridgeVents: parseInt(formData.ridgeVents) || 0,
+                turbineVents: parseInt(formData.turbineVents) || 0,
+                rimeFlow: parseFloat(formData.rimeFlow) || null,
+                pipe15Inch: parseInt(formData.pipe15Inch) || 0,
+                pipe2Inch: parseInt(formData.pipe2Inch) || 0,
+                pipe3Inch: parseInt(formData.pipe3Inch) || 0,
+                pipe4Inch: parseInt(formData.pipe4Inch) || 0,
+                gables: parseInt(formData.gables) || 0,
+                turtleBacks: parseInt(formData.turtleBacks) || 0,
+                satellite: Boolean(formData.satellite),
+                chimney: Boolean(formData.chimney),
+                solar: Boolean(formData.solar),
+                swampCooler: Boolean(formData.swampCooler),
+                gutterLf: parseFloat(formData.gutterLf) || null,
+                downspouts: parseInt(formData.downspouts) || 0,
+                gutterGuardLf: parseFloat(formData.gutterGuardLf) || null,
+                permanentLighting: formData.permanentLighting,
+                quoteAmount: parseFloat(formData.quoteAmount) || null,
+                quoteNotes: formData.quoteNotes
+            };
+
+            await onUpdateLead(updatedLead);
+            setHasUnsavedChanges(false);
+        }
+    };
+
+    const handleCancel = () => {
+        if (isAddingNew) {
+            setIsAddingNew(false);
+            setFormData({});
+        } else if (selectedCustomerId) {
+            handleCustomerSelect(selectedCustomerId);
+        }
+        setHasUnsavedChanges(false);
+    };
+
+    const FormField = ({ label, field, type = 'number', step = '0.01', helpText }) => (
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                {label}
+                {helpText && <span className="text-gray-500 text-xs ml-1">({helpText})</span>}
+            </label>
+            <input
+                type={type}
+                value={formData[field] || ''}
+                onChange={(e) => handleFieldChange(field, e.target.value)}
+                step={step}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+        </div>
+    );
+
+    const CheckboxField = ({ label, field }) => (
+        <label className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+            <input
+                type="checkbox"
+                checked={formData[field] || false}
+                onChange={(e) => handleFieldChange(field, e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+        </label>
+    );
 
     return (
-        <div className="space-y-4 lg:space-y-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                    <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Job Count Management</h2>
-                    <p className="text-sm lg:text-base text-gray-600 mt-1">Track roofing job counts, measurements, and customer information</p>
+                    <h2 className="text-3xl font-bold text-gray-900">Job Count</h2>
+                    <p className="text-base text-gray-600 mt-1">Detailed measurements and specifications for each customer</p>
                 </div>
-                <div className="flex items-center space-x-2 lg:space-x-3">
-                    <button
-                        onClick={onRefreshJobCounts}
-                        className="inline-flex items-center px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-xs lg:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                    >
-                        <RefreshCw className="w-3 h-3 lg:w-4 lg:h-4 lg:mr-2" />
-                        <span className="hidden lg:inline">Refresh</span>
-                    </button>
-                    <button
-                        onClick={onAddJobCount}
-                        className="inline-flex items-center px-3 lg:px-4 py-2 border border-transparent rounded-lg text-xs lg:text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                    >
-                        <Plus className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
-                        Add Job Count
-                    </button>
-                </div>
+                <button
+                    onClick={handleStartAddNew}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Count
+                </button>
             </div>
 
-            {/* Search and Filters */}
-            <div className="bg-white p-3 lg:p-6 rounded-lg shadow-sm border">
-                <div className="space-y-3 lg:space-y-4">
-                    {/* Main Search and Date Filter */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-4">
-                        <div className="relative md:col-span-2">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search across all fields..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
-                        <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="date"
-                                value={filterDate}
-                                onChange={(e) => setFilterDate(e.target.value)}
-                                className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
+            {/* Customer Selection */}
+            {!isAddingNew && (
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Customer
+                    </label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search customers..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2"
+                        />
                     </div>
-
-                    {/* Filter Controls */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`inline-flex items-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                                    showFilters
-                                        ? 'border-blue-500 text-blue-700 bg-blue-50'
-                                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                                }`}
-                            >
-                                <Filter className="w-4 h-4 mr-2" />
-                                Column Filters
-                                {Object.keys(columnFilters).length > 0 && (
-                                    <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                                        {Object.keys(columnFilters).length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <button
-                                onClick={() => setShowColumnSettings(!showColumnSettings)}
-                                className={`inline-flex items-center px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                                    showColumnSettings
-                                        ? 'border-purple-500 text-purple-700 bg-purple-50'
-                                        : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                                }`}
-                            >
-                                <Settings className="w-4 h-4 mr-2" />
-                                Manage Columns
-                                <span className="ml-2 bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                                    {Object.values(visibleColumns).filter(Boolean).length}
-                                </span>
-                            </button>
-
-                            {hasActiveFilters && (
-                                <button
-                                    onClick={clearAllFilters}
-                                    className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-                                >
-                                    <X className="w-4 h-4 mr-2" />
-                                    Clear All Filters
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex items-center space-x-3">
-                            <select
-                                value={itemsPerPage}
-                                onChange={(e) => {
-                                    setItemsPerPage(Number(e.target.value));
-                                    setCurrentPage(1);
-                                }}
-                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value={10}>10 per page</option>
-                                <option value={25}>25 per page</option>
-                                <option value={50}>50 per page</option>
-                                <option value={100}>100 per page</option>
-                            </select>
-
-                            <div className="text-sm text-gray-600">
-                                Showing {filteredAndSortedJobCounts.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredAndSortedJobCounts.length)} of {filteredAndSortedJobCounts.length}
-                            </div>
-                        </div>
-                    </div>
+                    <select
+                        value={selectedCustomerId}
+                        onChange={(e) => handleCustomerSelect(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                    >
+                        <option value="">-- Select a customer --</option>
+                        {filteredLeads.map(lead => (
+                            <option key={lead.id} value={lead.id}>
+                                {lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim()}
+                                {lead.phoneNumber ? ` - ${lead.phoneNumber}` : ''}
+                                {lead.address ? ` - ${lead.address}` : ''}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-            </div>
+            )}
 
-            {/* Column Settings Panel */}
-            {showColumnSettings && (
+            {/* Add New Customer Form */}
+            {isAddingNew && (
                 <div className="bg-white p-6 rounded-lg shadow-sm border">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">Manage Visible Columns</h3>
+                        <h3 className="text-lg font-semibold text-gray-900">New Customer Information</h3>
                         <button
-                            onClick={() => {
-                                setTempVisibleColumns(visibleColumns);
-                                setShowColumnSettings(false);
-                            }}
+                            onClick={() => setIsAddingNew(false)}
                             className="text-gray-400 hover:text-gray-600"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-                        {availableColumns.map(column => (
-                            <label
-                                key={column.key}
-                                className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={tempVisibleColumns[column.key]}
-                                    onChange={() => toggleColumnVisibility(column.key)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <span className="text-sm text-gray-700">{column.label}</span>
-                            </label>
-                        ))}
-                    </div>
-                    <div className="flex justify-end space-x-3 pt-4 border-t">
-                        <button
-                            onClick={() => {
-                                setTempVisibleColumns(visibleColumns);
-                                setShowColumnSettings(false);
-                            }}
-                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleSaveColumns}
-                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-                        >
-                            <Save className="w-4 h-4 mr-2" />
-                            Save Column Selection
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField label="First Name" field="firstName" type="text" />
+                        <FormField label="Last Name" field="lastName" type="text" />
+                        <FormField label="Phone Number" field="phoneNumber" type="tel" />
+                        <FormField label="Email" field="email" type="email" />
+                        <div className="md:col-span-2">
+                            <FormField label="Address" field="address" type="text" />
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Summary Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-                <div className="bg-white rounded-lg shadow-sm border p-4 lg:p-6">
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                            <Users className="h-8 w-8 text-blue-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-600">Total Jobs</p>
-                            <p className="text-2xl font-bold text-gray-900">{summaryStats.totalJobs}</p>
-                        </div>
+            {/* Job Count Form */}
+            {(selectedCustomerId || isAddingNew) && (
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                            <Calculator className="w-6 h-6 mr-2 text-blue-600" />
+                            {isAddingNew ? 'New Job Count' : `Job Count - ${selectedCustomer?.customerName || 'Customer'}`}
+                        </h3>
+                        {hasUnsavedChanges && (
+                            <span className="text-sm text-orange-600 font-medium">Unsaved changes</span>
+                        )}
                     </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                            <Calculator className="h-8 w-8 text-green-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-600">Total SQ FT</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatNumber(summaryStats.totalSqFt)}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                            <TrendingUp className="h-8 w-8 text-purple-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-600">Total Ridge LF</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatNumber(summaryStats.totalRidgeLf)}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-sm border p-6">
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                            <TrendingUp className="h-8 w-8 text-orange-600" />
-                        </div>
-                        <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-600">Total Valley LF</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatNumber(summaryStats.totalValleyLf)}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Job Counts Table */}
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                            <tr>
-                                {availableColumns.filter(col => visibleColumns[col.key]).map(column => (
-                                    <SortableHeader key={column.key} sortKey={column.key}>
-                                        {column.label}
-                                    </SortableHeader>
-                                ))}
-                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-100">
-                            {paginatedJobCounts.map((job, index) => (
-                                <tr
-                                    key={job.id || index}
-                                    className={`cursor-pointer transition-all duration-200 hover:bg-blue-50 hover:shadow-md transform hover:-translate-y-0.5 ${
-                                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                    }`}
-                                    onClick={() => onSelectJobCount(job)}
-                                >
-                                    {availableColumns.filter(col => visibleColumns[col.key]).map(column => {
-                                        const renderCellContent = () => {
-                                            if (column.key === 'date') {
-                                                return <div className="text-sm font-medium text-gray-900">{formatDate(job.date)}</div>;
-                                            }
-                                            if (column.key === 'customer') {
-                                                return (
-                                                    <div className="text-sm font-semibold text-gray-900">
-                                                        {job.customerName || `${job.firstName || ''} ${job.lastName || ''}`.trim() || 'Unknown'}
-                                                    </div>
-                                                );
-                                            }
-                                            if (column.key === 'phone') {
-                                                return (
-                                                    <a
-                                                        href={`tel:${job.phoneNumber}`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                                                    >
-                                                        {formatPhone(job.phoneNumber)}
-                                                    </a>
-                                                );
-                                            }
-                                            if (column.key === 'email') {
-                                                return job.email ? (
-                                                    <a
-                                                        href={`mailto:${job.email}`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
-                                                    >
-                                                        {job.email}
-                                                    </a>
-                                                ) : '-';
-                                            }
-                                            if (column.key === 'address') {
-                                                return <div className="text-sm text-gray-700 truncate max-w-xs">{job.address || '-'}</div>;
-                                            }
-                                            if (column.key === 'quote') {
-                                                return job.dabellaQuote ? (
-                                                    <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium">
-                                                        ${formatNumber(job.dabellaQuote)}
-                                                    </span>
-                                                ) : '-';
-                                            }
-                                            if (column.type === 'number') {
-                                                const value = job[column.key];
-                                                return value ? (
-                                                    <div className="text-sm font-medium text-gray-900">{formatNumber(value)}</div>
-                                                ) : '-';
-                                            }
-                                            return <div className="text-sm text-gray-900">{job[column.key] || '-'}</div>;
-                                        };
-
-                                        return (
-                                            <td key={column.key} className="px-6 py-5 whitespace-nowrap">
-                                                {renderCellContent()}
-                                            </td>
-                                        );
-                                    })}
-                                    <td className="px-6 py-5 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex items-center space-x-3">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onSelectJobCount(job); }}
-                                                className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-100 transition-all duration-200 hover:scale-110"
-                                                title="View Details"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onEditJobCount(job); }}
-                                                className="text-orange-600 hover:text-orange-900 p-2 rounded-lg hover:bg-orange-100 transition-all duration-200 hover:scale-110"
-                                                title="Edit"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {filteredAndSortedJobCounts.length === 0 && (
-                        <div className="text-center py-12">
-                            <Calculator className="mx-auto h-12 w-12 text-gray-400" />
-                            <h3 className="mt-2 text-sm font-medium text-gray-900">No job counts found</h3>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {hasActiveFilters
-                                    ? 'Try adjusting your search or filter criteria.'
-                                    : 'Get started by adding your first job count.'}
-                            </p>
+                    <div className="space-y-6">
+                        {/* Core Measurements */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
+                                Core Measurements
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <FormField label="Square Feet" field="sqft" helpText="required" />
+                                <FormField label="Ridge LF" field="ridgeLf" />
+                                <FormField label="Valley LF" field="valleyLf" />
+                                <FormField label="Eaves LF" field="eavesLf" />
+                            </div>
                         </div>
-                    )}
-                </div>
-            </div>
 
-            {/* Pagination */}
-            {filteredAndSortedJobCounts.length > 0 && totalPages > 1 && (
-                <div className="bg-white p-4 rounded-lg shadow-sm border">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        {/* Ventilation */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
+                                Ventilation
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormField label="Ridge Vents" field="ridgeVents" step="1" />
+                                <FormField label="Turbine Vents" field="turbineVents" step="1" />
+                                <FormField label="Rime Flow" field="rimeFlow" />
+                            </div>
+                        </div>
+
+                        {/* Pipes */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
+                                Pipes
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <FormField label='Pipes 1.5"' field="pipe15Inch" step="1" />
+                                <FormField label='Pipes 2"' field="pipe2Inch" step="1" />
+                                <FormField label='Pipes 3"' field="pipe3Inch" step="1" />
+                                <FormField label='Pipes 4"' field="pipe4Inch" step="1" />
+                            </div>
+                        </div>
+
+                        {/* Roof Features */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
+                                Roof Features
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <FormField label="Gables" field="gables" step="1" />
+                                <FormField label="Turtle Backs" field="turtleBacks" step="1" />
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <CheckboxField label="Satellite" field="satellite" />
+                                <CheckboxField label="Chimney" field="chimney" />
+                                <CheckboxField label="Solar" field="solar" />
+                                <CheckboxField label="Swamp Cooler" field="swampCooler" />
+                            </div>
+                        </div>
+
+                        {/* Gutters */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
+                                Gutters & Drainage
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <FormField label="Gutter LF" field="gutterLf" />
+                                <FormField label="Downspouts" field="downspouts" step="1" />
+                                <FormField label="Gutter Guard LF" field="gutterGuardLf" />
+                            </div>
+                        </div>
+
+                        {/* Additional */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
+                                Additional Information
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField label="Permanent Lighting" field="permanentLighting" type="text" />
+                                <FormField label="Quote Amount ($)" field="quoteAmount" />
+                            </div>
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Quote Notes
+                                </label>
+                                <textarea
+                                    value={formData.quoteNotes || ''}
+                                    onChange={(e) => handleFieldChange('quoteNotes', e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Additional notes about the quote..."
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex justify-end space-x-3 pt-4 border-t">
                             <button
-                                onClick={() => setCurrentPage(1)}
-                                disabled={currentPage === 1}
-                                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={handleCancel}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                             >
-                                First
+                                Cancel
                             </button>
                             <button
-                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={handleSave}
+                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
                             >
-                                <ChevronLeft className="w-4 h-4 mr-1" />
-                                Previous
-                            </button>
-                        </div>
-
-                        <div className="flex items-center space-x-1">
-                            {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                                let pageNum;
-                                if (totalPages <= 7) {
-                                    pageNum = i + 1;
-                                } else if (currentPage <= 4) {
-                                    pageNum = i + 1;
-                                } else if (currentPage >= totalPages - 3) {
-                                    pageNum = totalPages - 6 + i;
-                                } else {
-                                    pageNum = currentPage - 3 + i;
-                                }
-
-                                return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => setCurrentPage(pageNum)}
-                                        className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                                            currentPage === pageNum
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Next
-                                <ChevronRight className="w-4 h-4 ml-1" />
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage(totalPages)}
-                                disabled={currentPage === totalPages}
-                                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Last
+                                <Save className="w-4 h-4 mr-2" />
+                                {isAddingNew ? 'Create Lead & Save Count' : 'Save Job Count'}
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {!selectedCustomerId && !isAddingNew && (
+                <div className="bg-white p-12 rounded-lg shadow-sm border text-center">
+                    <Calculator className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Customer Selected</h3>
+                    <p className="text-gray-600 mb-6">
+                        Select a customer from the dropdown above to view or edit their job count information,<br />
+                        or click "Add New Count" to create a new lead with job count data.
+                    </p>
                 </div>
             )}
         </div>

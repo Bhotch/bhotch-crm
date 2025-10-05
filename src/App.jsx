@@ -231,13 +231,9 @@ function CrmApplication({ onLogout }) {
         )}
         {currentView === 'jobcount' && (
           <JobCountView
-            jobCounts={jobCounts}
             leads={leads}
-            onAddJobCount={() => setShowAddJobCountForm(true)}
-            onEditJobCount={setEditingJobCount}
-            onDeleteJobCount={deleteJobCount}
-            onRefreshJobCounts={refreshJobCounts}
-            onSelectJobCount={setSelectedDetailJobCount}
+            onUpdateLead={updateLead}
+            onAddLead={addLead}
           />
         )}
         {currentView === 'map' && (

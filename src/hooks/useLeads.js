@@ -92,7 +92,31 @@ export function useLeads(addNotification) {
           roof_age: leadData.roofAge,
           roof_type: leadData.roofType,
           dabella_quote: leadData.dabellaQuote,
-          notes: leadData.notes
+          notes: leadData.notes,
+          // Job count fields
+          sqft: leadData.sqft,
+          ridge_lf: leadData.ridgeLf,
+          valley_lf: leadData.valleyLf,
+          eaves_lf: leadData.eavesLf,
+          ridge_vents: leadData.ridgeVents,
+          turbine_vents: leadData.turbineVents,
+          rime_flow: leadData.rimeFlow,
+          pipe_1_5_inch: leadData.pipe15Inch,
+          pipe_2_inch: leadData.pipe2Inch,
+          pipe_3_inch: leadData.pipe3Inch,
+          pipe_4_inch: leadData.pipe4Inch,
+          gables: leadData.gables,
+          turtle_backs: leadData.turtleBacks,
+          satellite: leadData.satellite,
+          chimney: leadData.chimney,
+          solar: leadData.solar,
+          swamp_cooler: leadData.swampCooler,
+          gutter_lf: leadData.gutterLf,
+          downspouts: leadData.downspouts,
+          gutter_guard_lf: leadData.gutterGuardLf,
+          permanent_lighting: leadData.permanentLighting,
+          quote_amount: leadData.quoteAmount,
+          quote_notes: leadData.quoteNotes
         });
         addNotification(`Lead added: ${newLead.customer_name}`, 'success');
         return { success: true, lead: { ...newLead, customerName: newLead.customer_name } };
@@ -125,7 +149,31 @@ export function useLeads(addNotification) {
           quality: updatedLead.quality,
           disposition: updatedLead.disposition,
           dabella_quote: updatedLead.dabellaQuote,
-          notes: updatedLead.notes
+          notes: updatedLead.notes,
+          // Job count fields
+          sqft: updatedLead.sqft,
+          ridge_lf: updatedLead.ridgeLf,
+          valley_lf: updatedLead.valleyLf,
+          eaves_lf: updatedLead.eavesLf,
+          ridge_vents: updatedLead.ridgeVents,
+          turbine_vents: updatedLead.turbineVents,
+          rime_flow: updatedLead.rimeFlow,
+          pipe_1_5_inch: updatedLead.pipe15Inch,
+          pipe_2_inch: updatedLead.pipe2Inch,
+          pipe_3_inch: updatedLead.pipe3Inch,
+          pipe_4_inch: updatedLead.pipe4Inch,
+          gables: updatedLead.gables,
+          turtle_backs: updatedLead.turtleBacks,
+          satellite: updatedLead.satellite,
+          chimney: updatedLead.chimney,
+          solar: updatedLead.solar,
+          swamp_cooler: updatedLead.swampCooler,
+          gutter_lf: updatedLead.gutterLf,
+          downspouts: updatedLead.downspouts,
+          gutter_guard_lf: updatedLead.gutterGuardLf,
+          permanent_lighting: updatedLead.permanentLighting,
+          quote_amount: updatedLead.quoteAmount,
+          quote_notes: updatedLead.quoteNotes
         });
         addNotification(`Lead updated: ${updated.customer_name}`, 'info');
         return { success: true, lead: { ...updated, customerName: updated.customer_name } };
