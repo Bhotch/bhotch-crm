@@ -44,10 +44,8 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                 rimeFlow: customer.rimeFlow || '',
 
                 // Pipes
-                pipe15Inch: customer.pipe15Inch || 0,
-                pipe2Inch: customer.pipe2Inch || 0,
-                pipe3Inch: customer.pipe3Inch || 0,
-                pipe4Inch: customer.pipe4Inch || 0,
+                pipes12: customer.pipes12 || 0,
+                pipes34: customer.pipes34 || 0,
 
                 // Roof features
                 gables: customer.gables || 0,
@@ -91,10 +89,8 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
             ridgeVents: 0,
             turbineVents: 0,
             rimeFlow: '',
-            pipe15Inch: 0,
-            pipe2Inch: 0,
-            pipe3Inch: 0,
-            pipe4Inch: 0,
+            pipes12: 0,
+            pipes34: 0,
             gables: 0,
             turtleBacks: 0,
             satellite: false,
@@ -134,10 +130,8 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                 ridgeVents: parseInt(formData.ridgeVents) || 0,
                 turbineVents: parseInt(formData.turbineVents) || 0,
                 rimeFlow: parseFloat(formData.rimeFlow) || null,
-                pipe15Inch: parseInt(formData.pipe15Inch) || 0,
-                pipe2Inch: parseInt(formData.pipe2Inch) || 0,
-                pipe3Inch: parseInt(formData.pipe3Inch) || 0,
-                pipe4Inch: parseInt(formData.pipe4Inch) || 0,
+                pipes12: parseInt(formData.pipes12) || 0,
+                pipes34: parseInt(formData.pipes34) || 0,
                 gables: parseInt(formData.gables) || 0,
                 turtleBacks: parseInt(formData.turtleBacks) || 0,
                 satellite: Boolean(formData.satellite),
@@ -166,10 +160,8 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                 ridgeVents: parseInt(formData.ridgeVents) || 0,
                 turbineVents: parseInt(formData.turbineVents) || 0,
                 rimeFlow: parseFloat(formData.rimeFlow) || null,
-                pipe15Inch: parseInt(formData.pipe15Inch) || 0,
-                pipe2Inch: parseInt(formData.pipe2Inch) || 0,
-                pipe3Inch: parseInt(formData.pipe3Inch) || 0,
-                pipe4Inch: parseInt(formData.pipe4Inch) || 0,
+                pipes12: parseInt(formData.pipes12) || 0,
+                pipes34: parseInt(formData.pipes34) || 0,
                 gables: parseInt(formData.gables) || 0,
                 turtleBacks: parseInt(formData.turtleBacks) || 0,
                 satellite: Boolean(formData.satellite),
@@ -345,11 +337,9 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
                                 Pipes
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <FormField label='Pipes 1.5"' field="pipe15Inch" step="1" />
-                                <FormField label='Pipes 2"' field="pipe2Inch" step="1" />
-                                <FormField label='Pipes 3"' field="pipe3Inch" step="1" />
-                                <FormField label='Pipes 4"' field="pipe4Inch" step="1" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField label='Pipes 1"-2"' field="pipes12" step="1" />
+                                <FormField label='Pipes 3"-4"' field="pipes34" step="1" />
                             </div>
                         </div>
 

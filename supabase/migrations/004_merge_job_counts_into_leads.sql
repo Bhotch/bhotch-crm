@@ -12,11 +12,9 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS ridge_vents INTEGER DEFAULT 0;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS turbine_vents INTEGER DEFAULT 0;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS rime_flow NUMERIC(10, 2);
 
--- Pipe specifications (update existing pipes_1_5, pipes_2, pipes_3, pipes_4 to match job_counts naming)
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipe_1_5_inch INTEGER DEFAULT 0;
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipe_2_inch INTEGER DEFAULT 0;
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipe_3_inch INTEGER DEFAULT 0;
-ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipe_4_inch INTEGER DEFAULT 0;
+-- Pipe specifications (simplified to two fields)
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipes_12 INTEGER DEFAULT 0;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipes_34 INTEGER DEFAULT 0;
 
 -- Roof features
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS gables INTEGER DEFAULT 0;
@@ -53,11 +51,9 @@ SET
     turbine_vents = jc.turbine_vents,
     rime_flow = jc.rime_flow,
 
-    -- Pipe specifications (new naming)
-    pipe_1_5_inch = jc.pipe_1_5_inch,
-    pipe_2_inch = jc.pipe_2_inch,
-    pipe_3_inch = jc.pipe_3_inch,
-    pipe_4_inch = jc.pipe_4_inch,
+    -- Pipe specifications (combined: 1"-2" and 3"-4")
+    pipes_12 = COALESCE(jc.pipe_1_5_inch, 0) + COALESCE(jc.pipe_2_inch, 0),
+    pipes_34 = COALESCE(jc.pipe_3_inch, 0) + COALESCE(jc.pipe_4_inch, 0),
 
     -- Roof features
     gables = jc.gables,
