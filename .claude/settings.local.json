@@ -43,7 +43,10 @@
       "Bash(timeout 60 bash -c 'while ! curl -s http://localhost:3000 > /dev/null; do sleep 2; done && echo \"\"Server ready\"\"')",
       "Bash(timeout:*)",
       "Bash(npm ls:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npx supabase db reset:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": [],
     "ask": []

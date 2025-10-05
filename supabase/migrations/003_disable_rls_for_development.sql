@@ -1,8 +1,13 @@
 -- =============================================
 -- DISABLE RLS FOR DEVELOPMENT
 -- =============================================
+-- ⚠️ SUPERSEDED BY MIGRATION 005 ⚠️
+-- This migration was used temporarily during development
+-- Migration 005 re-enables RLS with proper security policies
+-- =============================================
 -- This allows the application to read/write data during development
 -- IMPORTANT: Enable proper RLS policies before production deployment
+-- STATUS: Superseded - RLS is now enabled via migration 005
 -- =============================================
 
 -- Disable RLS on all existing tables
