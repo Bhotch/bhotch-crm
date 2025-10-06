@@ -79,42 +79,54 @@ export function useLeads(addNotification) {
   const addLead = useCallback(async (leadData) => {
     try {
       if (useSupabase) {
+        // Helper function to convert empty strings to null for numeric fields
+        const parseNumeric = (value) => {
+          if (value === '' || value === null || value === undefined) return null;
+          const parsed = parseFloat(value);
+          return isNaN(parsed) ? null : parsed;
+        };
+        const parseInt = (value) => {
+          if (value === '' || value === null || value === undefined) return null;
+          const parsed = Number.parseInt(value);
+          return isNaN(parsed) ? null : parsed;
+        };
+
         const newLead = await leadsService.create({
           customer_name: leadData.customerName,
-          first_name: leadData.firstName,
-          last_name: leadData.lastName,
+          first_name: leadData.firstName || null,
+          last_name: leadData.lastName || null,
           phone_number: leadData.phoneNumber,
-          email: leadData.email,
-          address: leadData.address,
+          email: leadData.email || null,
+          address: leadData.address || null,
           quality: leadData.quality,
           disposition: leadData.disposition,
-          lead_source: leadData.leadSource,
-          roof_age: leadData.roofAge,
-          roof_type: leadData.roofType,
-          dabella_quote: leadData.dabellaQuote,
-          notes: leadData.notes,
+          lead_source: leadData.leadSource || null,
+          roof_age: parseInt(leadData.roofAge),
+          roof_type: leadData.roofType || null,
+          dabella_quote: parseNumeric(leadData.dabellaQuote),
+          notes: leadData.notes || null,
           // Job count fields
-          sqft: leadData.sqft,
-          ridge_lf: leadData.ridgeLf,
-          valley_lf: leadData.valleyLf,
-          eaves_lf: leadData.eavesLf,
-          ridge_vents: leadData.ridgeVents,
-          turbine_vents: leadData.turbineVents,
-          rime_flow: leadData.rimeFlow,
-          pipes_12: leadData.pipes12,
-          pipes_34: leadData.pipes34,
-          gables: leadData.gables,
-          turtle_backs: leadData.turtleBacks,
-          satellite: leadData.satellite,
-          chimney: leadData.chimney,
-          solar: leadData.solar,
-          swamp_cooler: leadData.swampCooler,
-          gutter_lf: leadData.gutterLf,
-          downspouts: leadData.downspouts,
-          gutter_guard_lf: leadData.gutterGuardLf,
-          permanent_lighting: leadData.permanentLighting,
-          quote_amount: leadData.quoteAmount,
-          quote_notes: leadData.quoteNotes
+          sqft: parseNumeric(leadData.sqft),
+          ridge_lf: parseNumeric(leadData.ridgeLf),
+          valley_lf: parseNumeric(leadData.valleyLf),
+          eaves_lf: parseNumeric(leadData.eavesLf),
+          ridge_vents: parseInt(leadData.ridgeVents),
+          turbine_vents: parseInt(leadData.turbineVents),
+          rime_flow: parseNumeric(leadData.rimeFlow),
+          pipes_12: parseInt(leadData.pipes12),
+          pipes_34: parseInt(leadData.pipes34),
+          gables: parseInt(leadData.gables),
+          turtle_backs: parseInt(leadData.turtleBacks),
+          satellite: leadData.satellite || false,
+          chimney: leadData.chimney || false,
+          solar: leadData.solar || false,
+          swamp_cooler: leadData.swampCooler || false,
+          gutter_lf: parseNumeric(leadData.gutterLf),
+          downspouts: parseInt(leadData.downspouts),
+          gutter_guard_lf: parseNumeric(leadData.gutterGuardLf),
+          permanent_lighting: leadData.permanentLighting || null,
+          quote_amount: parseNumeric(leadData.quoteAmount),
+          quote_notes: leadData.quoteNotes || null
         });
         addNotification(`Lead added: ${newLead.customer_name}`, 'success');
         return { success: true, lead: { ...newLead, customerName: newLead.customer_name } };
@@ -137,39 +149,53 @@ export function useLeads(addNotification) {
   const updateLead = useCallback(async (updatedLead) => {
     try {
       if (useSupabase) {
+        // Helper function to convert empty strings to null for numeric fields
+        const parseNumeric = (value) => {
+          if (value === '' || value === null || value === undefined) return null;
+          const parsed = parseFloat(value);
+          return isNaN(parsed) ? null : parsed;
+        };
+        const parseInt = (value) => {
+          if (value === '' || value === null || value === undefined) return null;
+          const parsed = Number.parseInt(value);
+          return isNaN(parsed) ? null : parsed;
+        };
+
         const updated = await leadsService.update(updatedLead.id, {
           customer_name: updatedLead.customerName,
-          first_name: updatedLead.firstName,
-          last_name: updatedLead.lastName,
+          first_name: updatedLead.firstName || null,
+          last_name: updatedLead.lastName || null,
           phone_number: updatedLead.phoneNumber,
-          email: updatedLead.email,
-          address: updatedLead.address,
+          email: updatedLead.email || null,
+          address: updatedLead.address || null,
           quality: updatedLead.quality,
           disposition: updatedLead.disposition,
-          dabella_quote: updatedLead.dabellaQuote,
-          notes: updatedLead.notes,
+          roof_age: parseInt(updatedLead.roofAge),
+          roof_type: updatedLead.roofType || null,
+          dabella_quote: parseNumeric(updatedLead.dabellaQuote),
+          notes: updatedLead.notes || null,
           // Job count fields
-          sqft: updatedLead.sqft,
-          ridge_lf: updatedLead.ridgeLf,
-          valley_lf: updatedLead.valleyLf,
-          eaves_lf: updatedLead.eavesLf,
-          ridge_vents: updatedLead.ridgeVents,
-          turbine_vents: updatedLead.turbineVents,
-          rime_flow: updatedLead.rimeFlow,
-          pipes_12: updatedLead.pipes12,
-          pipes_34: updatedLead.pipes34,
-          gables: updatedLead.gables,
-          turtle_backs: updatedLead.turtleBacks,
-          satellite: updatedLead.satellite,
-          chimney: updatedLead.chimney,
-          solar: updatedLead.solar,
-          swamp_cooler: updatedLead.swampCooler,
-          gutter_lf: updatedLead.gutterLf,
-          downspouts: updatedLead.downspouts,
-          gutter_guard_lf: updatedLead.gutterGuardLf,
-          permanent_lighting: updatedLead.permanentLighting,
-          quote_amount: updatedLead.quoteAmount,
-          quote_notes: updatedLead.quoteNotes
+          sqft: parseNumeric(updatedLead.sqft),
+          ridge_lf: parseNumeric(updatedLead.ridgeLf),
+          valley_lf: parseNumeric(updatedLead.valleyLf),
+          eaves_lf: parseNumeric(updatedLead.eavesLf),
+          ridge_vents: parseInt(updatedLead.ridgeVents),
+          turbine_vents: parseInt(updatedLead.turbineVents),
+          rime_flow: parseNumeric(updatedLead.rimeFlow),
+          pipes_12: parseInt(updatedLead.pipes12),
+          pipes_34: parseInt(updatedLead.pipes34),
+          gables: parseInt(updatedLead.gables),
+          turtle_backs: parseInt(updatedLead.turtleBacks),
+          satellite: updatedLead.satellite || false,
+          chimney: updatedLead.chimney || false,
+          solar: updatedLead.solar || false,
+          swamp_cooler: updatedLead.swampCooler || false,
+          gutter_lf: parseNumeric(updatedLead.gutterLf),
+          downspouts: parseInt(updatedLead.downspouts),
+          gutter_guard_lf: parseNumeric(updatedLead.gutterGuardLf),
+          permanent_lighting: updatedLead.permanentLighting || null,
+          quote_amount: parseNumeric(updatedLead.quoteAmount),
+          quote_notes: updatedLead.quoteNotes || null
         });
         addNotification(`Lead updated: ${updated.customer_name}`, 'info');
         return { success: true, lead: { ...updated, customerName: updated.customer_name } };
