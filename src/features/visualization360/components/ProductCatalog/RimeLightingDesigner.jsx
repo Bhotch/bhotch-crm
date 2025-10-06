@@ -35,47 +35,57 @@ import {
   Move
 } from 'lucide-react';
 
-// Rime Lighting Product Catalog
+// Rime Lighting Product Catalog - PERMANENT EAVE TRACK LIGHTING ONLY
 const RIME_PRODUCTS = {
-  track: {
-    name: 'Rime Track Lighting',
-    type: 'track',
-    power: 24, // Watts per foot
-    lumens: 300, // Lumens per foot
-    colorTemp: [2700, 3000, 4000, 5000, 6500], // Kelvin options
-    pricePerFoot: 28,
-    description: 'Flexible LED track system for architectural lighting',
-    features: ['IP65 Rated', 'Dimmable', 'Smart Control Compatible']
+  eaveTrack: {
+    name: 'Rime Permanent Eave Track',
+    type: 'eave-track',
+    power: 18, // Watts per foot
+    lumens: 350, // Lumens per foot
+    ledCount: 60, // LEDs per foot for maximum brightness
+    pricePerFoot: 32,
+    description: 'Professional-grade permanent eave lighting with 100 million color options',
+    features: [
+      'IP67 Weatherproof Rating',
+      'Aluminum Track Housing',
+      'Concealed Installation',
+      'UV-Resistant Lens',
+      'Lifetime LED Warranty'
+    ],
+    specifications: {
+      voltage: '24V DC',
+      operatingTemp: '-40°F to 140°F',
+      lifespan: '50,000 hours',
+      beamAngle: '120° wide flood',
+      cri: '90+ High CRI',
+    }
   },
-  spotlight: {
-    name: 'Rime Accent Spot',
-    type: 'spot',
-    power: 12,
-    lumens: 800,
-    beamAngle: 25,
-    priceEach: 85,
-    description: 'Precision spotlight for highlighting features',
-    features: ['Adjustable Beam', 'RGBW Color', 'DMX Compatible']
+  controlModule: {
+    name: 'Rime Smart Control Module',
+    type: 'controller',
+    power: 200, // Watts max capacity
+    maxLength: 300, // Max feet of track per controller
+    priceEach: 450,
+    description: 'WiFi-enabled control hub with 100 million color capability',
+    features: [
+      '100 Million RGBW Colors',
+      'WiFi + Bluetooth Control',
+      'Smartphone App',
+      'Voice Assistant Compatible',
+      'Astronomical Clock (Auto Sunset/Sunrise)',
+      'Pre-programmed Holiday Scenes',
+      'Custom Animation Designer',
+      'Multi-zone Support'
+    ],
+    colorCapability: 100000000, // 100 million colors
   },
-  floodlight: {
-    name: 'Rime Flood Wash',
-    type: 'flood',
-    power: 30,
-    lumens: 2400,
-    beamAngle: 120,
+  powerSupply: {
+    name: 'Professional Power Supply',
+    type: 'power',
+    wattage: 200,
     priceEach: 125,
-    description: 'Wide-angle flood for wall washing',
-    features: ['Wide Coverage', 'Weather Resistant', 'Long-throw Capability']
-  },
-  uplighter: {
-    name: 'Rime Ground Uplight',
-    type: 'uplight',
-    power: 15,
-    lumens: 1200,
-    beamAngle: 45,
-    priceEach: 95,
-    description: 'In-ground uplight for dramatic effects',
-    features: ['Buried Installation', 'Heavy-duty Housing', 'Landscape Integration']
+    description: 'Weather-resistant 24V DC power supply',
+    features: ['IP65 Rated', 'Thermal Protection', 'Low-voltage Safety']
   }
 };
 
@@ -241,41 +251,279 @@ const LightingScene = ({ lights, selectedLightId, onSelectLight, showGrid }) => 
   );
 };
 
-// Color Picker Component
+// 100 Million Color Picker Component with RGB, HSL, and Preset Scenes
 const ColorPicker = ({ value, onChange, label }) => {
-  const presetColors = [
+  const [colorMode, setColorMode] = useState('presets'); // 'presets', 'rgb', 'hsl', 'scenes'
+  const [rgbValues, setRgbValues] = useState({ r: 255, g: 255, b: 255 });
+  const [hslValues, setHslValues] = useState({ h: 0, s: 100, l: 50 });
+
+  // Holiday and Scene Presets
+  const scenePresets = [
+    { name: 'Christmas', colors: ['#FF0000', '#00FF00', '#FFFFFF'], animation: 'fade' },
+    { name: 'Halloween', colors: ['#FF6600', '#9D00FF', '#000000'], animation: 'chase' },
+    { name: 'Fourth of July', colors: ['#FF0000', '#FFFFFF', '#0000FF'], animation: 'sparkle' },
+    { name: 'Valentine\'s Day', colors: ['#FF1493', '#FF69B4', '#FFFFFF'], animation: 'pulse' },
+    { name: 'St. Patrick\'s', colors: ['#00FF00', '#90EE90', '#FFFFFF'], animation: 'fade' },
+    { name: 'Easter', colors: ['#FFB6C1', '#FFFF00', '#E6E6FA'], animation: 'soft-fade' },
+    { name: 'Thanksgiving', colors: ['#FF8C00', '#8B4513', '#FFD700'], animation: 'warm-glow' },
+    { name: 'New Year\'s', colors: ['#FFD700', '#FFFFFF', '#000000'], animation: 'sparkle' },
+  ];
+
+  const standardColors = [
     { name: 'Warm White', value: '#FFE5B4', temp: '2700K' },
     { name: 'Soft White', value: '#FFF8DC', temp: '3000K' },
     { name: 'Cool White', value: '#F0F8FF', temp: '4000K' },
     { name: 'Daylight', value: '#E6F2FF', temp: '5000K' },
-    { name: 'Blue', value: '#4F46E5', temp: 'RGB' },
-    { name: 'Green', value: '#10B981', temp: 'RGB' },
-    { name: 'Red', value: '#EF4444', temp: 'RGB' },
-    { name: 'Purple', value: '#A855F7', temp: 'RGB' }
+    { name: 'Red', value: '#FF0000', temp: 'RGB' },
+    { name: 'Orange', value: '#FF6600', temp: 'RGB' },
+    { name: 'Yellow', value: '#FFFF00', temp: 'RGB' },
+    { name: 'Green', value: '#00FF00', temp: 'RGB' },
+    { name: 'Blue', value: '#0000FF', temp: 'RGB' },
+    { name: 'Purple', value: '#9D00FF', temp: 'RGB' },
+    { name: 'Pink', value: '#FF1493', temp: 'RGB' },
+    { name: 'Cyan', value: '#00FFFF', temp: 'RGB' },
   ];
 
+  const handleRgbChange = (component, val) => {
+    const newRgb = { ...rgbValues, [component]: parseInt(val) };
+    setRgbValues(newRgb);
+    const hex = `#${((1 << 24) + (newRgb.r << 16) + (newRgb.g << 8) + newRgb.b).toString(16).slice(1)}`;
+    onChange(hex);
+  };
+
+  const handleHslChange = (component, val) => {
+    const newHsl = { ...hslValues, [component]: parseInt(val) };
+    setHslValues(newHsl);
+    // Convert HSL to RGB then to HEX
+    const h = newHsl.h / 360;
+    const s = newHsl.s / 100;
+    const l = newHsl.l / 100;
+    let r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+    const toHex = (x) => {
+      const hex = Math.round(x * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+    onChange(`#${toHex(r)}${toHex(g)}${toHex(b)}`);
+  };
+
   return (
-    <div className="space-y-2">
-      <label className="text-sm text-slate-400">{label}</label>
-      <div className="grid grid-cols-4 gap-2">
-        {presetColors.map((preset) => (
-          <button
-            key={preset.value}
-            onClick={() => onChange(preset.value)}
-            className={`h-10 rounded-lg border-2 transition ${
-              value === preset.value ? 'border-blue-500 scale-110' : 'border-slate-600'
-            }`}
-            style={{ backgroundColor: preset.value }}
-            title={`${preset.name} (${preset.temp})`}
-          />
-        ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-sm text-slate-400 font-semibold">{label}</label>
+        <span className="text-xs text-green-400">100M Colors</span>
       </div>
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full h-10 rounded-lg cursor-pointer"
-      />
+
+      {/* Mode Selector */}
+      <div className="grid grid-cols-4 gap-1 bg-slate-700/50 p-1 rounded-lg">
+        <button
+          onClick={() => setColorMode('presets')}
+          className={`px-2 py-1.5 text-xs rounded transition ${
+            colorMode === 'presets' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          Presets
+        </button>
+        <button
+          onClick={() => setColorMode('scenes')}
+          className={`px-2 py-1.5 text-xs rounded transition ${
+            colorMode === 'scenes' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          Scenes
+        </button>
+        <button
+          onClick={() => setColorMode('rgb')}
+          className={`px-2 py-1.5 text-xs rounded transition ${
+            colorMode === 'rgb' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          RGB
+        </button>
+        <button
+          onClick={() => setColorMode('hsl')}
+          className={`px-2 py-1.5 text-xs rounded transition ${
+            colorMode === 'hsl' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          HSL
+        </button>
+      </div>
+
+      {/* Presets Mode */}
+      {colorMode === 'presets' && (
+        <div className="grid grid-cols-4 gap-2">
+          {standardColors.map((preset) => (
+            <button
+              key={preset.value}
+              onClick={() => onChange(preset.value)}
+              className={`h-12 rounded-lg border-2 transition hover:scale-110 ${
+                value === preset.value ? 'border-blue-500 scale-110 ring-2 ring-blue-300' : 'border-slate-600'
+              }`}
+              style={{ backgroundColor: preset.value }}
+              title={`${preset.name} (${preset.temp})`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Holiday Scenes Mode */}
+      {colorMode === 'scenes' && (
+        <div className="space-y-2">
+          {scenePresets.map((scene) => (
+            <button
+              key={scene.name}
+              onClick={() => onChange(scene.colors[0])} // Select first color
+              className="w-full p-3 bg-slate-700/50 hover:bg-slate-700 rounded-lg border border-slate-600 transition text-left"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white font-medium text-sm">{scene.name}</span>
+                <span className="text-xs text-slate-400">{scene.animation}</span>
+              </div>
+              <div className="flex gap-1">
+                {scene.colors.map((color, idx) => (
+                  <div
+                    key={idx}
+                    className="h-6 flex-1 rounded"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* RGB Mode */}
+      {colorMode === 'rgb' && (
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-red-400">Red</label>
+              <span className="text-xs text-white font-mono">{rgbValues.r}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={rgbValues.r}
+              onChange={(e) => handleRgbChange('r', e.target.value)}
+              className="w-full h-2 bg-gradient-to-r from-black to-red-600 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-green-400">Green</label>
+              <span className="text-xs text-white font-mono">{rgbValues.g}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={rgbValues.g}
+              onChange={(e) => handleRgbChange('g', e.target.value)}
+              className="w-full h-2 bg-gradient-to-r from-black to-green-600 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-blue-400">Blue</label>
+              <span className="text-xs text-white font-mono">{rgbValues.b}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={rgbValues.b}
+              onChange={(e) => handleRgbChange('b', e.target.value)}
+              className="w-full h-2 bg-gradient-to-r from-black to-blue-600 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* HSL Mode */}
+      {colorMode === 'hsl' && (
+        <div className="space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-slate-400">Hue</label>
+              <span className="text-xs text-white font-mono">{hslValues.h}°</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={hslValues.h}
+              onChange={(e) => handleHslChange('h', e.target.value)}
+              className="w-full h-2 bg-gradient-to-r from-red-600 via-green-600 to-blue-600 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-slate-400">Saturation</label>
+              <span className="text-xs text-white font-mono">{hslValues.s}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={hslValues.s}
+              onChange={(e) => handleHslChange('s', e.target.value)}
+              className="w-full h-2 bg-gradient-to-r from-gray-500 to-blue-600 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-slate-400">Lightness</label>
+              <span className="text-xs text-white font-mono">{hslValues.l}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={hslValues.l}
+              onChange={(e) => handleHslChange('l', e.target.value)}
+              className="w-full h-2 bg-gradient-to-r from-black via-blue-600 to-white rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Color Preview & Hex Input */}
+      <div className="flex items-center gap-2 p-3 bg-slate-700/30 rounded-lg border border-slate-600">
+        <div
+          className="w-12 h-12 rounded-lg border-2 border-white/20 shadow-lg"
+          style={{ backgroundColor: value }}
+        />
+        <div className="flex-1">
+          <label htmlFor="hexColorInput" className="text-xs text-slate-400 block mb-1">Hex Color</label>
+          <input
+            type="text"
+            id="hexColorInput"
+            value={value.toUpperCase()}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-2 py-1 bg-slate-700 text-white rounded text-sm font-mono uppercase border border-slate-600"
+            placeholder="#FFFFFF"
+          />
+        </div>
+      </div>
     </div>
   );
 };
@@ -399,9 +647,9 @@ const RimeLightingDesigner = () => {
           <div className="flex items-center gap-3">
             <Lightbulb className="w-6 h-6 text-yellow-400" />
             <div>
-              <h2 className="text-xl font-bold text-white">Rime Lighting Designer</h2>
+              <h2 className="text-xl font-bold text-white">Rime Permanent Eave Lighting Designer</h2>
               <p className="text-sm text-slate-400">
-                {lights.length} fixtures • Est. ${costEstimate.total.toLocaleString()}
+                100 Million Color System • {lights.length} tracks • Est. ${costEstimate.total.toLocaleString()}
               </p>
             </div>
           </div>
@@ -512,9 +760,11 @@ const RimeLightingDesigner = () => {
             />
 
             <div className="mt-4">
-              <label className="text-sm text-slate-400 block mb-2">Default Intensity</label>
+              <label htmlFor="defaultIntensity" className="text-sm text-slate-400 block mb-2">Default Intensity</label>
               <input
                 type="range"
+                id="defaultIntensity"
+                name="defaultIntensity"
                 min="0"
                 max="2"
                 step="0.1"
@@ -522,6 +772,7 @@ const RimeLightingDesigner = () => {
                 onChange={(e) =>
                   setGlobalSettings((prev) => ({ ...prev, intensity: parseFloat(e.target.value) }))
                 }
+                autoComplete="off"
                 className="w-full"
               />
               <div className="text-center text-white text-sm mt-1">
@@ -589,10 +840,13 @@ const RimeLightingDesigner = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-slate-400 block mb-2">Type</label>
+                <label htmlFor="lightType" className="text-sm text-slate-400 block mb-2">Type</label>
                 <select
+                  id="lightType"
+                  name="lightType"
                   value={selectedLight.type}
                   onChange={(e) => handleUpdateLight({ type: e.target.value })}
+                  autoComplete="off"
                   className="w-full bg-slate-700 text-white rounded-lg px-3 py-2"
                 >
                   {Object.entries(RIME_PRODUCTS).map(([key, product]) => (
@@ -610,14 +864,17 @@ const RimeLightingDesigner = () => {
               />
 
               <div>
-                <label className="text-sm text-slate-400 block mb-2">Intensity</label>
+                <label htmlFor="lightIntensity" className="text-sm text-slate-400 block mb-2">Intensity</label>
                 <input
                   type="range"
+                  id="lightIntensity"
+                  name="lightIntensity"
                   min="0"
                   max="2"
                   step="0.1"
                   value={selectedLight.intensity}
                   onChange={(e) => handleUpdateLight({ intensity: parseFloat(e.target.value) })}
+                  autoComplete="off"
                   className="w-full"
                 />
                 <div className="text-center text-white text-sm mt-1">
@@ -626,14 +883,17 @@ const RimeLightingDesigner = () => {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-2">Beam Angle</label>
+                <label htmlFor="lightBeamAngle" className="text-sm text-slate-400 block mb-2">Beam Angle</label>
                 <input
                   type="range"
+                  id="lightBeamAngle"
+                  name="lightBeamAngle"
                   min="0.1"
                   max="1.5"
                   step="0.1"
                   value={selectedLight.angle}
                   onChange={(e) => handleUpdateLight({ angle: parseFloat(e.target.value) })}
+                  autoComplete="off"
                   className="w-full"
                 />
                 <div className="text-center text-white text-sm mt-1">
@@ -642,14 +902,17 @@ const RimeLightingDesigner = () => {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-2">Distance</label>
+                <label htmlFor="lightDistance" className="text-sm text-slate-400 block mb-2">Distance</label>
                 <input
                   type="range"
+                  id="lightDistance"
+                  name="lightDistance"
                   min="5"
                   max="20"
                   step="1"
                   value={selectedLight.distance}
                   onChange={(e) => handleUpdateLight({ distance: parseFloat(e.target.value) })}
+                  autoComplete="off"
                   className="w-full"
                 />
                 <div className="text-center text-white text-sm mt-1">
@@ -662,9 +925,11 @@ const RimeLightingDesigner = () => {
                 <div className="grid grid-cols-3 gap-2">
                   {['X', 'Y', 'Z'].map((axis, idx) => (
                     <div key={axis}>
-                      <label className="text-xs text-slate-400 block mb-1">{axis}</label>
+                      <label htmlFor={`lightPosition${axis}`} className="text-xs text-slate-400 block mb-1">{axis}</label>
                       <input
                         type="number"
+                        id={`lightPosition${axis}`}
+                        name={`lightPosition${axis}`}
                         step="0.5"
                         value={selectedLight.position[idx].toFixed(1)}
                         onChange={(e) => {
@@ -672,6 +937,7 @@ const RimeLightingDesigner = () => {
                           newPos[idx] = parseFloat(e.target.value) || 0;
                           handleUpdateLight({ position: newPos });
                         }}
+                        autoComplete="off"
                         className="w-full bg-slate-700 text-white rounded px-2 py-1 text-sm"
                       />
                     </div>

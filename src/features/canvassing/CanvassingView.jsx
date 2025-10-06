@@ -285,8 +285,10 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
         // Use AdvancedMarkerElement if available (Google Maps v3.56+)
         if (window.google.maps.marker?.AdvancedMarkerElement) {
-          // Create a div element for the custom marker content - FIX: Safely handle SVG without innerHTML
+          // Create a div element for the custom marker content
           const content = document.createElement('div');
+          content.style.cursor = 'pointer';
+          content.style.position = 'relative';
           const iconData = createPropertyMarkerIcon(property);
 
           if (iconData && iconData.url) {
@@ -295,7 +297,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
             img.src = iconData.url;
             img.style.width = '36px';
             img.style.height = '36px';
-            img.style.cursor = 'pointer';
+            img.style.pointerEvents = 'auto'; // Ensure click events work
             content.appendChild(img);
           }
 
@@ -304,10 +306,11 @@ const CanvassingView = ({ leads, onMapLoad }) => {
             position: { lat: property.latitude, lng: property.longitude },
             title: property.address || 'Property',
             content: content,
+            gmpClickable: true, // Enable click events
           });
 
-          // Add click listener
-          content.addEventListener('click', () => {
+          // Add click listener to the marker itself (preferred method)
+          marker.addListener('click', () => {
             setSelectedProperty(property);
             setShowPropertySheet(true);
           });
@@ -319,6 +322,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
             title: property.address || 'Property',
             icon: createPropertyMarkerIcon(property),
             animation: window.google.maps.Animation.DROP,
+            clickable: true,
           });
 
           marker.addListener('click', () => {
@@ -475,66 +479,93 @@ const CanvassingView = ({ leads, onMapLoad }) => {
           </div>
         </div>
       )}
-      {/* Header */}
-      <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Target className="w-6 h-6 text-blue-600" />
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Door-to-Door Canvassing</h2>
-            <p className="text-sm text-gray-600">{filterStats.total} properties</p>
+      {/* Header - Professional Design */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 border-b border-blue-800 px-6 py-4 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm">
+              <Target className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white drop-shadow-sm">Elite Canvassing System</h2>
+              <div className="flex items-center gap-4 mt-1">
+                <p className="text-sm text-blue-100 flex items-center gap-1">
+                  <span className="font-semibold">{filterStats.total}</span> properties tracked
+                </p>
+                <span className="text-blue-200">•</span>
+                <p className="text-sm text-blue-100 flex items-center gap-1">
+                  <span className="font-semibold">{filterStats.interested}</span> interested
+                </p>
+                <span className="text-blue-200">•</span>
+                <p className="text-sm text-blue-100 flex items-center gap-1">
+                  <span className="font-semibold">{filterStats.sold}</span> sold
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Day Summary Toggle */}
-          <button
-            onClick={() => setShowDaySummary(!showDaySummary)}
-            className="flex items-center px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-            title="View Day Summary"
-          >
-            <ClipboardList className="w-4 h-4 mr-2" />
-            Day Summary
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* Day Summary Toggle */}
+            <button
+              onClick={() => setShowDaySummary(!showDaySummary)}
+              className="flex items-center px-4 py-2.5 rounded-lg text-sm font-medium bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-sm border border-white/20 shadow-sm"
+              title="View Day Summary"
+            >
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Daily Stats
+            </button>
 
-          {/* Location Tracking Toggle */}
-          <button
-            onClick={handleToggleTracking}
-            className={`flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isTracking
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {isTracking ? (
-              <><Square className="w-4 h-4 mr-2" /> Stop Tracking</>
-            ) : (
-              <><Play className="w-4 h-4 mr-2" /> Start Tracking</>
-            )}
-          </button>
+            {/* Location Tracking Toggle */}
+            <button
+              onClick={handleToggleTracking}
+              className={`flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm border ${
+                isTracking
+                  ? 'bg-green-500 text-white hover:bg-green-600 border-green-400 animate-pulse'
+                  : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm border-white/20'
+              }`}
+            >
+              {isTracking ? (
+                <>
+                  <Square className="w-4 h-4 mr-2" />
+                  <span>Tracking Live</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  <span>Start Tracking</span>
+                </>
+              )}
+            </button>
 
-          {/* Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`p-2 rounded-lg transition-colors ${
-              showFilters ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Filter className="w-5 h-5" />
-          </button>
+            {/* Filter Toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-2.5 rounded-lg transition-all shadow-sm ${
+                showFilters
+                  ? 'bg-white text-blue-600'
+                  : 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm border border-white/20'
+              }`}
+              title="Toggle Filters"
+            >
+              <Filter className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filters Panel */}
+      {/* Filters Panel - Modern Design */}
       {showFilters && (
-        <div className="bg-white border-b px-4 py-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200 px-6 py-4 shadow-inner">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             {/* Status Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                Status Filter
+              </label>
               <select
                 value={propertyFilter.status}
                 onChange={(e) => setPropertyFilter({ status: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm font-medium text-sm"
               >
                 <option value="all">All Statuses</option>
                 {Object.values(PROPERTY_STATUS).map((status) => (
@@ -547,22 +578,26 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
             {/* Quality Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lead Quality</label>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                Lead Quality
+              </label>
               <select
                 value={propertyFilter.quality}
                 onChange={(e) => setPropertyFilter({ quality: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm font-medium text-sm"
               >
                 <option value="all">All Qualities</option>
-                <option value="hot">Hot</option>
-                <option value="warm">Warm</option>
-                <option value="cold">Cold</option>
+                <option value="hot">🔥 Hot Leads</option>
+                <option value="warm">⭐ Warm Leads</option>
+                <option value="cold">❄️ Cold Leads</option>
               </select>
             </div>
 
             {/* Map Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Map Type</label>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                Map View
+              </label>
               <select
                 value={mapView.mapType}
                 onChange={(e) => {
@@ -571,37 +606,57 @@ const CanvassingView = ({ leads, onMapLoad }) => {
                     mapInstanceRef.current.setMapTypeId(e.target.value);
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm font-medium text-sm"
               >
-                <option value="roadmap">Road Map</option>
-                <option value="satellite">Satellite</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="terrain">Terrain</option>
+                <option value="roadmap">🗺️ Road Map</option>
+                <option value="satellite">🛰️ Satellite</option>
+                <option value="hybrid">🔀 Hybrid</option>
+                <option value="terrain">🏔️ Terrain</option>
               </select>
+            </div>
+
+            {/* Quick Actions */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                Quick Actions
+              </label>
+              <button
+                onClick={() => {
+                  setPropertyFilter({ status: 'all', quality: 'all' });
+                }}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300 rounded-xl transition-all shadow-sm font-semibold text-sm text-gray-700"
+              >
+                Reset Filters
+              </button>
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="mt-4 grid grid-cols-5 gap-3">
-            <div className="bg-gray-50 px-3 py-2 rounded-lg text-center">
-              <p className="text-xs text-gray-600">Not Contacted</p>
-              <p className="text-lg font-bold text-gray-900">{filterStats.notContacted}</p>
+          {/* Performance Stats Dashboard */}
+          <div className="grid grid-cols-5 gap-3">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 px-4 py-3 rounded-xl text-center hover:shadow-md transition-all">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Not Contacted</p>
+              <p className="text-2xl font-black text-gray-800">{filterStats.notContacted}</p>
+              <div className="mt-1 h-1 bg-gray-300 rounded-full"></div>
             </div>
-            <div className="bg-green-50 px-3 py-2 rounded-lg text-center">
-              <p className="text-xs text-green-600">Interested</p>
-              <p className="text-lg font-bold text-green-700">{filterStats.interested}</p>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 px-4 py-3 rounded-xl text-center hover:shadow-md transition-all">
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Interested</p>
+              <p className="text-2xl font-black text-green-700">{filterStats.interested}</p>
+              <div className="mt-1 h-1 bg-green-400 rounded-full"></div>
             </div>
-            <div className="bg-blue-50 px-3 py-2 rounded-lg text-center">
-              <p className="text-xs text-blue-600">Appointments</p>
-              <p className="text-lg font-bold text-blue-700">{filterStats.appointments}</p>
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 px-4 py-3 rounded-xl text-center hover:shadow-md transition-all">
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Appointments</p>
+              <p className="text-2xl font-black text-blue-700">{filterStats.appointments}</p>
+              <div className="mt-1 h-1 bg-blue-400 rounded-full"></div>
             </div>
-            <div className="bg-purple-50 px-3 py-2 rounded-lg text-center">
-              <p className="text-xs text-purple-600">Sold</p>
-              <p className="text-lg font-bold text-purple-700">{filterStats.sold}</p>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 px-4 py-3 rounded-xl text-center hover:shadow-md transition-all">
+              <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-1">Sold</p>
+              <p className="text-2xl font-black text-purple-700">{filterStats.sold}</p>
+              <div className="mt-1 h-1 bg-purple-400 rounded-full"></div>
             </div>
-            <div className="bg-gray-50 px-3 py-2 rounded-lg text-center">
-              <p className="text-xs text-gray-600">Total</p>
-              <p className="text-lg font-bold text-gray-900">{filterStats.total}</p>
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-2 border-indigo-200 px-4 py-3 rounded-xl text-center hover:shadow-md transition-all">
+              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">Total</p>
+              <p className="text-2xl font-black text-indigo-800">{filterStats.total}</p>
+              <div className="mt-1 h-1 bg-indigo-400 rounded-full"></div>
             </div>
           </div>
         </div>
@@ -632,45 +687,68 @@ const CanvassingView = ({ leads, onMapLoad }) => {
           </button>
         )}
 
-        {/* Legend */}
-        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-xs max-h-[80vh] overflow-y-auto">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Canvassing Status</h3>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-[#F97316] mr-2"></div>
-              <span>Needs Inspection</span>
+        {/* Modern Legend */}
+        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-gray-200 p-5 max-w-xs max-h-[80vh] overflow-y-auto">
+          <h3 className="text-base font-black text-gray-900 mb-4 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></div>
+            Property Status Legend
+          </h3>
+          <div className="space-y-2.5 text-sm">
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-[#F97316] mr-3 shadow-sm"></div>
+                <span className="font-medium text-gray-700">Needs Inspection</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-[#9CA3AF] mr-2"></div>
-              <span>Knock Not Home</span>
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-[#9CA3AF] mr-3 shadow-sm"></div>
+                <span className="font-medium text-gray-700">Knock Not Home</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-[#EAB308] mr-2"></div>
-              <span>Follow-up Needed</span>
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-[#EAB308] mr-3 shadow-sm"></div>
+                <span className="font-medium text-gray-700">Follow-up Needed</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-[#A855F7] mr-2"></div>
-              <span>Door Hanger</span>
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-[#A855F7] mr-3 shadow-sm"></div>
+                <span className="font-medium text-gray-700">Door Hanger</span>
+              </div>
             </div>
-            <hr className="my-2" />
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-              <span>Interested</span>
+            <hr className="my-3 border-gray-300" />
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-green-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-green-500 mr-3 shadow-sm"></div>
+                <span className="font-semibold text-green-700">Interested</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
-              <span>Appointment</span>
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-blue-500 mr-3 shadow-sm"></div>
+                <span className="font-semibold text-blue-700">Appointment</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
-              <span>Sold</span>
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-purple-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-purple-500 mr-3 shadow-sm"></div>
+                <span className="font-semibold text-purple-700">Sold</span>
+              </div>
             </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-              <span>Not Interested</span>
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-red-50 transition-colors">
+              <div className="flex items-center">
+                <div className="w-4 h-4 rounded-full bg-red-500 mr-3 shadow-sm"></div>
+                <span className="font-semibold text-red-700">Not Interested</span>
+              </div>
             </div>
           </div>
-          <p className="text-[10px] text-gray-500 mt-3 pt-2 border-t">Click anywhere on map to drop a pin</p>
+          <div className="mt-4 pt-4 border-t-2 border-gray-200">
+            <p className="text-xs text-gray-600 bg-blue-50 p-2 rounded-lg border border-blue-200">
+              💡 <strong>Tip:</strong> Click anywhere on the map to drop a new property pin
+            </p>
+          </div>
         </div>
       </div>
 
