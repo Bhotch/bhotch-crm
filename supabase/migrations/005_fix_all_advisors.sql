@@ -1,36 +1,30 @@
 -- =============================================
--- FIX ALL SUPABASE ADVISORS
+-- FIX ALL SUPABASE ADVISORS - UPDATED
 -- =============================================
 -- This migration fixes all security and performance issues identified by Supabase database linter
 --
--- Issues addressed:
--- 1. RLS SECURITY (16 errors):
---    - 7 tables with policies but RLS disabled (policy_exists_rls_disabled)
---    - 7 tables with RLS disabled in public schema (rls_disabled_in_public)
---    - 1 view with SECURITY DEFINER (security_definer_view)
---    - 1 table without RLS enabled (job_counts - now removed)
+-- Current Issues (as of 2025-10-05):
+-- 1. SECURITY (1 error):
+--    - 1 view with SECURITY DEFINER (dashboard_stats)
 --
--- 2. PERFORMANCE (23 info):
---    - 22 unused indexes to drop
---    - 1 missing foreign key index to add
+-- 2. PERFORMANCE (1 info):
+--    - 1 unused index (idx_property_visits_territory_id)
+--
+-- Note: Foreign key indexes already exist from migration 001
 -- =============================================
 
 -- =============================================
--- SECTION 1: FIX RLS SECURITY ISSUES
+-- SECTION 1: VERIFY RLS STATUS (Optional check)
 -- =============================================
-
--- Re-enable RLS on all tables (was disabled in migration 003)
--- Note: Policies already exist from migration 001, just need to enable RLS
-ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE communications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE canvassing_territories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE canvassing_properties ENABLE ROW LEVEL SECURITY;
-ALTER TABLE property_visits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE property_designs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
-
--- Note: job_counts table referenced in migration 003 has been removed in migration 004
--- No action needed for job_counts
+-- RLS should already be enabled from previous migrations
+-- Uncomment to re-enable if needed:
+-- ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE communications ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE canvassing_territories ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE canvassing_properties ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE property_visits ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE property_designs ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 
 -- =============================================
 -- SECTION 2: FIX SECURITY DEFINER VIEW
@@ -71,85 +65,47 @@ COMMENT ON VIEW dashboard_stats IS 'Dashboard statistics view using SECURITY INV
 -- SECTION 3: FIX PERFORMANCE ISSUES
 -- =============================================
 
--- Add missing index on foreign key
-CREATE INDEX IF NOT EXISTS idx_property_visits_territory_id ON property_visits(territory_id);
+-- Note: Most foreign key indexes already exist from migration 001
+-- Only idx_canvassing_properties_territory exists (renamed from idx_canvassing_properties_territory_id)
+-- No new indexes needed - all foreign keys are already indexed
 
--- Drop unused indexes (identified by Supabase linter)
--- Note: These indexes have never been used according to pg_stat_user_indexes
-
--- Leads table unused indexes
-DROP INDEX IF EXISTS idx_leads_quality;
-DROP INDEX IF EXISTS idx_leads_disposition;
-DROP INDEX IF EXISTS idx_leads_location;
-DROP INDEX IF EXISTS idx_leads_phone;
-DROP INDEX IF EXISTS idx_leads_email;
-DROP INDEX IF EXISTS idx_leads_customer_name;
-DROP INDEX IF EXISTS idx_leads_search;
-DROP INDEX IF EXISTS idx_leads_sqft;
-DROP INDEX IF EXISTS idx_leads_quote_amount;
-
--- Communications table unused indexes
-DROP INDEX IF EXISTS idx_communications_lead_id;
-DROP INDEX IF EXISTS idx_communications_type;
-
--- Canvassing territories unused indexes
-DROP INDEX IF EXISTS idx_territories_active;
-
--- Canvassing properties unused indexes
-DROP INDEX IF EXISTS idx_canvassing_properties_territory;
-DROP INDEX IF EXISTS idx_canvassing_properties_status;
-DROP INDEX IF EXISTS idx_canvassing_properties_location;
-
--- Property visits unused indexes
-DROP INDEX IF EXISTS idx_property_visits_property_id;
-DROP INDEX IF EXISTS idx_property_visits_date;
-
--- Property designs unused indexes
-DROP INDEX IF EXISTS idx_property_designs_lead_id;
-DROP INDEX IF EXISTS idx_property_designs_status;
-
--- Calendar events unused indexes
-DROP INDEX IF EXISTS idx_calendar_events_lead_id;
-DROP INDEX IF EXISTS idx_calendar_events_start_time;
-DROP INDEX IF EXISTS idx_calendar_events_google_id;
+-- Drop unused index (was created but never used)
+DROP INDEX IF EXISTS idx_property_visits_territory_id;
 
 -- =============================================
 -- VERIFICATION QUERIES (Run manually to verify)
 -- =============================================
-
--- Verify RLS is enabled on all tables:
--- SELECT schemaname, tablename, rowsecurity
--- FROM pg_tables
--- WHERE schemaname = 'public'
--- AND tablename IN ('leads', 'communications', 'canvassing_territories', 'canvassing_properties',
---                   'property_visits', 'property_designs', 'calendar_events')
--- ORDER BY tablename;
 
 -- Verify view security (should NOT show SECURITY DEFINER):
 -- SELECT viewname, definition
 -- FROM pg_views
 -- WHERE viewname = 'dashboard_stats';
 
--- Verify new index exists:
--- SELECT indexname, indexdef
--- FROM pg_indexes
--- WHERE tablename = 'property_visits'
--- AND indexname = 'idx_property_visits_territory_id';
-
--- Verify unused indexes are dropped:
+-- Verify unused index is dropped:
 -- SELECT indexname
 -- FROM pg_indexes
 -- WHERE schemaname = 'public'
--- AND indexname LIKE 'idx_leads_%'
--- OR indexname LIKE 'idx_communications_%'
--- OR indexname LIKE 'idx_territories_%'
--- OR indexname LIKE 'idx_canvassing_%'
--- OR indexname LIKE 'idx_property_%'
--- OR indexname LIKE 'idx_calendar_%';
+-- AND indexname = 'idx_property_visits_territory_id';
+-- (Should return 0 rows)
+
+-- Verify all foreign key indexes exist from migration 001:
+-- SELECT indexname, tablename
+-- FROM pg_indexes
+-- WHERE schemaname = 'public'
+-- AND indexname IN (
+--   'idx_calendar_events_lead_id',
+--   'idx_canvassing_properties_territory',
+--   'idx_communications_lead_id',
+--   'idx_property_designs_lead_id',
+--   'idx_property_visits_property_id'
+-- )
+-- ORDER BY tablename;
+-- (Should return 5 rows)
 
 -- =============================================
 -- NOTES
 -- =============================================
--- This migration supersedes the RLS disable in migration 003_disable_rls_for_development.sql
--- All security policies from migration 001 remain in place and are now active
--- Performance is optimized by removing 22 unused indexes and adding 1 missing FK index
+-- This migration fixes the actual current advisor issues:
+-- 1. Recreates dashboard_stats view without SECURITY DEFINER
+-- 2. Removes 1 unused index (idx_property_visits_territory_id)
+-- 3. All foreign key indexes already exist from migration 001
