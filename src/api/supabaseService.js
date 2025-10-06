@@ -105,20 +105,16 @@ export const leadsService = {
 
 // =============================================
 // JOB COUNTS SERVICE
-// Replaces: googleSheetsService.getJobCounts()
+// Job counts data is now part of the leads table
+// This service queries leads that have job count data (sqft, quote_amount, etc.)
 // =============================================
 export const jobCountsService = {
   async getAll() {
     const { data, error } = await supabase
-      .from('job_counts')
-      .select(`
-        *,
-        leads (
-          customer_name,
-          address,
-          phone_number
-        )
-      `)
+      .from('leads')
+      .select('*')
+      .not('sqft', 'is', null)  // Only get leads with job count data
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(`Failed to fetch job counts: ${error.message}`);
@@ -126,13 +122,11 @@ export const jobCountsService = {
   },
 
   async create(jobCountData) {
+    // Job count data is now stored in the leads table
     const { data, error } = await supabase
-      .from('job_counts')
+      .from('leads')
       .insert([jobCountData])
-      .select(`
-        *,
-        leads (customer_name, address)
-      `)
+      .select()
       .single();
 
     if (error) throw new Error(`Failed to create job count: ${error.message}`);
@@ -141,7 +135,7 @@ export const jobCountsService = {
 
   async update(id, updates) {
     const { data, error } = await supabase
-      .from('job_counts')
+      .from('leads')
       .update(updates)
       .eq('id', id)
       .select()
@@ -152,9 +146,10 @@ export const jobCountsService = {
   },
 
   async delete(id) {
+    // Soft delete by setting deleted_at timestamp
     const { error } = await supabase
-      .from('job_counts')
-      .delete()
+      .from('leads')
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (error) throw new Error(`Failed to delete job count: ${error.message}`);
@@ -434,17 +429,16 @@ export const dashboardService = {
       .select('*')
       .is('deleted_at', null);
 
-    const { data: jobCounts } = await supabase
-      .from('job_counts')
-      .select('sqft, quote_amount');
+    // Job counts are now part of the leads table
+    const leadsWithJobCounts = leads?.filter(l => l.sqft != null) || [];
 
     return {
       total_leads: leads?.length || 0,
       hot_leads: leads?.filter(l => l.quality === 'Hot').length || 0,
       quoted_leads: leads?.filter(l => l.disposition === 'Quoted').length || 0,
       total_quote_value: leads?.reduce((sum, l) => sum + (l.dabella_quote || 0), 0) || 0,
-      total_job_counts: jobCounts?.length || 0,
-      total_sqft: jobCounts?.reduce((sum, j) => sum + (j.sqft || 0), 0) || 0,
+      total_job_counts: leadsWithJobCounts.length,
+      total_sqft: leadsWithJobCounts.reduce((sum, l) => sum + (l.sqft || 0), 0),
       conversion_rate: leads?.length ?
         ((leads.filter(l => l.disposition === 'Closed Sold').length / leads.length) * 100).toFixed(2) : 0
     };

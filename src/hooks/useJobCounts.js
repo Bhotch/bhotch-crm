@@ -14,13 +14,13 @@ export function useJobCounts(addNotification) {
 
         try {
             if (useSupabase) {
-                // Use Supabase
+                // Use Supabase - job counts are now part of the leads table
                 const data = await jobCountsService.getAll();
                 const processedJobCounts = data.map(jc => ({
                     ...jc,
-                    fullName: jc.leads?.customer_name || 'Unknown Customer',
-                    customerName: jc.leads?.customer_name,
-                    address: jc.leads?.address
+                    fullName: jc.customer_name || 'Unknown Customer',
+                    customerName: jc.customer_name,
+                    address: jc.address
                 }));
                 setJobCounts(processedJobCounts);
 
@@ -75,10 +75,10 @@ export function useJobCounts(addNotification) {
                 .on('postgres_changes', {
                     event: '*',
                     schema: 'public',
-                    table: 'job_counts'
+                    table: 'leads'  // Job counts are now part of the leads table
                 }, async (payload) => {
-                    console.log('Job count changed:', payload);
-                    // Refresh to get joined lead data
+                    console.log('Lead/Job count changed:', payload);
+                    // Refresh job counts data
                     await loadJobCountsData(true);
                 })
                 .subscribe();

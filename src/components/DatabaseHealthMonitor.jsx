@@ -46,9 +46,11 @@ export function DatabaseHealthMonitor() {
           .from('leads')
           .select('*', { count: 'exact', head: true });
 
+        // Job counts are now part of the leads table - count leads with sqft data
         const { count: jobCountsCount } = await supabase
-          .from('job_counts')
-          .select('*', { count: 'exact', head: true });
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .not('sqft', 'is', null);
 
         setHealth({
           connected: true,
