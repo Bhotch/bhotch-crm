@@ -26,3 +26,6 @@ supabase/config.toml
 
 # Data migration
 data-export/
+
+# Generated PDFs
+docs/generated/*.pdf

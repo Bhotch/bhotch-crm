@@ -46,7 +46,10 @@
       "Bash(npm uninstall:*)",
       "Bash(npx supabase db reset:*)",
       "Bash(npx supabase db push:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(pwsh:*)",
+      "Bash(where:*)",
+      "Bash(choco install:*)"
     ],
     "deny": [],
     "ask": []
