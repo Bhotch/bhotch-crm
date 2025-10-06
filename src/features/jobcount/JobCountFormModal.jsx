@@ -11,9 +11,9 @@ const FormSection = ({ title, children }) => (
     </div>
 );
 
-const FormField = ({ label, children, fullWidth = false, required = false }) => (
+const FormField = ({ label, children, fullWidth = false, required = false, htmlFor }) => (
     <div className={fullWidth ? 'lg:col-span-3 md:col-span-2' : ''}>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700 mb-2">
             {label} {required && <span className="text-red-500">*</span>}
         </label>
         {children}
@@ -23,7 +23,9 @@ const FormField = ({ label, children, fullWidth = false, required = false }) => 
 const TextInput = (props) => (
     <input
         {...props}
+        id={props.name}
         type="text"
+        autoComplete={props.autoComplete || 'off'}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
     />
 );
@@ -31,9 +33,11 @@ const TextInput = (props) => (
 const NumberInput = (props) => (
     <input
         {...props}
+        id={props.name}
         type="number"
         step="0.01"
         min="0"
+        autoComplete={props.autoComplete || 'off'}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
     />
 );
@@ -41,7 +45,9 @@ const NumberInput = (props) => (
 const DateInput = (props) => (
     <input
         {...props}
+        id={props.name}
         type="date"
+        autoComplete={props.autoComplete || 'off'}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
     />
 );
@@ -49,6 +55,8 @@ const DateInput = (props) => (
 const SelectInput = ({ children, ...props }) => (
     <select
         {...props}
+        id={props.name}
+        autoComplete={props.autoComplete || 'off'}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
     >
         {children}
@@ -58,7 +66,9 @@ const SelectInput = ({ children, ...props }) => (
 const TextareaInput = (props) => (
     <textarea
         {...props}
+        id={props.name}
         rows={4}
+        autoComplete={props.autoComplete || 'off'}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
     />
 );
@@ -198,8 +208,8 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
                     <form onSubmit={handleSubmit} className="space-y-8">
                         {/* Customer Information */}
                         <FormSection title="Customer Information">
-                            <FormField label="Select from Leads" fullWidth>
-                                <SelectInput value={selectedLeadId} onChange={handleLeadSelect}>
+                            <FormField label="Select from Leads" fullWidth htmlFor="leadSelect">
+                                <SelectInput name="leadSelect" value={selectedLeadId} onChange={handleLeadSelect}>
                                     <option value="">-- Select a Lead or Add New Customer --</option>
                                     {leads.map(lead => (
                                         <option key={lead.id} value={lead.id}>
@@ -208,54 +218,60 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
                                     ))}
                                 </SelectInput>
                             </FormField>
-                            <FormField label="First Name" required>
+                            <FormField label="First Name" required htmlFor="firstName">
                                 <TextInput
                                     name="firstName"
                                     value={formData.firstName}
                                     onChange={handleChange}
                                     required
                                     placeholder="John"
+                                    autoComplete="given-name"
                                 />
                             </FormField>
-                            <FormField label="Last Name">
+                            <FormField label="Last Name" htmlFor="lastName">
                                 <TextInput
                                     name="lastName"
                                     value={formData.lastName}
                                     onChange={handleChange}
                                     placeholder="Doe"
+                                    autoComplete="family-name"
                                 />
                             </FormField>
-                            <FormField label="Full Name">
+                            <FormField label="Full Name" htmlFor="customerName">
                                 <TextInput
                                     name="customerName"
                                     value={formData.customerName}
                                     onChange={handleChange}
                                     placeholder="John Doe (auto-filled from above)"
+                                    autoComplete="name"
                                 />
                             </FormField>
-                            <FormField label="Phone Number">
+                            <FormField label="Phone Number" htmlFor="phoneNumber">
                                 <TextInput
                                     name="phoneNumber"
                                     value={formData.phoneNumber}
                                     onChange={handleChange}
                                     placeholder="(555) 123-4567"
+                                    autoComplete="tel"
                                 />
                             </FormField>
-                            <FormField label="Email">
+                            <FormField label="Email" htmlFor="email">
                                 <TextInput
                                     name="email"
                                     type="email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     placeholder="john@example.com"
+                                    autoComplete="email"
                                 />
                             </FormField>
-                            <FormField label="Address" fullWidth>
+                            <FormField label="Address" fullWidth htmlFor="address">
                                 <TextInput
                                     name="address"
                                     value={formData.address}
                                     onChange={handleChange}
                                     placeholder="123 Main St, City, State 12345"
+                                    autoComplete="street-address"
                                 />
                             </FormField>
                         </FormSection>

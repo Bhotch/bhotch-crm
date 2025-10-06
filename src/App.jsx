@@ -13,7 +13,7 @@ import DashboardView from './features/dashboard/DashboardView';
 import LeadsView from './features/leads/LeadsView';
 import JobCountView from './features/jobcount/JobCountView';
 import MapView from './features/map/MapView';
-import CalendarView from './features/calendar/CalendarView';
+import InternalCalendar from './features/calendar/InternalCalendar';
 import CommunicationsView from './features/communications/CommunicationsView';
 import DesignerView from './features/visualization360/DesignerView';
 import CanvassingViewEnhanced from './features/canvassing/CanvassingViewEnhanced';
@@ -244,7 +244,12 @@ function CrmApplication({ onLogout }) {
             onSearchComplete={() => setMapSearchAddress('')}
           />
         )}
-        {currentView === 'calendar' && <CalendarView />}
+        {currentView === 'calendar' && (
+          <InternalCalendar
+            leads={leads}
+            addNotification={addNotification}
+          />
+        )}
         {currentView === 'communications' && (
           <CommunicationsView
             leads={leads}

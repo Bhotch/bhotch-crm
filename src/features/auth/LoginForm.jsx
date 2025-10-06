@@ -35,8 +35,14 @@ function LoginForm({ onLogin }) {
         </div>
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input type="email" placeholder="Email" value={credentials.email} onChange={(e) => setCredentials(c => ({ ...c, email: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-          <input type="password" placeholder="Password" value={credentials.password} onChange={(e) => setCredentials(c => ({ ...c, password: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          <div>
+            <label htmlFor="email" className="sr-only">Email</label>
+            <input id="email" name="email" type="email" placeholder="Email" value={credentials.email} onChange={(e) => setCredentials(c => ({ ...c, email: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required autoComplete="email" />
+          </div>
+          <div>
+            <label htmlFor="password" className="sr-only">Password</label>
+            <input id="password" name="password" type="password" placeholder="Password" value={credentials.password} onChange={(e) => setCredentials(c => ({ ...c, password: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required autoComplete="current-password" />
+          </div>
           <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center">{loading ? <Loader2 className="animate-spin h-5 w-5" /> : 'Sign In'}</button>
         </form>
       </div>
