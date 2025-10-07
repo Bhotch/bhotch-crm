@@ -49,7 +49,8 @@
       "Bash(npx supabase:*)",
       "Bash(pwsh:*)",
       "Bash(where:*)",
-      "Bash(choco install:*)"
+      "Bash(choco install:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
