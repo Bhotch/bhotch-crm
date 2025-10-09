@@ -648,9 +648,30 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                                                 return <div className="text-sm text-gray-700 truncate max-w-xs">{lead.address || '-'}</div>;
                                             }
 
+                                            // Quality
+                                            if (column.key === 'quality') {
+                                                const qualityBadges = {
+                                                    'Hot': 'bg-red-100 text-red-800',
+                                                    'Warm': 'bg-yellow-100 text-yellow-800',
+                                                    'Cold': 'bg-blue-100 text-blue-800'
+                                                };
+                                                const quality = lead.quality || '-';
+                                                const badgeClass = qualityBadges[quality] || 'bg-gray-100 text-gray-800';
+                                                return quality !== '-' ? (
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}`}>
+                                                        {quality}
+                                                    </span>
+                                                ) : '-';
+                                            }
+
                                             // Disposition
                                             if (column.key === 'disposition') {
                                                 return getStatusBadge(lead.disposition);
+                                            }
+
+                                            // Lead Source
+                                            if (column.key === 'leadSource') {
+                                                return <div className="text-sm text-gray-900">{lead.leadSource || lead.lead_source || '-'}</div>;
                                             }
 
                                             // DaBella Quote
