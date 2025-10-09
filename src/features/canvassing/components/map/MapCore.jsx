@@ -61,8 +61,12 @@ const MapCore = ({
 
     const initMap = async () => {
       try {
-        if (!mapRef.current) {
-          throw new Error('Map container not found');
+        // Wait for DOM to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!mounted || !mapRef.current) {
+          console.warn('Map container not ready, retrying...');
+          return;
         }
 
         const google = await loadGoogleMaps();
@@ -123,8 +127,18 @@ const MapCore = ({
       } catch (err) {
         console.error('Map initialization error:', err);
         if (mounted) {
-          setError(err.message || 'Failed to initialize map');
-          setLoading(false);
+          // Retry once after 500ms if container not found
+          if (err.message?.includes('container') || err.message?.includes('not ready')) {
+            setTimeout(() => {
+              if (mounted) {
+                console.log('Retrying map initialization...');
+                initMap();
+              }
+            }, 500);
+          } else {
+            setError(err.message || 'Failed to initialize map');
+            setLoading(false);
+          }
         }
       }
     };

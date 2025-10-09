@@ -159,10 +159,12 @@ const PropertyDetailSheetEnhanced = ({
                 </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                    <label htmlFor="owner-name" className="block text-xs font-medium text-gray-700 mb-1">
                       Owner Name
                     </label>
                     <input
+                      id="owner-name"
+                      name="owner_name"
                       type="text"
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
@@ -172,11 +174,13 @@ const PropertyDetailSheetEnhanced = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                    <label htmlFor="owner-phone" className="block text-xs font-medium text-gray-700 mb-1">
                       Phone Number
                     </label>
                     <div className="flex gap-2">
                       <input
+                        id="owner-phone"
+                        name="owner_phone"
                         type="tel"
                         value={ownerPhone}
                         onChange={(e) => setOwnerPhone(e.target.value)}
@@ -205,6 +209,8 @@ const PropertyDetailSheetEnhanced = ({
                   Notes
                 </h3>
                 <textarea
+                  id="property-notes"
+                  name="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   disabled={!isEditing}
