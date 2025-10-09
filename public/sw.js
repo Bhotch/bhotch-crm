@@ -12,7 +12,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Cache opened with version', CACHE_NAME);
+        // Cache opened successfully
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
@@ -96,7 +96,7 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
             if (cacheName !== CACHE_NAME) {
-              console.log('Service Worker: Deleting old cache', cacheName);
+              // Deleting old cache
               return caches.delete(cacheName);
             }
           })
@@ -107,7 +107,7 @@ self.addEventListener('activate', (event) => {
     ])
   );
 
-  console.log('Service Worker: Activated version', CACHE_NAME);
+  // Service worker activated
 });
 
 self.addEventListener('message', (event) => {
@@ -123,7 +123,7 @@ self.addEventListener('sync', (event) => {
 });
 
 async function doBackgroundSync() {
-  console.log('Service Worker: Background sync triggered');
+  // Background sync triggered
   try {
     const savedData = await getStoredData();
     if (savedData && savedData.length > 0) {

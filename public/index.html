@@ -41,14 +41,14 @@
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
-              console.log('SW registered: ', registration);
+              // Service worker registered successfully (silent)
 
               // Check for updates
               registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('New content is available; please refresh.');
+                    // New content available
                     if (confirm('New version available! Refresh to update?')) {
                       window.location.reload();
                     }
@@ -57,7 +57,7 @@
               });
             })
             .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
+              console.error('SW registration failed: ', registrationError);
             });
         });
 
@@ -84,9 +84,7 @@
           installBtn.addEventListener('click', () => {
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then((choiceResult) => {
-              if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-              }
+              // Install prompt accepted/declined (silent)
               deferredPrompt = null;
             });
           });
@@ -95,7 +93,7 @@
 
       // Detect if app is installed
       window.addEventListener('appinstalled', (evt) => {
-        console.log('App was installed.');
+        // App installed successfully (silent)
       });
     </script>
   </body>
