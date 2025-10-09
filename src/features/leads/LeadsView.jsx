@@ -11,6 +11,16 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [showColumnSettings, setShowColumnSettings] = useState(false);
 
+    // Debug: Log first lead to see data structure
+    React.useEffect(() => {
+        if (leads && leads.length > 0) {
+            console.log('==== LEAD DATA SAMPLE ====');
+            console.log('First lead object:', leads[0]);
+            console.log('Lead keys:', Object.keys(leads[0]));
+            console.log('Total leads:', leads.length);
+        }
+    }, [leads]);
+
     // Default column visibility settings
     const defaultVisibleColumns = {
         // Basic Information (most important shown by default)
@@ -654,14 +664,22 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
 
                                             // Number columns
                                             if (column.type === 'number') {
-                                                const value = lead[column.key];
-                                                return value ? (
+                                                // Try multiple field name variations to handle both Google Sheets and Supabase
+                                                const value = lead[column.key] ||
+                                                             lead[column.key.toLowerCase()] ||
+                                                             lead[column.label.replace(/\s+/g, '')] ||
+                                                             lead[column.label.toLowerCase().replace(/\s+/g, '')];
+                                                return value && value !== '0' ? (
                                                     <div className="text-sm font-medium text-gray-900">{formatNumber(value)}</div>
                                                 ) : '-';
                                             }
 
-                                            // Default text rendering
-                                            return <div className="text-sm text-gray-900">{lead[column.key] || '-'}</div>;
+                                            // Default text rendering - try multiple field name variations
+                                            const textValue = lead[column.key] ||
+                                                            lead[column.key.toLowerCase()] ||
+                                                            lead[column.label.replace(/\s+/g, '')] ||
+                                                            lead[column.label.toLowerCase().replace(/\s+/g, '')];
+                                            return <div className="text-sm text-gray-900">{textValue || '-'}</div>;
                                         };
 
                                         return (

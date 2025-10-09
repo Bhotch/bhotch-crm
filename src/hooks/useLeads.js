@@ -13,16 +13,85 @@ export function useLeads(addNotification) {
 
     try {
       if (useSupabase) {
-        // Use Supabase
+        // Use Supabase - Map snake_case to camelCase for frontend
         const data = await leadsService.getAll();
+
+        // DEBUG: Log first lead to see what Supabase returns
+        if (data && data.length > 0) {
+          console.log('=== SUPABASE RAW DATA ===');
+          console.log('First lead from Supabase:', data[0]);
+          console.log('Field names:', Object.keys(data[0]));
+          console.log('Phone number value:', data[0].phone_number);
+          console.log('Quality value:', data[0].quality);
+          console.log('Disposition value:', data[0].disposition);
+          console.log('Lead source value:', data[0].lead_source);
+        }
+
         const processedLeads = data.map(lead => ({
+          // Keep original snake_case fields
           ...lead,
+          // Map to camelCase for frontend compatibility
+          id: lead.id,
           customerName: lead.customer_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown',
-          createdDate: lead.created_at
+          firstName: lead.first_name,
+          lastName: lead.last_name,
+          phoneNumber: lead.phone_number,
+          email: lead.email,
+          address: lead.address,
+          latitude: lead.latitude,
+          longitude: lead.longitude,
+          dateAdded: lead.date_added,
+          quality: lead.quality,
+          disposition: lead.disposition,
+          leadSource: lead.lead_source,
+          status: lead.status,
+          roofAge: lead.roof_age,
+          roofType: lead.roof_type,
+          // Measurements
+          sqFt: lead.sqft,
+          ridgeLf: lead.ridge_lf,
+          valleyLf: lead.valley_lf,
+          eavesLf: lead.eaves_lf,
+          // Ventilation
+          ridgeVents: lead.ridge_vents,
+          turbineVents: lead.turbine_vents,
+          turbine: lead.turbine_vents, // alias
+          rimeFlow: lead.rime_flow,
+          // Pipes
+          pipes12: lead.pipes_12,
+          pipes34: lead.pipes_34,
+          pipes1Half: lead.pipes_12, // alias
+          pipes2: lead.pipes_12, // alias (assuming pipes_12 covers both)
+          pipes3: lead.pipes_34, // alias
+          pipes4: lead.pipes_34, // alias (assuming pipes_34 covers both)
+          // Features
+          gables: lead.gables,
+          turtleBacks: lead.turtle_backs,
+          satellite: lead.satellite,
+          chimney: lead.chimney,
+          solar: lead.solar,
+          swampCooler: lead.swamp_cooler,
+          // Gutters
+          guttersLf: lead.gutter_lf,
+          gutterLf: lead.gutter_lf, // alias
+          downspouts: lead.downspouts,
+          gutterGuardLf: lead.gutter_guard_lf,
+          // Financial
+          dabellaQuote: lead.dabella_quote,
+          quoteAmount: lead.quote_amount,
+          quoteNotes: lead.quote_notes,
+          // Additional
+          permanentLighting: lead.permanent_lighting,
+          notes: lead.notes,
+          // Timestamps
+          createdDate: lead.created_at,
+          createdAt: lead.created_at,
+          updatedAt: lead.updated_at,
+          deletedAt: lead.deleted_at
         }));
         setLeads(processedLeads);
-        if (isManualRefresh) addNotification(`Leads refreshed. Found ${processedLeads.length} leads.`, 'success');
-        else addNotification(`Leads loaded. Found ${processedLeads.length} leads.`, 'success');
+        if (isManualRefresh) addNotification(`Leads refreshed from Supabase. Found ${processedLeads.length} leads.`, 'success');
+        else addNotification(`Leads loaded from Supabase. Found ${processedLeads.length} leads.`, 'success');
       } else {
         // Fallback to Google Sheets
         const response = await googleSheetsService.fetchLeads();
@@ -52,18 +121,58 @@ export function useLeads(addNotification) {
 
     // Set up real-time subscription if using Supabase
     if (useSupabase) {
+      const mapLeadFromSupabase = (lead) => ({
+        ...lead,
+        customerName: lead.customer_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown',
+        firstName: lead.first_name,
+        lastName: lead.last_name,
+        phoneNumber: lead.phone_number,
+        email: lead.email,
+        address: lead.address,
+        dateAdded: lead.date_added,
+        quality: lead.quality,
+        disposition: lead.disposition,
+        leadSource: lead.lead_source,
+        roofAge: lead.roof_age,
+        roofType: lead.roof_type,
+        sqFt: lead.sqft,
+        ridgeLf: lead.ridge_lf,
+        valleyLf: lead.valley_lf,
+        eavesLf: lead.eaves_lf,
+        ridgeVents: lead.ridge_vents,
+        turbineVents: lead.turbine_vents,
+        turbine: lead.turbine_vents,
+        rimeFlow: lead.rime_flow,
+        pipes12: lead.pipes_12,
+        pipes34: lead.pipes_34,
+        gables: lead.gables,
+        turtleBacks: lead.turtle_backs,
+        satellite: lead.satellite,
+        chimney: lead.chimney,
+        solar: lead.solar,
+        swampCooler: lead.swamp_cooler,
+        guttersLf: lead.gutter_lf,
+        gutterLf: lead.gutter_lf,
+        downspouts: lead.downspouts,
+        gutterGuardLf: lead.gutter_guard_lf,
+        dabellaQuote: lead.dabella_quote,
+        quoteAmount: lead.quote_amount,
+        quoteNotes: lead.quote_notes,
+        permanentLighting: lead.permanent_lighting,
+        notes: lead.notes,
+        createdDate: lead.created_at,
+        createdAt: lead.created_at,
+        updatedAt: lead.updated_at
+      });
+
       const subscription = leadsService.subscribeToChanges((payload) => {
         console.log('Lead changed:', payload);
 
         if (payload.eventType === 'INSERT') {
-          const newLead = {
-            ...payload.new,
-            customerName: payload.new.customer_name
-          };
-          setLeads(prev => [newLead, ...prev]);
+          setLeads(prev => [mapLeadFromSupabase(payload.new), ...prev]);
         } else if (payload.eventType === 'UPDATE') {
           setLeads(prev => prev.map(lead =>
-            lead.id === payload.new.id ? { ...payload.new, customerName: payload.new.customer_name } : lead
+            lead.id === payload.new.id ? mapLeadFromSupabase(payload.new) : lead
           ));
         } else if (payload.eventType === 'DELETE') {
           setLeads(prev => prev.filter(lead => lead.id !== payload.old.id));
