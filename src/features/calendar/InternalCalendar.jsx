@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Plus, Edit2, Trash2, X, Clock, MapPin, User, Save } from 'lucide-react';
+import { Calendar, Plus, Trash2, X, Save } from 'lucide-react';
 import { calendarEventsService } from '../../api/supabaseService';
 import { isSupabaseEnabled } from '../../lib/supabase';
 
@@ -7,6 +7,7 @@ function InternalCalendar({ leads, addNotification }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  // eslint-disable-next-line no-unused-vars
   const [selectedDate, setSelectedDate] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);

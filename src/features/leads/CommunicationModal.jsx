@@ -212,12 +212,17 @@ function CommunicationModal({ lead, onClose, onLogCommunication, onUpdateLead })
               ))}
             </div>
             {selectedReminder === 'custom' && (
-              <input
-                type="datetime-local"
-                value={customReminderDate}
-                onChange={(e) => setCustomReminderDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-              />
+              <div>
+                <label htmlFor="customReminderDate" className="block text-sm font-medium text-gray-700 mb-2">Custom Date & Time</label>
+                <input
+                  id="customReminderDate"
+                  name="customReminderDate"
+                  type="datetime-local"
+                  value={customReminderDate}
+                  onChange={(e) => setCustomReminderDate(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                />
+              </div>
             )}
           </div>
           <div className="flex justify-end space-x-3 p-4 bg-gray-50 border-t">
@@ -312,8 +317,10 @@ function CommunicationModal({ lead, onClose, onLogCommunication, onUpdateLead })
 
           {/* Duration */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">Duration</label>
             <select
+              id="duration"
+              name="duration"
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
               className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
@@ -328,8 +335,10 @@ function CommunicationModal({ lead, onClose, onLogCommunication, onUpdateLead })
 
           {/* Additional Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+            <label htmlFor="additionalNotes" className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
             <textarea
+              id="additionalNotes"
+              name="additionalNotes"
               value={additionalNotes}
               onChange={(e) => setAdditionalNotes(e.target.value)}
               placeholder={selectedTag ? selectedTag.autoNote : 'Enter any additional notes...'}

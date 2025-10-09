@@ -16,17 +16,6 @@ export function useLeads(addNotification) {
         // Use Supabase - Map snake_case to camelCase for frontend
         const data = await leadsService.getAll();
 
-        // DEBUG: Log first lead to see what Supabase returns
-        if (data && data.length > 0) {
-          console.log('=== SUPABASE RAW DATA ===');
-          console.log('First lead from Supabase:', data[0]);
-          console.log('Field names:', Object.keys(data[0]));
-          console.log('Phone number value:', data[0].phone_number);
-          console.log('Quality value:', data[0].quality);
-          console.log('Disposition value:', data[0].disposition);
-          console.log('Lead source value:', data[0].lead_source);
-        }
-
         const processedLeads = data.map(lead => ({
           // Keep original snake_case fields
           ...lead,
