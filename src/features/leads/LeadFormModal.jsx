@@ -9,6 +9,24 @@ const TextInput = (props) => <input {...props} id={props.name} autoComplete={pro
 const SelectInput = ({ children, ...props }) => <select {...props} id={props.name} autoComplete={props.autoComplete || 'off'} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">{children}</select>;
 const TextareaInput = (props) => <textarea {...props} id={props.name} autoComplete={props.autoComplete || 'off'} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" />;
 
+// Phone Input with auto-formatting: (***) ***-****
+const PhoneInput = ({ value, onChange, ...props }) => {
+    const formatPhone = (val) => {
+        const cleaned = (val || '').replace(/\D/g, '').slice(0, 10);
+        if (cleaned.length === 0) return '';
+        if (cleaned.length <= 3) return `(${cleaned}`;
+        if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+        return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    };
+
+    const handlePhoneChange = (e) => {
+        const formatted = formatPhone(e.target.value);
+        onChange({ target: { name: e.target.name, value: formatted } });
+    };
+
+    return <input {...props} type="tel" value={value || ''} onChange={handlePhoneChange} id={props.name} autoComplete={props.autoComplete || 'tel'} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500" placeholder="(***) ***-****" />;
+};
+
 const initialFormData = { customerName: '', address: '', phoneNumber: '', email: '', dabellaQuote: '', quality: 'Cold', notes: '', disposition: 'New', leadSource: 'Door Knock', roofAge: '', roofType: 'Asphalt Shingle' };
 
 function LeadFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
@@ -47,7 +65,7 @@ function LeadFormModal({ initialData, onSubmit, onCancel, isEdit = false }) {
                     <form onSubmit={handleSubmit}>
                         <FormSection title="Customer Information">
                             <FormField label="Full Name *" htmlFor="customerName"><TextInput name="customerName" value={formData.customerName} onChange={handleChange} autoComplete="name" required /></FormField>
-                            <FormField label="Phone Number *" htmlFor="phoneNumber"><TextInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} autoComplete="tel" required /></FormField>
+                            <FormField label="Phone Number *" htmlFor="phoneNumber"><PhoneInput name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} autoComplete="tel" required /></FormField>
                             <FormField label="Email" htmlFor="email"><TextInput name="email" type="email" value={formData.email} onChange={handleChange} autoComplete="email" /></FormField>
                             <FormField label="Address" htmlFor="address" fullWidth><TextInput name="address" value={formData.address} onChange={handleChange} autoComplete="street-address" placeholder="Full address for map location" /></FormField>
                         </FormSection>
