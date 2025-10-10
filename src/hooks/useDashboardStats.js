@@ -50,19 +50,60 @@ export function useDashboardStats(leads = [], jobCounts = []) {
     }
   }, [useSupabase, calculateLocalStats]);
 
+  // Initial load
   useEffect(() => {
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Refresh stats every 30 seconds if using Supabase
+  // Set up automatic refresh for Supabase with optimized performance
+  useEffect(() => {
     if (useSupabase) {
-      const interval = setInterval(loadStats, 30000);
+      // Use requestIdleCallback for non-blocking updates
+      const interval = setInterval(() => {
+        // Schedule the update during idle time to avoid blocking the main thread
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(() => {
+            dashboardService.getStats().then(supabaseStats => {
+              setStats({
+                totalLeads: supabaseStats.total_leads || 0,
+                hotLeads: supabaseStats.hot_leads || 0,
+                quotedLeads: supabaseStats.quoted_leads || 0,
+                totalQuoteValue: supabaseStats.total_quote_value || 0,
+                totalJobCounts: supabaseStats.total_job_counts || 0,
+                totalSqFt: supabaseStats.total_sqft || 0,
+                conversionRate: supabaseStats.conversion_rate || 0
+              });
+            }).catch(error => {
+              console.error('Error refreshing dashboard stats:', error);
+            });
+          }, { timeout: 2000 });
+        } else {
+          // Fallback for browsers without requestIdleCallback
+          setTimeout(() => {
+            dashboardService.getStats().then(supabaseStats => {
+              setStats({
+                totalLeads: supabaseStats.total_leads || 0,
+                hotLeads: supabaseStats.hot_leads || 0,
+                quotedLeads: supabaseStats.quoted_leads || 0,
+                totalQuoteValue: supabaseStats.total_quote_value || 0,
+                totalJobCounts: supabaseStats.total_job_counts || 0,
+                totalSqFt: supabaseStats.total_sqft || 0,
+                conversionRate: supabaseStats.conversion_rate || 0
+              });
+            }).catch(error => {
+              console.error('Error refreshing dashboard stats:', error);
+            });
+          }, 0);
+        }
+      }, 30000);
       return () => clearInterval(interval);
     }
-  }, [loadStats, useSupabase]);
+  }, [useSupabase]);
 
   // Re-calculate when leads or jobCounts change (for non-Supabase mode)
   useEffect(() => {
-    if (!useSupabase) {
+    if (!useSupabase && leads.length > 0) {
       setStats(calculateLocalStats());
     }
   }, [leads, jobCounts, useSupabase, calculateLocalStats]);

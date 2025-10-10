@@ -180,13 +180,33 @@ const MapCore = ({
     properties.forEach((property) => {
       if (!property.latitude || !property.longitude) return;
 
-      const marker = new window.google.maps.Marker({
-        position: { lat: property.latitude, lng: property.longitude },
-        map: mapInstanceRef.current,
-        title: property.address || 'Property',
-        icon: createMarkerIcon(property),
-        animation: window.google.maps.Animation.DROP,
-      });
+      // Use AdvancedMarkerElement if available (modern API), fallback to Marker
+      let marker;
+      if (window.google.maps.marker?.AdvancedMarkerElement) {
+        // Modern API - AdvancedMarkerElement
+        const pinElement = new window.google.maps.marker.PinElement({
+          background: STATUS_COLORS[property.status] || '#9CA3AF',
+          borderColor: '#FFFFFF',
+          glyphColor: '#FFFFFF',
+          scale: 1.2,
+        });
+
+        marker = new window.google.maps.marker.AdvancedMarkerElement({
+          position: { lat: property.latitude, lng: property.longitude },
+          map: mapInstanceRef.current,
+          title: property.address || 'Property',
+          content: pinElement.element,
+        });
+      } else {
+        // Fallback to legacy Marker for older browsers
+        marker = new window.google.maps.Marker({
+          position: { lat: property.latitude, lng: property.longitude },
+          map: mapInstanceRef.current,
+          title: property.address || 'Property',
+          icon: createMarkerIcon(property),
+          animation: window.google.maps.Animation.DROP,
+        });
+      }
 
       marker.addListener('click', () => {
         if (onPropertyClick) {
@@ -210,21 +230,41 @@ const MapCore = ({
       accuracyCircleRef.current.setMap(null);
     }
 
-    // Create user location marker
-    userMarkerRef.current = new window.google.maps.Marker({
-      position: { lat: userLocation.lat, lng: userLocation.lng },
-      map: mapInstanceRef.current,
-      title: 'Your Location',
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: '#4285F4',
-        fillOpacity: 1,
-        strokeColor: '#FFFFFF',
-        strokeWeight: 3,
-      },
-      zIndex: 10000,
-    });
+    // Create user location marker with modern API if available
+    if (window.google.maps.marker?.AdvancedMarkerElement) {
+      // Modern API - Create custom element for user location
+      const userPin = document.createElement('div');
+      userPin.style.width = '20px';
+      userPin.style.height = '20px';
+      userPin.style.borderRadius = '50%';
+      userPin.style.backgroundColor = '#4285F4';
+      userPin.style.border = '3px solid #FFFFFF';
+      userPin.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+
+      userMarkerRef.current = new window.google.maps.marker.AdvancedMarkerElement({
+        position: { lat: userLocation.lat, lng: userLocation.lng },
+        map: mapInstanceRef.current,
+        title: 'Your Location',
+        content: userPin,
+        zIndex: 10000,
+      });
+    } else {
+      // Fallback to legacy Marker
+      userMarkerRef.current = new window.google.maps.Marker({
+        position: { lat: userLocation.lat, lng: userLocation.lng },
+        map: mapInstanceRef.current,
+        title: 'Your Location',
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#4285F4',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 3,
+        },
+        zIndex: 10000,
+      });
+    }
 
     // Create accuracy circle
     if (userLocation.accuracy) {

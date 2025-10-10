@@ -51,22 +51,37 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     updateInterval: 30000, // 30 seconds
   });
 
-  // Auto-start location tracking on mount
+  // Auto-start location tracking and force to user location with roadmap
+  const hasInitialized = useRef(false);
   useEffect(() => {
-    startTracking();
-    setTrackingEnabled(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const initializeTracking = async () => {
+      if (hasInitialized.current || !mapInstanceRef.current) return;
 
-  // Auto-zoom to user location on first load
-  const hasZoomedToLocation = useRef(false);
-  useEffect(() => {
-    if (location && mapInstanceRef.current && !hasZoomedToLocation.current) {
-      hasZoomedToLocation.current = true;
-      mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
-      mapInstanceRef.current.setZoom(19); // Street-level zoom
-    }
-  }, [location]);
+      hasInitialized.current = true;
+
+      // Start tracking
+      startTracking();
+      setTrackingEnabled(true);
+
+      // Wait a moment for location to be acquired
+      setTimeout(() => {
+        if (location && mapInstanceRef.current) {
+          // Force roadmap view
+          mapInstanceRef.current.setMapTypeId('roadmap');
+          updateMapView({ mapType: 'roadmap' });
+
+          // Pan to user location with street-level zoom
+          mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
+          mapInstanceRef.current.setZoom(19); // Street-level zoom to show house numbers
+
+          console.log('Map initialized successfully');
+        }
+      }, 1000);
+    };
+
+    initializeTracking();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapInstanceRef.current]);
 
   // Initialize map with retry logic
   const initializeMapFunction = async (attempt = 0) => {
@@ -262,9 +277,15 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     });
   }, [leads, properties, addProperty]);
 
-  // Render property markers using AdvancedMarkerElement (or fallback to Marker)
+  // Render property markers using ONLY AdvancedMarkerElement (no deprecated Marker API)
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google) return;
+
+    // Verify AdvancedMarkerElement is available
+    if (!window.google.maps.marker?.AdvancedMarkerElement) {
+      console.error('[Canvassing] AdvancedMarkerElement not available. Please update Google Maps API.');
+      return;
+    }
 
     // Clear existing markers
     markersRef.current.forEach((marker) => {
@@ -276,79 +297,77 @@ const CanvassingView = ({ leads, onMapLoad }) => {
 
     const filteredProperties = getFilteredProperties();
 
-    // Create new markers
+    // Create new markers using AdvancedMarkerElement ONLY
     filteredProperties.forEach((property) => {
       if (!property || !property.latitude || !property.longitude) return;
 
       try {
-        let marker;
+        // Create custom marker content
+        const content = document.createElement('div');
+        content.style.cursor = 'pointer';
+        content.style.position = 'relative';
+        content.style.transition = 'transform 0.2s ease';
 
-        // Use AdvancedMarkerElement if available (Google Maps v3.56+)
-        if (window.google.maps.marker?.AdvancedMarkerElement) {
-          // Create a div element for the custom marker content
-          const content = document.createElement('div');
-          content.style.cursor = 'pointer';
-          content.style.position = 'relative';
-          const iconData = createPropertyMarkerIcon(property);
+        const iconData = createPropertyMarkerIcon(property);
 
-          if (iconData && iconData.url) {
-            // Create image element instead of using innerHTML to avoid SVG injection
-            const img = document.createElement('img');
-            img.src = iconData.url;
-            img.style.width = '36px';
-            img.style.height = '36px';
-            img.style.pointerEvents = 'auto'; // Ensure click events work
-            content.appendChild(img);
-          }
+        if (iconData && iconData.url) {
+          const img = document.createElement('img');
+          img.src = iconData.url;
+          img.style.width = '36px';
+          img.style.height = '36px';
+          img.style.pointerEvents = 'auto';
+          img.title = property.address || 'Property';
 
-          marker = new window.google.maps.marker.AdvancedMarkerElement({
-            map: mapInstanceRef.current,
-            position: { lat: property.latitude, lng: property.longitude },
-            title: property.address || 'Property',
-            content: content,
-            gmpClickable: true, // Enable click events
+          // Add hover effect
+          img.addEventListener('mouseenter', () => {
+            content.style.transform = 'scale(1.15)';
+          });
+          img.addEventListener('mouseleave', () => {
+            content.style.transform = 'scale(1)';
           });
 
-          // Add click listener to the marker itself (preferred method)
-          marker.addListener('click', () => {
-            setSelectedProperty(property);
-            setShowPropertySheet(true);
-          });
-        } else {
-          // Fallback to legacy Marker
-          marker = new window.google.maps.Marker({
-            position: { lat: property.latitude, lng: property.longitude },
-            map: mapInstanceRef.current,
-            title: property.address || 'Property',
-            icon: createPropertyMarkerIcon(property),
-            animation: window.google.maps.Animation.DROP,
-            clickable: true,
-          });
-
-          marker.addListener('click', () => {
-            setSelectedProperty(property);
-            setShowPropertySheet(true);
-          });
+          content.appendChild(img);
         }
 
-        if (marker) {
-          markersRef.current.push(marker);
-        }
+        // Create AdvancedMarkerElement
+        const marker = new window.google.maps.marker.AdvancedMarkerElement({
+          map: mapInstanceRef.current,
+          position: { lat: property.latitude, lng: property.longitude },
+          title: property.address || 'Property',
+          content: content,
+          gmpClickable: true,
+          zIndex: property.priority === 'high' ? 1000 : 100,
+        });
+
+        // Add click listener
+        marker.addListener('click', () => {
+          setSelectedProperty(property);
+          setShowPropertySheet(true);
+          console.log('[Canvassing] Property selected:', property.address);
+        });
+
+        markersRef.current.push(marker);
       } catch (error) {
-        console.error('Error creating marker for property:', property.id, error);
+        console.error('[Canvassing] Error creating marker:', property.id, error);
       }
     });
   }, [properties, propertyFilter, getFilteredProperties]);
 
-  // Current location marker
+  // Current location marker using ONLY AdvancedMarkerElement
   useEffect(() => {
     if (!mapInstanceRef.current || !window.google || !location) return;
 
-    let currentLocationMarker;
+    // Verify AdvancedMarkerElement is available
+    if (!window.google.maps.marker?.AdvancedMarkerElement) {
+      console.error('[Canvassing] AdvancedMarkerElement not available for location marker');
+      return;
+    }
 
-    // Use AdvancedMarkerElement if available, otherwise fallback to Marker
-    if (window.google.maps.marker?.AdvancedMarkerElement) {
-      // Create custom div element for current location
+    let currentLocationMarker;
+    let accuracyCircle;
+
+    try {
+      // Create custom div element for current location with pulsing animation
       const locationDiv = document.createElement('div');
       locationDiv.style.width = '20px';
       locationDiv.style.height = '20px';
@@ -356,58 +375,45 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       locationDiv.style.backgroundColor = '#4285F4';
       locationDiv.style.border = '3px solid #FFFFFF';
       locationDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      locationDiv.style.animation = 'pulse 2s ease-in-out infinite';
 
       currentLocationMarker = new window.google.maps.marker.AdvancedMarkerElement({
         map: mapInstanceRef.current,
         position: { lat: location.lat, lng: location.lng },
         title: 'Your Location',
         content: locationDiv,
-      });
-    } else {
-      // Fallback to legacy Marker
-      currentLocationMarker = new window.google.maps.Marker({
-        position: { lat: location.lat, lng: location.lng },
-        map: mapInstanceRef.current,
-        title: 'Your Location',
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#4285F4',
-          fillOpacity: 1,
-          strokeColor: '#FFFFFF',
-          strokeWeight: 3,
-        },
         zIndex: 10000,
       });
-    }
 
-    // Create accuracy circle
-    const accuracyCircle = new window.google.maps.Circle({
-      map: mapInstanceRef.current,
-      center: { lat: location.lat, lng: location.lng },
-      radius: location.accuracy,
-      fillColor: '#4285F4',
-      fillOpacity: 0.1,
-      strokeColor: '#4285F4',
-      strokeOpacity: 0.3,
-      strokeWeight: 1,
-    });
+      // Create accuracy circle
+      accuracyCircle = new window.google.maps.Circle({
+        map: mapInstanceRef.current,
+        center: { lat: location.lat, lng: location.lng },
+        radius: location.accuracy || 50,
+        fillColor: '#4285F4',
+        fillOpacity: 0.1,
+        strokeColor: '#4285F4',
+        strokeOpacity: 0.3,
+        strokeWeight: 1,
+        clickable: false,
+      });
+    } catch (error) {
+      console.error('[Canvassing] Error creating location marker:', error);
+    }
 
     return () => {
       if (currentLocationMarker) {
-        if (currentLocationMarker.setMap) {
-          try {
-            currentLocationMarker.setMap(null);
-          } catch (e) {
-            console.error('Error clearing location marker:', e);
-          }
+        try {
+          currentLocationMarker.setMap(null);
+        } catch (e) {
+          console.error('[Canvassing] Error clearing location marker:', e);
         }
       }
       if (accuracyCircle) {
         try {
           accuracyCircle.setMap(null);
         } catch (e) {
-          console.error('Error clearing accuracy circle:', e);
+          console.error('[Canvassing] Error clearing accuracy circle:', e);
         }
       }
     };

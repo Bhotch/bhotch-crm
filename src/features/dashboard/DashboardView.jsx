@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { StatCard } from '../../components/StatCard';
 import {
   DollarSign, Users, Target, TrendingUp, Calendar,
   ClipboardList, Calculator, Map,
-  ArrowUpRight, Percent, Clock, CheckCircle
+  ArrowUpRight, Percent, Clock, CheckCircle, RefreshCw
 } from 'lucide-react';
 
-function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
-  const recentLeads = leads.slice(0, 5);
-  const recentJobCounts = jobCounts.slice(0, 3);
+function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab, onRefresh }) {
+  const recentLeads = useMemo(() => leads.slice(0, 5), [leads]);
+  const recentJobCounts = useMemo(() => jobCounts.slice(0, 3), [jobCounts]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -23,12 +24,23 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
     return new Intl.NumberFormat('en-US').format(value);
   };
 
-  // Calculate additional statistics
-  const scheduledLeads = leads.filter(l => l.disposition === 'Scheduled').length;
-  const followUpLeads = leads.filter(l => l.disposition === 'Follow Up').length;
-  const insuranceLeads = leads.filter(l => l.disposition === 'Insurance').length;
-  const closedSold = leads.filter(l => l.disposition === 'Closed Sold').length;
-  const conversionRate = stats.totalLeads > 0 ? ((closedSold / stats.totalLeads) * 100).toFixed(1) : '0.0';
+  // Calculate additional statistics with useMemo for performance
+  const dispositionStats = useMemo(() => {
+    const scheduledLeads = leads.filter(l => l.disposition === 'Scheduled').length;
+    const followUpLeads = leads.filter(l => l.disposition === 'Follow Up').length;
+    const insuranceLeads = leads.filter(l => l.disposition === 'Insurance').length;
+    const closedSold = leads.filter(l => l.disposition === 'Closed Sold').length;
+    const newLeads = leads.filter(l => l.disposition === 'New').length;
+    const conversionRate = stats.totalLeads > 0 ? ((closedSold / stats.totalLeads) * 100).toFixed(1) : '0.0';
+
+    return { scheduledLeads, followUpLeads, insuranceLeads, closedSold, newLeads, conversionRate };
+  }, [leads, stats.totalLeads]);
+
+  const handleRefresh = useCallback(() => {
+    if (onRefresh) {
+      onRefresh();
+    }
+  }, [onRefresh]);
 
   return (
     <div className="space-y-6">
@@ -38,8 +50,20 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
           <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
           <p className="text-base text-gray-600 mt-1">Comprehensive overview of your roofing business</p>
         </div>
-        <div className="text-sm text-gray-500">
-          Last updated: {new Date().toLocaleString()}
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-500">
+            Last updated: {new Date().toLocaleString()}
+          </div>
+          {onRefresh && (
+            <button
+              onClick={handleRefresh}
+              className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              title="Refresh dashboard data"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </button>
+          )}
         </div>
       </div>
 
@@ -73,41 +97,41 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
 
       {/* Secondary Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500 transition-transform hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Scheduled</p>
-              <p className="text-2xl font-bold text-gray-900">{scheduledLeads}</p>
+              <p className="text-sm text-gray-600 font-medium">Scheduled</p>
+              <p className="text-2xl font-bold text-gray-900">{dispositionStats.scheduledLeads}</p>
             </div>
             <Calendar className="w-8 h-8 text-blue-500 opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500 transition-transform hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Follow Up</p>
-              <p className="text-2xl font-bold text-gray-900">{followUpLeads}</p>
+              <p className="text-sm text-gray-600 font-medium">Follow Up</p>
+              <p className="text-2xl font-bold text-gray-900">{dispositionStats.followUpLeads}</p>
             </div>
             <Clock className="w-8 h-8 text-yellow-500 opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-indigo-500">
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-indigo-500 transition-transform hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Insurance</p>
-              <p className="text-2xl font-bold text-gray-900">{insuranceLeads}</p>
+              <p className="text-sm text-gray-600 font-medium">Insurance</p>
+              <p className="text-2xl font-bold text-gray-900">{dispositionStats.insuranceLeads}</p>
             </div>
             <ClipboardList className="w-8 h-8 text-indigo-500 opacity-50" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-emerald-500">
+        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-emerald-500 transition-transform hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Conversion</p>
-              <p className="text-2xl font-bold text-gray-900">{conversionRate}%</p>
+              <p className="text-sm text-gray-600 font-medium">Conversion</p>
+              <p className="text-2xl font-bold text-gray-900">{dispositionStats.conversionRate}%</p>
             </div>
             <Percent className="w-8 h-8 text-emerald-500 opacity-50" />
           </div>
@@ -116,7 +140,7 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
 
       {/* Job Count Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white cursor-pointer transition-all hover:shadow-xl hover:scale-105">
           <div className="flex items-center justify-between mb-2">
             <Calculator className="w-10 h-10 opacity-80" />
             <ArrowUpRight className="w-6 h-6" />
@@ -125,7 +149,7 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
           <p className="text-4xl font-bold mt-1">{stats.totalJobCounts}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white cursor-pointer transition-all hover:shadow-xl hover:scale-105">
           <div className="flex items-center justify-between mb-2">
             <Target className="w-10 h-10 opacity-80" />
             <ArrowUpRight className="w-6 h-6" />
@@ -134,13 +158,13 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
           <p className="text-4xl font-bold mt-1">{formatNumber(stats.totalSqFt)}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white cursor-pointer transition-all hover:shadow-xl hover:scale-105">
           <div className="flex items-center justify-between mb-2">
             <CheckCircle className="w-10 h-10 opacity-80" />
             <ArrowUpRight className="w-6 h-6" />
           </div>
           <p className="text-sm opacity-90">Closed Deals</p>
-          <p className="text-4xl font-bold mt-1">{closedSold}</p>
+          <p className="text-4xl font-bold mt-1">{dispositionStats.closedSold}</p>
         </div>
       </div>
 
@@ -193,7 +217,17 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
             </button>
           </div>
           {recentLeads.length === 0 ? (
-            <p className="text-sm text-gray-500">No leads yet. Add your first lead to get started!</p>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Users className="w-12 h-12 text-gray-300 mb-3" />
+              <p className="text-sm text-gray-500 font-medium">No leads yet</p>
+              <p className="text-xs text-gray-400 mt-1">Add your first lead to get started!</p>
+              <button
+                onClick={() => onNavigateToTab('leads')}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Lead
+              </button>
+            </div>
           ) : (
             <div className="space-y-3">
               {recentLeads.map((lead, index) => (
@@ -235,7 +269,17 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
             </button>
           </div>
           {recentJobCounts.length === 0 ? (
-            <p className="text-sm text-gray-500">No job counts yet. Add your first job count!</p>
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Calculator className="w-12 h-12 text-gray-300 mb-3" />
+              <p className="text-sm text-gray-500 font-medium">No job counts yet</p>
+              <p className="text-xs text-gray-400 mt-1">Add your first job count!</p>
+              <button
+                onClick={() => onNavigateToTab('jobcount')}
+                className="mt-4 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Add Job Count
+              </button>
+            </div>
           ) : (
             <div className="space-y-3">
               {recentJobCounts.map((job, index) => (
@@ -264,34 +308,54 @@ function DashboardView({ stats, leads, jobCounts = [], onNavigateToTab }) {
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales Pipeline</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{leads.filter(l => l.disposition === 'New').length}</div>
-            <div className="text-sm text-gray-600 mt-1">New</div>
+          <div className="text-center p-3 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="text-2xl font-bold text-gray-900">{dispositionStats.newLeads}</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">New</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{scheduledLeads}</div>
-            <div className="text-sm text-gray-600 mt-1">Scheduled</div>
+          <div className="text-center p-3 rounded-lg hover:bg-blue-50 transition-colors">
+            <div className="text-2xl font-bold text-blue-600">{dispositionStats.scheduledLeads}</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">Scheduled</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">{insuranceLeads}</div>
-            <div className="text-sm text-gray-600 mt-1">Insurance</div>
+          <div className="text-center p-3 rounded-lg hover:bg-indigo-50 transition-colors">
+            <div className="text-2xl font-bold text-indigo-600">{dispositionStats.insuranceLeads}</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">Insurance</div>
           </div>
-          <div className="text-center">
+          <div className="text-center p-3 rounded-lg hover:bg-purple-50 transition-colors">
             <div className="text-2xl font-bold text-purple-600">{stats.quotedLeads}</div>
-            <div className="text-sm text-gray-600 mt-1">Quoted</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">Quoted</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{followUpLeads}</div>
-            <div className="text-sm text-gray-600 mt-1">Follow Up</div>
+          <div className="text-center p-3 rounded-lg hover:bg-yellow-50 transition-colors">
+            <div className="text-2xl font-bold text-yellow-600">{dispositionStats.followUpLeads}</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">Follow Up</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{closedSold}</div>
-            <div className="text-sm text-gray-600 mt-1">Closed Sold</div>
+          <div className="text-center p-3 rounded-lg hover:bg-green-50 transition-colors">
+            <div className="text-2xl font-bold text-green-600">{dispositionStats.closedSold}</div>
+            <div className="text-sm text-gray-600 mt-1 font-medium">Closed Sold</div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+DashboardView.propTypes = {
+  stats: PropTypes.shape({
+    totalLeads: PropTypes.number,
+    hotLeads: PropTypes.number,
+    quotedLeads: PropTypes.number,
+    totalQuoteValue: PropTypes.number,
+    totalJobCounts: PropTypes.number,
+    totalSqFt: PropTypes.number
+  }).isRequired,
+  leads: PropTypes.arrayOf(PropTypes.object).isRequired,
+  jobCounts: PropTypes.arrayOf(PropTypes.object),
+  onNavigateToTab: PropTypes.func.isRequired,
+  onRefresh: PropTypes.func
+};
+
+DashboardView.defaultProps = {
+  jobCounts: [],
+  onRefresh: null
+};
 
 export default DashboardView;

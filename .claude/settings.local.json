@@ -50,7 +50,8 @@
       "Bash(pwsh:*)",
       "Bash(where:*)",
       "Bash(choco install:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Read(//c/Users/PC_User/Pictures/**)"
     ],
     "deny": [],
     "ask": []

@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom scrollbar styling for better UX */
+@layer utilities {
+  /* Sticky scrollbar at bottom of screen */
+  .sticky-scrollbar-container {
+    position: relative;
+    max-height: calc(100vh - 320px);
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  /* Better scrollbar visibility */
+  .sticky-scrollbar-container::-webkit-scrollbar {
+    height: 12px;
+    width: 12px;
+  }
+
+  .sticky-scrollbar-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 6px;
+  }
+
+  .sticky-scrollbar-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 6px;
+  }
+
+  .sticky-scrollbar-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  /* Performance optimizations - reduce reflow/repaint */
+  .optimized-table-row {
+    will-change: background-color, transform;
+    backface-visibility: hidden;
+  }
+
+  /* Smooth animations */
+  @keyframes fade-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-fade-in-right {
+    animation: fade-in-right 0.3s ease-out;
+  }
+}

@@ -191,25 +191,30 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
         setHasUnsavedChanges(false);
     };
 
-    const FormField = ({ label, field, type = 'number', step = '0.01', helpText }) => (
+    const FormField = ({ label, field, type = 'number', step = '0.01', helpText, placeholder }) => (
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor={field} className="block text-sm font-medium text-gray-700 mb-1">
                 {label}
                 {helpText && <span className="text-gray-500 text-xs ml-1">({helpText})</span>}
             </label>
             <input
+                id={field}
+                name={field}
                 type={type}
                 value={formData[field] || ''}
                 onChange={(e) => handleFieldChange(field, e.target.value)}
                 step={step}
+                placeholder={placeholder}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
         </div>
     );
 
     const CheckboxField = ({ label, field }) => (
-        <label className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+        <label htmlFor={field} className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
             <input
+                id={field}
+                name={field}
                 type="checkbox"
                 checked={formData[field] || false}
                 onChange={(e) => handleFieldChange(field, e.target.checked)}
@@ -243,16 +248,20 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                         Select Customer
                     </label>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
                         <input
+                            id="customer-search"
+                            name="customer-search"
                             type="text"
                             placeholder="Search customers..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2"
+                            aria-label="Search customers"
                         />
                     </div>
                     <select
+                        id="customer-select"
                         value={selectedCustomerId}
                         onChange={(e) => handleCustomerSelect(e.target.value)}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
@@ -261,8 +270,6 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                         {filteredLeads.map(lead => (
                             <option key={lead.id} value={lead.id}>
                                 {lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim()}
-                                {lead.phoneNumber ? ` - ${lead.phoneNumber}` : ''}
-                                {lead.address ? ` - ${lead.address}` : ''}
                             </option>
                         ))}
                     </select>
@@ -277,17 +284,78 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                         <button
                             onClick={() => setIsAddingNew(false)}
                             className="text-gray-400 hover:text-gray-600"
+                            aria-label="Close new customer form"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField label="First Name" field="firstName" type="text" />
-                        <FormField label="Last Name" field="lastName" type="text" />
-                        <FormField label="Phone Number" field="phoneNumber" type="tel" />
-                        <FormField label="Email" field="email" type="email" />
-                        <div className="md:col-span-2">
-                            <FormField label="Address" field="address" type="text" />
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                                    First Name
+                                </label>
+                                <input
+                                    id="firstName"
+                                    type="text"
+                                    value={formData.firstName || ''}
+                                    onChange={(e) => handleFieldChange('firstName', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="John"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Last Name
+                                </label>
+                                <input
+                                    id="lastName"
+                                    type="text"
+                                    value={formData.lastName || ''}
+                                    onChange={(e) => handleFieldChange('lastName', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Doe"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Phone Number
+                                </label>
+                                <input
+                                    id="phoneNumber"
+                                    type="tel"
+                                    value={formData.phoneNumber || ''}
+                                    onChange={(e) => handleFieldChange('phoneNumber', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="(555) 123-4567"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={formData.email || ''}
+                                    onChange={(e) => handleFieldChange('email', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="john@example.com"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                                Address
+                            </label>
+                            <input
+                                id="address"
+                                type="text"
+                                value={formData.address || ''}
+                                onChange={(e) => handleFieldChange('address', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="123 Main St, City, State 12345"
+                            />
                         </div>
                     </div>
                 </div>
@@ -382,10 +450,12 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                                 <FormField label="Quote Amount ($)" field="quoteAmount" />
                             </div>
                             <div className="mt-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label htmlFor="quoteNotes" className="block text-sm font-medium text-gray-700 mb-1">
                                     Quote Notes
                                 </label>
                                 <textarea
+                                    id="quoteNotes"
+                                    name="quoteNotes"
                                     value={formData.quoteNotes || ''}
                                     onChange={(e) => handleFieldChange('quoteNotes', e.target.value)}
                                     rows={3}

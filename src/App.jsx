@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Home, ClipboardList, Map, Calendar, Calculator, XCircle, DollarSign, Loader2, CheckCircle, AlertCircle, Clock, MessageCircle, Eye, Target } from 'lucide-react';
 
 // Import hooks
@@ -16,12 +16,11 @@ import MapView from './features/map/MapView';
 import InternalCalendar from './features/calendar/InternalCalendar';
 import CommunicationsView from './features/communications/CommunicationsView';
 import DesignerView from './features/visualization360/DesignerView';
-import CanvassingViewRebuild from './features/canvassing/CanvassingViewRebuild';
+import CanvassingView from './features/canvassing/CanvassingView';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
 import JobCountFormModal from './features/jobcount/JobCountFormModal';
 import JobCountDetailModal from './features/jobcount/JobCountDetailModal';
-import ConnectionStatus from './components/ConnectionStatus';
 import ConfigErrorDisplay from './components/ConfigErrorDisplay';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -52,6 +51,17 @@ function CrmApplication({ onLogout }) {
     totalJobCounts: jobCounts.length,
     totalSqFt: jobCounts.reduce((sum, job) => sum + (parseFloat(job.sqFt) || 0), 0)
   }), [leads, jobCounts]);
+
+  // Sync selected detail lead with leads array changes
+  useEffect(() => {
+    if (selectedDetailLead && selectedDetailLead.id) {
+      const updatedLead = leads.find(l => l.id === selectedDetailLead.id);
+      if (updatedLead && JSON.stringify(updatedLead) !== JSON.stringify(selectedDetailLead)) {
+        setSelectedDetailLead(updatedLead);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads]);
 
   // Lead handlers
   const handleAddSubmit = async (leadData) => {
@@ -209,15 +219,13 @@ function CrmApplication({ onLogout }) {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {currentView === 'dashboard' && (
-          <>
-            <ConnectionStatus />
-            <DashboardView
-              stats={dashboardStats}
-              leads={leads}
-              jobCounts={jobCounts}
-              onNavigateToTab={handleNavigateToTab}
-            />
-          </>
+          <DashboardView
+            stats={dashboardStats}
+            leads={leads}
+            jobCounts={jobCounts}
+            onNavigateToTab={handleNavigateToTab}
+            onRefresh={refreshLeads}
+          />
         )}
         {currentView === 'leads' && (
           <LeadsView
@@ -264,7 +272,7 @@ function CrmApplication({ onLogout }) {
         )}
         {currentView === 'canvassing' && (
           <div style={{ height: 'calc(100vh - 120px)' }}>
-            <CanvassingViewRebuild leads={leads} />
+            <CanvassingView leads={leads} />
           </div>
         )}
       </main>

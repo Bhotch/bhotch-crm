@@ -213,7 +213,7 @@ function JobCountFormModal({ initialData, onSubmit, onCancel, isEdit = false, le
                                     <option value="">-- Select a Lead or Add New Customer --</option>
                                     {leads.map(lead => (
                                         <option key={lead.id} value={lead.id}>
-                                            {lead.customerName || 'Unnamed'} - {lead.phoneNumber || 'No Phone'} - {lead.address || 'No Address'}
+                                            {lead.customerName || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Customer'}
                                         </option>
                                     ))}
                                 </SelectInput>

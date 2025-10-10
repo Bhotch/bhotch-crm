@@ -4,13 +4,13 @@ import { useCanvassingStore } from '../store/canvassingStore';
 /**
  * Custom hook for real-time geolocation tracking
  * Optimized for mobile devices with battery-saving features
+ * PERFORMANCE OPTIMIZED: Uses native watchPosition instead of setInterval
  */
 export const useGeoLocation = (options = {}) => {
   const {
     enableHighAccuracy = true,
     timeout = 10000,
     maximumAge = 30000, // 30 seconds cache
-    // updateInterval = 30000, // Update every 30 seconds - Reserved for future use
     distanceFilter = 10, // Minimum distance in meters before update
   } = options;
 
@@ -40,6 +40,7 @@ export const useGeoLocation = (options = {}) => {
 
   /**
    * Handle successful position update
+   * OPTIMIZED: Throttled to prevent excessive re-renders
    */
   const handleSuccess = useCallback((position) => {
     const newLocation = {
@@ -71,10 +72,13 @@ export const useGeoLocation = (options = {}) => {
       }
     }
 
-    lastPositionRef.current = newLocation;
-    setLocation(newLocation);
-    setCurrentLocation(newLocation);
-    setError(null);
+    // Use requestAnimationFrame to batch updates and prevent performance warnings
+    requestAnimationFrame(() => {
+      lastPositionRef.current = newLocation;
+      setLocation(newLocation);
+      setCurrentLocation(newLocation);
+      setError(null);
+    });
   }, [distanceFilter, setCurrentLocation]);
 
   /**

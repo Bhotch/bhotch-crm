@@ -17,9 +17,7 @@ export function useLeads(addNotification) {
         const data = await leadsService.getAll();
 
         const processedLeads = data.map(lead => ({
-          // Keep original snake_case fields
-          ...lead,
-          // Map to camelCase for frontend compatibility
+          // Only use camelCase for frontend - NO duplicate snake_case fields
           id: lead.id,
           customerName: lead.customer_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown',
           firstName: lead.first_name,
@@ -44,15 +42,14 @@ export function useLeads(addNotification) {
           // Ventilation
           ridgeVents: lead.ridge_vents,
           turbineVents: lead.turbine_vents,
-          turbine: lead.turbine_vents, // alias
           rimeFlow: lead.rime_flow,
           // Pipes
           pipes12: lead.pipes_12,
           pipes34: lead.pipes_34,
-          pipes1Half: lead.pipes_12, // alias
-          pipes2: lead.pipes_12, // alias (assuming pipes_12 covers both)
-          pipes3: lead.pipes_34, // alias
-          pipes4: lead.pipes_34, // alias (assuming pipes_34 covers both)
+          pipe1Half: lead.pipe_1_5_inch,
+          pipe2: lead.pipe_2_inch,
+          pipe3: lead.pipe_3_inch,
+          pipe4: lead.pipe_4_inch,
           // Features
           gables: lead.gables,
           turtleBacks: lead.turtle_backs,
@@ -61,8 +58,7 @@ export function useLeads(addNotification) {
           solar: lead.solar,
           swampCooler: lead.swamp_cooler,
           // Gutters
-          guttersLf: lead.gutter_lf,
-          gutterLf: lead.gutter_lf, // alias
+          gutterLf: lead.gutter_lf,
           downspouts: lead.downspouts,
           gutterGuardLf: lead.gutter_guard_lf,
           // Financial
@@ -72,8 +68,8 @@ export function useLeads(addNotification) {
           // Additional
           permanentLighting: lead.permanent_lighting,
           notes: lead.notes,
+          lastContactDate: lead.last_contact_date,
           // Timestamps
-          createdDate: lead.created_at,
           createdAt: lead.created_at,
           updatedAt: lead.updated_at,
           deletedAt: lead.deleted_at
@@ -111,17 +107,20 @@ export function useLeads(addNotification) {
     // Set up real-time subscription if using Supabase
     if (useSupabase) {
       const mapLeadFromSupabase = (lead) => ({
-        ...lead,
+        id: lead.id,
         customerName: lead.customer_name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unknown',
         firstName: lead.first_name,
         lastName: lead.last_name,
         phoneNumber: lead.phone_number,
         email: lead.email,
         address: lead.address,
+        latitude: lead.latitude,
+        longitude: lead.longitude,
         dateAdded: lead.date_added,
         quality: lead.quality,
         disposition: lead.disposition,
         leadSource: lead.lead_source,
+        status: lead.status,
         roofAge: lead.roof_age,
         roofType: lead.roof_type,
         sqFt: lead.sqft,
@@ -130,17 +129,19 @@ export function useLeads(addNotification) {
         eavesLf: lead.eaves_lf,
         ridgeVents: lead.ridge_vents,
         turbineVents: lead.turbine_vents,
-        turbine: lead.turbine_vents,
         rimeFlow: lead.rime_flow,
         pipes12: lead.pipes_12,
         pipes34: lead.pipes_34,
+        pipe1Half: lead.pipe_1_5_inch,
+        pipe2: lead.pipe_2_inch,
+        pipe3: lead.pipe_3_inch,
+        pipe4: lead.pipe_4_inch,
         gables: lead.gables,
         turtleBacks: lead.turtle_backs,
         satellite: lead.satellite,
         chimney: lead.chimney,
         solar: lead.solar,
         swampCooler: lead.swamp_cooler,
-        guttersLf: lead.gutter_lf,
         gutterLf: lead.gutter_lf,
         downspouts: lead.downspouts,
         gutterGuardLf: lead.gutter_guard_lf,
@@ -149,14 +150,13 @@ export function useLeads(addNotification) {
         quoteNotes: lead.quote_notes,
         permanentLighting: lead.permanent_lighting,
         notes: lead.notes,
-        createdDate: lead.created_at,
+        lastContactDate: lead.last_contact_date,
         createdAt: lead.created_at,
-        updatedAt: lead.updated_at
+        updatedAt: lead.updated_at,
+        deletedAt: lead.deleted_at
       });
 
       const subscription = leadsService.subscribeToChanges((payload) => {
-        console.log('Lead changed:', payload);
-
         if (payload.eventType === 'INSERT') {
           setLeads(prev => [mapLeadFromSupabase(payload.new), ...prev]);
         } else if (payload.eventType === 'UPDATE') {
@@ -196,6 +196,8 @@ export function useLeads(addNotification) {
           phone_number: leadData.phoneNumber,
           email: leadData.email || null,
           address: leadData.address || null,
+          latitude: leadData.latitude || null,
+          longitude: leadData.longitude || null,
           quality: leadData.quality,
           disposition: leadData.disposition,
           lead_source: leadData.leadSource || null,
@@ -226,8 +228,62 @@ export function useLeads(addNotification) {
           quote_amount: parseNumeric(leadData.quoteAmount),
           quote_notes: leadData.quoteNotes || null
         });
-        addNotification(`Lead added: ${newLead.customer_name}`, 'success');
-        return { success: true, lead: { ...newLead, customerName: newLead.customer_name } };
+
+        // Map to camelCase for frontend
+        const mappedLead = {
+          id: newLead.id,
+          customerName: newLead.customer_name || `${newLead.first_name || ''} ${newLead.last_name || ''}`.trim() || 'Unknown',
+          firstName: newLead.first_name,
+          lastName: newLead.last_name,
+          phoneNumber: newLead.phone_number,
+          email: newLead.email,
+          address: newLead.address,
+          latitude: newLead.latitude,
+          longitude: newLead.longitude,
+          dateAdded: newLead.date_added,
+          quality: newLead.quality,
+          disposition: newLead.disposition,
+          leadSource: newLead.lead_source,
+          status: newLead.status,
+          roofAge: newLead.roof_age,
+          roofType: newLead.roof_type,
+          sqFt: newLead.sqft,
+          ridgeLf: newLead.ridge_lf,
+          valleyLf: newLead.valley_lf,
+          eavesLf: newLead.eaves_lf,
+          ridgeVents: newLead.ridge_vents,
+          turbineVents: newLead.turbine_vents,
+          rimeFlow: newLead.rime_flow,
+          pipes12: newLead.pipes_12,
+          pipes34: newLead.pipes_34,
+          pipe1Half: newLead.pipe_1_5_inch,
+          pipe2: newLead.pipe_2_inch,
+          pipe3: newLead.pipe_3_inch,
+          pipe4: newLead.pipe_4_inch,
+          gables: newLead.gables,
+          turtleBacks: newLead.turtle_backs,
+          satellite: newLead.satellite,
+          chimney: newLead.chimney,
+          solar: newLead.solar,
+          swampCooler: newLead.swamp_cooler,
+          gutterLf: newLead.gutter_lf,
+          downspouts: newLead.downspouts,
+          gutterGuardLf: newLead.gutter_guard_lf,
+          dabellaQuote: newLead.dabella_quote,
+          quoteAmount: newLead.quote_amount,
+          quoteNotes: newLead.quote_notes,
+          permanentLighting: newLead.permanent_lighting,
+          notes: newLead.notes,
+          lastContactDate: newLead.last_contact_date,
+          createdAt: newLead.created_at,
+          updatedAt: newLead.updated_at,
+          deletedAt: newLead.deleted_at
+        };
+
+        // Immediately update local state to show the new lead in the UI
+        setLeads(prev => [mappedLead, ...prev]);
+        addNotification(`Lead added: ${mappedLead.customerName}`, 'success');
+        return { success: true, lead: mappedLead };
       } else {
         const response = await googleSheetsService.addLead(leadData);
         if (response.success && response.lead) {
@@ -266,8 +322,11 @@ export function useLeads(addNotification) {
           phone_number: updatedLead.phoneNumber,
           email: updatedLead.email || null,
           address: updatedLead.address || null,
+          latitude: updatedLead.latitude || null,
+          longitude: updatedLead.longitude || null,
           quality: updatedLead.quality,
           disposition: updatedLead.disposition,
+          lead_source: updatedLead.leadSource || null,
           roof_age: parseInt(updatedLead.roofAge),
           roof_type: updatedLead.roofType || null,
           dabella_quote: parseNumeric(updatedLead.dabellaQuote),
@@ -295,8 +354,62 @@ export function useLeads(addNotification) {
           quote_amount: parseNumeric(updatedLead.quoteAmount),
           quote_notes: updatedLead.quoteNotes || null
         });
-        addNotification(`Lead updated: ${updated.customer_name}`, 'info');
-        return { success: true, lead: { ...updated, customerName: updated.customer_name } };
+
+        // Map to camelCase for frontend
+        const mappedLead = {
+          id: updated.id,
+          customerName: updated.customer_name || `${updated.first_name || ''} ${updated.last_name || ''}`.trim() || 'Unknown',
+          firstName: updated.first_name,
+          lastName: updated.last_name,
+          phoneNumber: updated.phone_number,
+          email: updated.email,
+          address: updated.address,
+          latitude: updated.latitude,
+          longitude: updated.longitude,
+          dateAdded: updated.date_added,
+          quality: updated.quality,
+          disposition: updated.disposition,
+          leadSource: updated.lead_source,
+          status: updated.status,
+          roofAge: updated.roof_age,
+          roofType: updated.roof_type,
+          sqFt: updated.sqft,
+          ridgeLf: updated.ridge_lf,
+          valleyLf: updated.valley_lf,
+          eavesLf: updated.eaves_lf,
+          ridgeVents: updated.ridge_vents,
+          turbineVents: updated.turbine_vents,
+          rimeFlow: updated.rime_flow,
+          pipes12: updated.pipes_12,
+          pipes34: updated.pipes_34,
+          pipe1Half: updated.pipe_1_5_inch,
+          pipe2: updated.pipe_2_inch,
+          pipe3: updated.pipe_3_inch,
+          pipe4: updated.pipe_4_inch,
+          gables: updated.gables,
+          turtleBacks: updated.turtle_backs,
+          satellite: updated.satellite,
+          chimney: updated.chimney,
+          solar: updated.solar,
+          swampCooler: updated.swamp_cooler,
+          gutterLf: updated.gutter_lf,
+          downspouts: updated.downspouts,
+          gutterGuardLf: updated.gutter_guard_lf,
+          dabellaQuote: updated.dabella_quote,
+          quoteAmount: updated.quote_amount,
+          quoteNotes: updated.quote_notes,
+          permanentLighting: updated.permanent_lighting,
+          notes: updated.notes,
+          lastContactDate: updated.last_contact_date,
+          createdAt: updated.created_at,
+          updatedAt: updated.updated_at,
+          deletedAt: updated.deleted_at
+        };
+
+        // Immediately update local state to show the updated lead in the UI
+        setLeads(prev => prev.map(l => (l.id === mappedLead.id ? mappedLead : l)));
+        addNotification(`Lead updated: ${mappedLead.customerName}`, 'info');
+        return { success: true, lead: mappedLead };
       } else {
         const response = await googleSheetsService.updateLead(updatedLead);
         if (response.success && response.lead) {

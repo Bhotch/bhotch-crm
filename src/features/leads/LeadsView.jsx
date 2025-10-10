@@ -11,15 +11,6 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
     const [itemsPerPage, setItemsPerPage] = useState(25);
     const [showColumnSettings, setShowColumnSettings] = useState(false);
 
-    // Debug: Log first lead to see data structure
-    React.useEffect(() => {
-        if (leads && leads.length > 0) {
-            console.log('==== LEAD DATA SAMPLE ====');
-            console.log('First lead object:', leads[0]);
-            console.log('Lead keys:', Object.keys(leads[0]));
-            console.log('Total leads:', leads.length);
-        }
-    }, [leads]);
 
     // Default column visibility settings
     const defaultVisibleColumns = {
