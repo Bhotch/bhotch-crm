@@ -260,10 +260,12 @@ const CanvassingViewRebuild = ({ leads }) => {
         <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">
+              <label htmlFor="filter-status" className="block text-xs font-semibold text-gray-700 uppercase mb-2">
                 Status
               </label>
               <select
+                id="filter-status"
+                name="status_filter"
                 value={propertyFilter.status}
                 onChange={(e) => setPropertyFilter({ status: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
@@ -281,10 +283,12 @@ const CanvassingViewRebuild = ({ leads }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">
+              <label htmlFor="filter-quality" className="block text-xs font-semibold text-gray-700 uppercase mb-2">
                 Quality
               </label>
               <select
+                id="filter-quality"
+                name="quality_filter"
                 value={propertyFilter.quality}
                 onChange={(e) => setPropertyFilter({ quality: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
@@ -297,10 +301,10 @@ const CanvassingViewRebuild = ({ leads }) => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">
+              <label htmlFor="filter-date-range" className="block text-xs font-semibold text-gray-700 uppercase mb-2">
                 Date Range
               </label>
-              <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+              <select id="filter-date-range" name="date_range_filter" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                 <option>Today</option>
                 <option>This Week</option>
                 <option>This Month</option>

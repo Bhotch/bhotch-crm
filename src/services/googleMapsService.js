@@ -5,7 +5,7 @@ let loadingPromise = null;
 
 export const loadGoogleMaps = () => {
   // If already loaded, return immediately
-  if (googleMapsLoaded && window.google?.maps) {
+  if (googleMapsLoaded && window.google?.maps?.Map) {
     return Promise.resolve(window.google);
   }
 
@@ -21,7 +21,7 @@ export const loadGoogleMaps = () => {
     }
 
     // Double check if loaded while we were waiting
-    if (window.google?.maps) {
+    if (window.google?.maps?.Map) {
       googleMapsLoaded = true;
       loadingPromise = null;
       return resolve(window.google);
@@ -42,9 +42,22 @@ export const loadGoogleMaps = () => {
 
     const handleSuccess = () => {
       clearTimeout(timeoutId);
-      googleMapsLoaded = true;
-      loadingPromise = null;
-      resolve(window.google);
+
+      // Wait for google.maps.Map to be available (not just window.google)
+      const checkMapsReady = () => {
+        if (window.google?.maps?.Map) {
+          googleMapsLoaded = true;
+          loadingPromise = null;
+          resolve(window.google);
+        } else if (window.google) {
+          // Maps library is loading, wait a bit longer
+          setTimeout(checkMapsReady, 50);
+        } else {
+          handleFailure(new Error('Google Maps loaded but Maps API not available'));
+        }
+      };
+
+      checkMapsReady();
     };
 
     const handleFailure = (error) => {
@@ -59,7 +72,7 @@ export const loadGoogleMaps = () => {
 
     if (existingScript) {
       // Script is already in DOM, wait for it to load
-      if (window.google?.maps) {
+      if (window.google?.maps?.Map) {
         handleSuccess();
       } else {
         existingScript.addEventListener('load', handleSuccess, { once: true });
