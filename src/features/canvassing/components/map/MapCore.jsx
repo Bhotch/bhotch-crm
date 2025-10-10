@@ -63,9 +63,6 @@ const MapCore = ({
 
     const initMap = async () => {
       try {
-        // Wait for DOM to be fully ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-
         if (!mounted) return;
 
         if (!mapRef.current) {
@@ -74,7 +71,7 @@ const MapCore = ({
             console.warn(`Map container not ready, retry ${retryCount}/${maxRetries}...`);
             setTimeout(() => {
               if (mounted) initMap();
-            }, 300 * retryCount); // Exponential backoff
+            }, 200 * retryCount); // Exponential backoff: 200ms, 400ms, 600ms...
             return;
           } else {
             throw new Error('Map container not found after multiple retries');
@@ -295,39 +292,37 @@ const MapCore = ({
     }
   }, [userLocation]);
 
-  if (loading) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-3" />
-          <p className="text-gray-600">Loading Map...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center bg-red-50">
-        <div className="text-center max-w-md px-4">
-          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-red-800 mb-2">Map Error</h3>
-          <p className="text-red-600 text-sm mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Reload Page
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative w-full h-full">
-      {/* Map Container */}
+      {/* Map Container - Always rendered so ref is available */}
       <div ref={mapRef} className="w-full h-full" />
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-50">
+          <div className="text-center">
+            <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-3" />
+            <p className="text-gray-600">Loading Map...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Overlay */}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-50">
+          <div className="text-center max-w-md px-4">
+            <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Map Error</h3>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating Controls */}
       <div className="absolute top-4 right-4 flex flex-col gap-2">
