@@ -1,22 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import House360Viewer from './components/Viewer/House360Viewer';
+import House3DModel from './components/Viewer/House3DModel';
 import ControlPanel from './components/UI/ControlPanel';
 import ProductPanel from './components/UI/ProductPanel';
 import { useVisualizationStore } from './store/visualizationStore';
-import { Loader2, Eye } from 'lucide-react';
+import { Loader2, Eye, Box, Maximize2 } from 'lucide-react';
 
 /**
  * Main Visualization 360 Component
  * Advanced AI-powered house visualization and product design tool
  */
 export default function Visualization360() {
-  const { ui, toggleControls } = useVisualizationStore();
+  const { ui, toggleControls, model3D } = useVisualizationStore();
+  const [viewMode, setViewMode] = useState('360'); // '360' or '3d'
 
   return (
     <div className="visualization-360 h-full w-full relative bg-gray-900">
-      {/* Main 3D Viewer */}
+      {/* Main Viewer - Toggle between 360 and 3D */}
       <div className="absolute inset-0">
-        <House360Viewer />
+        {viewMode === '360' ? (
+          <House360Viewer />
+        ) : (
+          <House3DModel modelData={model3D.data} showEnvironment={true} />
+        )}
       </div>
 
       {/* Control Panel - Left Side */}
@@ -33,15 +39,48 @@ export default function Visualization360() {
         </div>
       )}
 
-      {/* Toggle Controls Button */}
-      <button
-        onClick={toggleControls}
-        className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded-full shadow-lg font-medium text-sm transition-colors flex items-center gap-2"
-        title={ui.showControls ? 'Hide Controls' : 'Show Controls'}
-      >
-        <Eye className="w-4 h-4" />
-        {ui.showControls ? 'Hide Controls' : 'Show Controls'}
-      </button>
+      {/* View Mode Toggle & Controls */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-2">
+        {/* 360 vs 3D Toggle */}
+        {model3D.isGenerated && (
+          <div className="bg-white rounded-full shadow-lg p-1 flex">
+            <button
+              onClick={() => setViewMode('360')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+                viewMode === '360'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              title="360° Panorama View"
+            >
+              <Maximize2 className="w-4 h-4" />
+              360° View
+            </button>
+            <button
+              onClick={() => setViewMode('3d')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+                viewMode === '3d'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+              title="3D Model View"
+            >
+              <Box className="w-4 h-4" />
+              3D Model
+            </button>
+          </div>
+        )}
+
+        {/* Toggle Controls Button */}
+        <button
+          onClick={toggleControls}
+          className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded-full shadow-lg font-medium text-sm transition-colors flex items-center gap-2"
+          title={ui.showControls ? 'Hide Controls' : 'Show Controls'}
+        >
+          <Eye className="w-4 h-4" />
+          {ui.showControls ? 'Hide' : 'Show'}
+        </button>
+      </div>
 
       {/* Loading Overlay */}
       {ui.isLoading && (

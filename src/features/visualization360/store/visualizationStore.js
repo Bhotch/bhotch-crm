@@ -13,6 +13,29 @@ export const useVisualizationStore = create((set, get) => ({
     panorama: null,
   },
 
+  // ========== 3D MODEL STATE ==========
+  model3D: {
+    data: null, // 3D model data (GLB, point cloud, etc.)
+    type: null, // 'glb', 'pointCloud', 'procedural'
+    url: null, // Model URL
+    isGenerated: false,
+    generationMethod: null, // 'photogrammetry', 'ai-depth', 'procedural'
+    quality: null,
+  },
+
+  set3DModel: (modelData) => set({ model3D: modelData }),
+
+  clear3DModel: () => set({
+    model3D: {
+      data: null,
+      type: null,
+      url: null,
+      isGenerated: false,
+      generationMethod: null,
+      quality: null,
+    }
+  }),
+
   setBeforeImage: (imageUrl) => set((state) => ({
     images: { ...state.images, before: imageUrl }
   })),

@@ -9,6 +9,7 @@ import { autoPlacement } from '../../services/AutoPlacement';
 import { photogrammetry } from '../../services/Photogrammetry';
 import { pdfReportGenerator } from '../../services/PDFReportGenerator';
 import { costEstimator } from '../../services/CostEstimator';
+import { ai3DModelGenerator } from '../../services/AI3DModelGenerator';
 
 /**
  * Control Panel Component
@@ -30,12 +31,16 @@ export default function ControlPanel() {
     setViewMode,
     ui,
     setLoading,
+    setUploadProgress,
     resetAll,
     shingles,
     lighting,
     measurements,
     addShingleRegion,
     addLight,
+    model3D,
+    set3DModel,
+    addCapturedImage,
   } = useVisualizationStore();
 
   const handleImageUpload = async (event) => {
@@ -49,35 +54,68 @@ export default function ControlPanel() {
       return;
     }
 
-    // For multiple files (up to 8), process directly
+    // For multiple files (up to 8), process directly for 3D reconstruction
     const maxFiles = Math.min(files.length, 8);
-    alert(`Processing ${maxFiles} photos for 3D reconstruction...`);
 
     setLoading(true);
+    setUploadProgress(10);
+
     try {
       const photoArray = [];
+
+      // Compress and prepare images
       for (let i = 0; i < maxFiles; i++) {
         const compressed = await compressImage(files[i], 2048, 0.9);
         photoArray.push({
           id: Date.now() + i,
           angle: `photo-${i + 1}`,
-          name: `Photo ${i + 1}`,
+          name: files[i].name,
           file: compressed.file,
           preview: compressed.url,
           timestamp: new Date().toISOString()
         });
-      }
 
-      // Process through photogrammetry
-      await handlePhotoCaptureComplete(photoArray);
+        // Store in captured images
+        addCapturedImage(photoArray[i]);
+
+        setUploadProgress(10 + (i / maxFiles) * 20);
+      }
 
       // Set the first image as the before image for visualization
       setBeforeImage(photoArray[0].preview);
+      setUploadProgress(30);
+
+      // Generate 3D model using AI
+      console.log(`Generating 3D model from ${photoArray.length} images...`);
+      setUploadProgress(40);
+
+      const modelData = await ai3DModelGenerator.generateModel(photoArray, {
+        quality: photoArray.length >= 8 ? 'high' : 'medium',
+        includeTextures: true,
+        optimizeForWeb: true,
+      });
+
+      setUploadProgress(80);
+
+      // Store the 3D model
+      set3DModel({
+        data: modelData,
+        type: modelData.type,
+        url: modelData.url,
+        isGenerated: true,
+        generationMethod: modelData.method,
+        quality: modelData.quality,
+      });
+
+      setUploadProgress(100);
+
+      alert(`✅ 3D Model generated successfully!\n\nMethod: ${modelData.method}\nQuality: ${modelData.quality}\n\nSwitch to 3D view to see your realistic house model.`);
     } catch (error) {
-      console.error('Multiple image upload error:', error);
+      console.error('Image upload and 3D generation error:', error);
       alert('Failed to process images: ' + error.message);
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -585,20 +623,44 @@ export default function ControlPanel() {
         </div>
       )}
 
+      {/* 3D Model Status */}
+      {model3D.isGenerated && activePanel === 'main' && (
+        <div className="pt-4 border-t border-gray-200">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <h4 className="font-semibold text-green-800 text-sm mb-2 flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              3D Model Generated
+            </h4>
+            <div className="text-xs text-green-700 space-y-1">
+              <div><strong>Method:</strong> {model3D.generationMethod}</div>
+              <div><strong>Quality:</strong> {model3D.quality}</div>
+              <div><strong>Type:</strong> {model3D.type}</div>
+            </div>
+            <p className="text-xs text-green-600 mt-2">
+              Click "3D Model" button at the top to see your realistic house visualization
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Instructions */}
       {activePanel === 'main' && (
         <div className="pt-4 border-t border-gray-200">
           <p className="text-xs text-gray-600">
-            <strong>How to use:</strong>
+            <strong>🚀 How to use:</strong>
           </p>
           <ul className="text-xs text-gray-600 mt-2 space-y-1 pl-4">
-            <li>• Upload a house photo to begin</li>
-            <li>• Use AI Auto-Placement for instant results</li>
+            <li>• Upload 1 photo for 360° view</li>
+            <li>• Upload 2-8 photos for 3D/4D model generation</li>
+            <li>• Use AI Auto-Placement for instant product visualization</li>
+            <li>• Apply shingles and lighting in the right panel</li>
             <li>• Measure roof surfaces with tools</li>
-            <li>• Capture 8 photos for 3D reconstruction</li>
             <li>• Generate cost estimates & PDF reports</li>
-            <li>• Export final visualization</li>
+            <li>• Export and share final visualization</li>
           </ul>
+          <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-800">
+            <strong>💡 Pro Tip:</strong> For best 3D results, capture photos from different angles around the house including aerial views
+          </div>
         </div>
       )}
     </div>
