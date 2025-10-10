@@ -82,6 +82,13 @@ export default function ControlPanel() {
   };
 
   const handleValidationComplete = async (result) => {
+    if (result.cancelled) {
+      // User cancelled or chose to pick a different image
+      setShowValidator(false);
+      setUploadingFile(null);
+      return;
+    }
+
     if (result.valid) {
       setLoading(true);
       try {

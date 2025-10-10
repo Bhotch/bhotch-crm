@@ -280,6 +280,35 @@ export default function PhotoValidator({ file, onValidationComplete }) {
           </ul>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-2">
+        {isValid ? (
+          <button
+            onClick={() => onValidationComplete({ valid: true, ...validation })}
+            className="flex-1 py-3 px-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <CheckCircle className="w-5 h-5" />
+            Use This Image
+          </button>
+        ) : (
+          <button
+            onClick={() => onValidationComplete({ valid: false, cancelled: true })}
+            className="flex-1 py-3 px-4 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+          >
+            Choose Different Image
+          </button>
+        )}
+
+        {hasWarnings && isValid && (
+          <button
+            onClick={() => onValidationComplete({ valid: false, cancelled: true })}
+            className="py-3 px-4 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }
