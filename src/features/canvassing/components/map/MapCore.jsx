@@ -58,15 +58,27 @@ const MapCore = ({
   // Initialize map
   useEffect(() => {
     let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 5;
 
     const initMap = async () => {
       try {
         // Wait for DOM to be fully ready
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        if (!mounted || !mapRef.current) {
-          console.warn('Map container not ready, retrying...');
-          return;
+        if (!mounted) return;
+
+        if (!mapRef.current) {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.warn(`Map container not ready, retry ${retryCount}/${maxRetries}...`);
+            setTimeout(() => {
+              if (mounted) initMap();
+            }, 300 * retryCount); // Exponential backoff
+            return;
+          } else {
+            throw new Error('Map container not found after multiple retries');
+          }
         }
 
         const google = await loadGoogleMaps();
@@ -124,21 +136,12 @@ const MapCore = ({
 
         setLoading(false);
         setError(null);
+        console.log('Map initialized successfully');
       } catch (err) {
         console.error('Map initialization error:', err);
         if (mounted) {
-          // Retry once after 500ms if container not found
-          if (err.message?.includes('container') || err.message?.includes('not ready')) {
-            setTimeout(() => {
-              if (mounted) {
-                console.log('Retrying map initialization...');
-                initMap();
-              }
-            }, 500);
-          } else {
-            setError(err.message || 'Failed to initialize map');
-            setLoading(false);
-          }
+          setError(err.message || 'Failed to initialize map');
+          setLoading(false);
         }
       }
     };
