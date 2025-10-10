@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useVisualizationStore } from '../../store/visualizationStore';
-import { Upload, Eye, EyeOff, Camera, Download, RefreshCw, Wand2, FileText, Calculator, Ruler } from 'lucide-react';
+import { Upload, Eye, EyeOff, Camera, Download, RefreshCw, Wand2, FileText, Calculator, Ruler, Share2, Filter } from 'lucide-react';
 import { compressImage } from '../../utils/ImageProcessor';
 import PhotoValidator from '../PhotoCapture/PhotoValidator';
 import CameraIntegration from '../PhotoCapture/CameraIntegration';
@@ -193,6 +193,58 @@ export default function ControlPanel() {
     }
   };
 
+  /**
+   * Share visualization via Web Share API or fallback to copy link
+   */
+  const handleShare = async () => {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) {
+      alert('No visualization to share. Please upload an image first.');
+      return;
+    }
+
+    try {
+      // Convert canvas to blob
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], `visualization-${Date.now()}.png`, { type: 'image/png' });
+
+        // Check if Web Share API is available
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Roof Visualization',
+            text: 'Check out this roof visualization!',
+            files: [file]
+          });
+          alert('Shared successfully!');
+        } else {
+          // Fallback: Copy image to clipboard or download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `visualization-${Date.now()}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          alert('Visualization downloaded! You can now share the image file.');
+        }
+      }, 'image/png');
+    } catch (error) {
+      console.error('Share failed:', error);
+      alert('Failed to share. Please try the Export button instead.');
+    }
+  };
+
+  /**
+   * Toggle filter panel
+   */
+  const [showFilters, setShowFilters] = useState(false);
+  const [imageFilters, setImageFilters] = useState({
+    brightness: 100,
+    contrast: 100,
+    saturation: 100,
+    blur: 0
+  });
+
   return (
     <div className="control-panel bg-white rounded-lg shadow-lg p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -343,6 +395,124 @@ export default function ControlPanel() {
               <Download className="w-4 h-4" />
               Export Image
             </button>
+
+            {/* Share */}
+            <button
+              onClick={handleShare}
+              className="w-full py-2 px-3 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              Share Visualization
+            </button>
+
+            {/* Image Filters */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full py-2 px-3 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              {showFilters ? 'Hide Filters' : 'Image Filters'}
+            </button>
+
+            {/* Filter Controls */}
+            {showFilters && (
+              <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+                <h5 className="font-semibold text-gray-800 text-sm">Adjust Image</h5>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Brightness: {imageFilters.brightness}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    value={imageFilters.brightness}
+                    onChange={(e) => {
+                      setImageFilters({...imageFilters, brightness: e.target.value});
+                      const canvas = document.querySelector('canvas');
+                      if (canvas) {
+                        canvas.style.filter = `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturation}%) blur(${imageFilters.blur}px)`;
+                      }
+                    }}
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Contrast: {imageFilters.contrast}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    value={imageFilters.contrast}
+                    onChange={(e) => {
+                      setImageFilters({...imageFilters, contrast: e.target.value});
+                      const canvas = document.querySelector('canvas');
+                      if (canvas) {
+                        canvas.style.filter = `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturation}%) blur(${imageFilters.blur}px)`;
+                      }
+                    }}
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Saturation: {imageFilters.saturation}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    value={imageFilters.saturation}
+                    onChange={(e) => {
+                      setImageFilters({...imageFilters, saturation: e.target.value});
+                      const canvas = document.querySelector('canvas');
+                      if (canvas) {
+                        canvas.style.filter = `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturation}%) blur(${imageFilters.blur}px)`;
+                      }
+                    }}
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Blur: {imageFilters.blur}px
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    value={imageFilters.blur}
+                    onChange={(e) => {
+                      setImageFilters({...imageFilters, blur: e.target.value});
+                      const canvas = document.querySelector('canvas');
+                      if (canvas) {
+                        canvas.style.filter = `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturation}%) blur(${imageFilters.blur}px)`;
+                      }
+                    }}
+                    className="w-full"
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    setImageFilters({ brightness: 100, contrast: 100, saturation: 100, blur: 0 });
+                    const canvas = document.querySelector('canvas');
+                    if (canvas) {
+                      canvas.style.filter = 'none';
+                    }
+                  }}
+                  className="w-full py-1.5 bg-gray-200 text-gray-700 rounded text-xs font-medium hover:bg-gray-300"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
