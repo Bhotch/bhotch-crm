@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, Search, Calculator, Save, X } from 'lucide-react';
+import VentilationCalculator from '../../components/VentilationCalculator';
 
 function JobCountView({ leads, onUpdateLead, onAddLead }) {
     const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -393,10 +394,32 @@ function JobCountView({ leads, onUpdateLead, onAddLead }) {
                             <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3 pb-2 border-b">
                                 Ventilation
                             </h4>
+
+                            {/* Ventilation Calculator */}
+                            <div className="mb-4">
+                                <VentilationCalculator
+                                    sqft={formData.sqft}
+                                    currentValues={{
+                                        ridgeVents: formData.ridgeVents,
+                                        turbineVents: formData.turbineVents,
+                                        rimeFlow: formData.rimeFlow
+                                    }}
+                                    onCalculate={(values) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            ridgeVents: values.ridgeVents,
+                                            turbineVents: values.turbineVents,
+                                            rimeFlow: values.rimeFlow
+                                        }));
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                />
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField label="Ridge Vents" field="ridgeVents" step="1" />
-                                <FormField label="Turbine Vents" field="turbineVents" step="1" />
-                                <FormField label="Rime Flow" field="rimeFlow" />
+                                <FormField label="Ridge Vents" field="ridgeVents" step="1" placeholder="Auto-calculated or manual" />
+                                <FormField label="Turbine Vents" field="turbineVents" step="1" placeholder="Auto-calculated or manual" />
+                                <FormField label="Rime Flow" field="rimeFlow" placeholder="Auto-calculated or manual" />
                             </div>
                         </div>
 

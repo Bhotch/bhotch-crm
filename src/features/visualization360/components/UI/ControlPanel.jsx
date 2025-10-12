@@ -44,11 +44,18 @@ export default function ControlPanel() {
   } = useVisualizationStore();
 
   const handleImageUpload = async (event) => {
+    console.log('handleImageUpload called');
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    console.log('Files selected:', files ? files.length : 0);
+
+    if (!files || files.length === 0) {
+      console.warn('No files selected');
+      return;
+    }
 
     // For single file, use existing validation flow
     if (files.length === 1) {
+      console.log('Single file upload, showing validator');
       setUploadingFile(files[0]);
       setShowValidator(true);
       return;

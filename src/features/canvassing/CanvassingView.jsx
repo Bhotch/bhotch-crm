@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   Navigation,
   Filter,
@@ -51,40 +51,39 @@ const CanvassingView = ({ leads, onMapLoad }) => {
     updateInterval: 30000, // 30 seconds
   });
 
-  // Auto-start location tracking and force to user location with roadmap
-  const hasInitialized = useRef(false);
+  // Auto-start location tracking when map loads
+  const hasStartedTracking = useRef(false);
+
+  // Start tracking once map is ready
   useEffect(() => {
-    const initializeTracking = async () => {
-      if (hasInitialized.current || !mapInstanceRef.current) return;
-
-      hasInitialized.current = true;
-
-      // Start tracking
+    if (!hasStartedTracking.current && mapInstanceRef.current) {
+      hasStartedTracking.current = true;
       startTracking();
       setTrackingEnabled(true);
+      console.log('[Canvassing] Location tracking started');
+    }
+  }, [startTracking, setTrackingEnabled]);
 
-      // Wait a moment for location to be acquired
-      setTimeout(() => {
-        if (location && mapInstanceRef.current) {
-          // Force roadmap view
-          mapInstanceRef.current.setMapTypeId('roadmap');
-          updateMapView({ mapType: 'roadmap' });
+  // Auto-zoom to user location when location is available
+  const hasZoomedToUser = useRef(false);
+  useEffect(() => {
+    if (location && mapInstanceRef.current && !hasZoomedToUser.current) {
+      hasZoomedToUser.current = true;
 
-          // Pan to user location with street-level zoom
-          mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
-          mapInstanceRef.current.setZoom(19); // Street-level zoom to show house numbers
+      // Force roadmap view
+      mapInstanceRef.current.setMapTypeId('roadmap');
+      updateMapView({ mapType: 'roadmap' });
 
-          console.log('Map initialized successfully');
-        }
-      }, 1000);
-    };
+      // Pan to user location with street-level zoom
+      mapInstanceRef.current.panTo({ lat: location.lat, lng: location.lng });
+      mapInstanceRef.current.setZoom(19); // Street-level zoom
 
-    initializeTracking();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapInstanceRef.current]);
+      console.log('[Canvassing] Auto-located to user position');
+    }
+  }, [location, updateMapView]);
 
-  // Initialize map with retry logic
-  const initializeMapFunction = async (attempt = 0) => {
+  // Initialize map with retry logic - WRAPPED IN useCallback
+  const initializeMapFunction = useCallback(async function initMap(attempt = 0) {
     const maxAttempts = 3;
     const delays = [100, 500, 1000];
 
@@ -93,7 +92,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       if (!mapRef.current) {
         if (attempt < maxAttempts - 1) {
           await new Promise(resolve => setTimeout(resolve, delays[attempt]));
-          return initializeMapFunction(attempt + 1);
+          return initMap(attempt + 1);
         }
         throw new Error('Map container not found. Please refresh the page.');
       }
@@ -217,12 +216,11 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       setError(err.message || 'Failed to initialize map');
       setLoading(false);
     }
-  };
+  }, [mapView, onMapLoad, updateMapView, addProperty]);
 
-  // Initialize map on mount
+  // Initialize map on mount - FIXED
   useEffect(() => {
     let mounted = true;
-    let timeoutId;
 
     const init = async () => {
       if (!mounted) return;
@@ -230,27 +228,25 @@ const CanvassingView = ({ leads, onMapLoad }) => {
       setLoading(true);
       setError(null);
 
-      // Wait for DOM to be ready
-      timeoutId = setTimeout(async () => {
-        if (mounted) {
-          await initializeMapFunction();
-        }
-      }, 100);
+      // Small delay to ensure DOM is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (mounted) {
+        await initializeMapFunction();
+      }
     };
 
     init();
 
     return () => {
       mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
       // Cleanup map instance
       if (mapInstanceRef.current) {
         window.google?.maps?.event?.clearInstanceListeners(mapInstanceRef.current);
         mapInstanceRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initializeMapFunction]);
 
   // Sync leads to properties if not already in store
   useEffect(() => {
