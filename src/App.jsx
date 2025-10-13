@@ -14,7 +14,7 @@ import LeadsView from './features/leads/LeadsView';
 import JobCountView from './features/jobcount/JobCountView';
 import MapView from './features/map/MapView';
 import InternalCalendar from './features/calendar/InternalCalendar';
-import CommunicationsView from './features/communications/CommunicationsView';
+import EnhancedCommunicationsView from './features/communications/EnhancedCommunicationsView';
 import DesignerView from './features/visualization360/DesignerView';
 import CanvassingViewLeaflet from './features/canvassing/CanvassingViewLeaflet';
 import LeadFormModal from './features/leads/LeadFormModal';
@@ -259,10 +259,11 @@ function CrmApplication({ onLogout }) {
           />
         )}
         {currentView === 'communications' && (
-          <CommunicationsView
+          <EnhancedCommunicationsView
             leads={leads}
             jobCounts={jobCounts}
             communications={communications}
+            onLogCommunication={addCommunication}
           />
         )}
         {currentView === 'visualization' && (

@@ -24,8 +24,13 @@ export default function DesignerView() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [model3D, setModel3D] = useState(null);
+  const [appliedShingleColor, setAppliedShingleColor] = useState(null);
+  const [appliedLighting, setAppliedLighting] = useState(null);
+  const [lightingIntensity, setLightingIntensity] = useState(80);
+  const [isApplying, setIsApplying] = useState(false);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const compositeCanvasRef = useRef(null);
 
   // Sample property data
   const properties = [
@@ -34,45 +39,136 @@ export default function DesignerView() {
     { id: 3, name: '789 Pine Rd', image: null, thumbnail: null },
   ];
 
-  // Design layers
+  // Design layers - Only Roof (Malarkey Vista) and Lighting (Rime)
   const layers = [
-    { id: 'roof', name: 'Roof', icon: Home, visible: true, locked: false },
-    { id: 'siding', name: 'Siding', icon: Layers, visible: true, locked: false },
-    { id: 'trim', name: 'Trim', icon: Palette, visible: true, locked: false },
-    { id: 'gutters', name: 'Gutters', icon: Grid, visible: true, locked: false },
+    { id: 'roof', name: 'Malarkey Vista Shingles', icon: Home, visible: true, locked: false },
+    { id: 'lighting', name: 'Rime Lighting', icon: Palette, visible: true, locked: false },
   ];
 
-  // Material library
-  const materials = {
-    roof: [
-      { id: 'asphalt-shingle', name: 'Asphalt Shingle', color: '#334155' },
-      { id: 'metal-standing-seam', name: 'Metal Standing Seam', color: '#64748b' },
-      { id: 'tile', name: 'Clay Tile', color: '#dc2626' },
-      { id: 'slate', name: 'Natural Slate', color: '#1e293b' },
-    ],
-    siding: [
-      { id: 'vinyl', name: 'Vinyl Siding', color: '#f8fafc' },
-      { id: 'fiber-cement', name: 'Fiber Cement', color: '#e2e8f0' },
-      { id: 'wood', name: 'Wood Siding', color: '#92400e' },
-    ],
-    trim: [
-      { id: 'white', name: 'White', color: '#ffffff' },
-      { id: 'black', name: 'Black', color: '#000000' },
-      { id: 'brown', name: 'Brown', color: '#78350f' },
-    ],
+  // Malarkey Vista Shingle Colors - 8 Official Colors
+  const malarkeyVistaColors = [
+    {
+      id: 'weathered-wood',
+      name: 'Weathered Wood',
+      color: '#8B7355',
+      hex: '#8B7355',
+      description: 'Warm brown with natural wood tones'
+    },
+    {
+      id: 'midnight-black',
+      name: 'Midnight Black',
+      color: '#2C2C2C',
+      hex: '#2C2C2C',
+      description: 'Deep, rich black with subtle texture'
+    },
+    {
+      id: 'antique-silver',
+      name: 'Antique Silver',
+      color: '#A8A8A8',
+      hex: '#A8A8A8',
+      description: 'Classic gray with silver highlights'
+    },
+    {
+      id: 'slate',
+      name: 'Slate',
+      color: '#4A5568',
+      hex: '#4A5568',
+      description: 'Natural slate gray'
+    },
+    {
+      id: 'burnt-sienna',
+      name: 'Burnt Sienna',
+      color: '#A0522D',
+      hex: '#A0522D',
+      description: 'Rich terracotta brown'
+    },
+    {
+      id: 'storm-cloud',
+      name: 'Storm Cloud',
+      color: '#6B7280',
+      hex: '#6B7280',
+      description: 'Medium gray with depth'
+    },
+    {
+      id: 'natural-wood',
+      name: 'Natural Wood',
+      color: '#C19A6B',
+      hex: '#C19A6B',
+      description: 'Light tan with warm undertones'
+    },
+    {
+      id: 'shadow-black',
+      name: 'Shadow Black',
+      color: '#1A1A1A',
+      hex: '#1A1A1A',
+      description: 'Premium black with dimensional shading'
+    },
+  ];
+
+  // Rime Lighting Colors
+  const rimeLightingColors = [
+    { id: 'warm-white', name: 'Warm White', color: '#FFF8DC', rgb: '255, 248, 220' },
+    { id: 'pure-white', name: 'Pure White', color: '#FFFFFF', rgb: '255, 255, 255' },
+    { id: 'ice-blue', name: 'Ice Blue', color: '#ADD8E6', rgb: '173, 216, 230' },
+    { id: 'rgb-multicolor', name: 'RGB Multicolor', color: 'linear-gradient(90deg, #FF0000, #00FF00, #0000FF)', rgb: 'Multi' },
+  ];
+
+  // Apply shingle color to house
+  const applyShingleColor = async (shingleColor) => {
+    if (!uploadedImage) {
+      alert('Please upload a house image first!');
+      return;
+    }
+
+    setIsApplying(true);
+    setSelectedLayer('roof');
+
+    try {
+      // Simulate AI processing (in production, this would call an AI service)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setAppliedShingleColor(shingleColor);
+      alert(`✅ ${shingleColor.name} shingles applied successfully!`);
+    } catch (error) {
+      console.error('Failed to apply shingles:', error);
+      alert('Failed to apply shingles. Please try again.');
+    } finally {
+      setIsApplying(false);
+    }
   };
 
-  // Color palette
-  const colorPalette = [
-    { name: 'Charcoal', hex: '#334155' },
-    { name: 'Slate Gray', hex: '#64748b' },
-    { name: 'Weathered Wood', hex: '#92400e' },
-    { name: 'Terracotta', hex: '#dc2626' },
-    { name: 'Forest Green', hex: '#065f46' },
-    { name: 'Colonial Blue', hex: '#1e40af' },
-    { name: 'Tan', hex: '#d6bc8a' },
-    { name: 'White', hex: '#ffffff' },
-  ];
+  // Apply Rime lighting to house
+  const applyLighting = async (lightingColor) => {
+    if (!uploadedImage) {
+      alert('Please upload a house image first!');
+      return;
+    }
+
+    setIsApplying(true);
+    setSelectedLayer('lighting');
+
+    try {
+      // Simulate processing
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setAppliedLighting(lightingColor);
+      alert(`✅ Rime Lighting (${lightingColor.name}) applied successfully!`);
+    } catch (error) {
+      console.error('Failed to apply lighting:', error);
+      alert('Failed to apply lighting. Please try again.');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  // Remove applied layers
+  const removeShingles = () => {
+    setAppliedShingleColor(null);
+  };
+
+  const removeLighting = () => {
+    setAppliedLighting(null);
+  };
 
   // Handle image upload (optimized for performance)
   const handleImageUpload = async (event) => {
@@ -308,11 +404,12 @@ export default function DesignerView() {
               })}
             </div>
 
-            <div className="p-4 border-t border-gray-200">
-              <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
-                <Plus className="w-4 h-4" />
-                Add Layer
-              </button>
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="text-xs text-gray-600 text-center">
+                <p className="font-semibold mb-1">Available Layers</p>
+                <p>Malarkey Vista™ Shingles</p>
+                <p>Rime Lighting™ System</p>
+              </div>
             </div>
           </div>
         )}
@@ -351,14 +448,72 @@ export default function DesignerView() {
 
               {uploadedImage ? (
                 <div className="absolute inset-0">
+                  {/* Base Image */}
                   <img
                     src={uploadedImage}
                     alt="Uploaded property"
                     className="w-full h-full object-contain"
                   />
-                  {model3D && (
-                    <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg">
-                      ✓ 3D Model Generated
+
+                  {/* Shingle Color Overlay */}
+                  {appliedShingleColor && (
+                    <div
+                      className="absolute inset-0 pointer-events-none mix-blend-multiply"
+                      style={{
+                        backgroundColor: appliedShingleColor.color,
+                        opacity: 0.3,
+                      }}
+                    />
+                  )}
+
+                  {/* Lighting Overlay */}
+                  {appliedLighting && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      {/* Simulated lighting effect around perimeter */}
+                      <div
+                        className="absolute inset-0"
+                        style={{
+                          boxShadow: `inset 0 0 ${lightingIntensity}px ${lightingIntensity / 2}px ${appliedLighting.color}`,
+                          opacity: lightingIntensity / 150,
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Status Badges */}
+                  <div className="absolute top-4 left-4 space-y-2">
+                    {model3D && (
+                      <div className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg">
+                        ✓ 3D Model Generated
+                      </div>
+                    )}
+                    {appliedShingleColor && (
+                      <div className="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded border-2 border-white"
+                          style={{ backgroundColor: appliedShingleColor.color }}
+                        />
+                        {appliedShingleColor.name}
+                      </div>
+                    )}
+                    {appliedLighting && (
+                      <div className="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded border-2 border-white"
+                          style={{ backgroundColor: appliedLighting.color }}
+                        />
+                        Rime Lighting - {appliedLighting.name}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Processing Overlay */}
+                  {isApplying && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                        <span className="text-gray-800 font-medium">Applying changes...</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -409,84 +564,167 @@ export default function DesignerView() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {/* Material Selection */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">
-                  {selectedLayer.charAt(0).toUpperCase() + selectedLayer.slice(1)} Materials
-                </h3>
-                <div className="space-y-2">
-                  {(materials[selectedLayer] || materials.roof).map(material => (
-                    <div
-                      key={material.id}
-                      onClick={() => setSelectedMaterial(material.id)}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
-                        selectedMaterial === material.id
-                          ? 'bg-blue-50 border-2 border-blue-500'
-                          : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'
-                      }`}
-                    >
+              {/* Malarkey Vista Shingles */}
+              {selectedLayer === 'roof' && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-gray-900">Malarkey Vista™ Shingles</h3>
+                    {appliedShingleColor && (
+                      <button
+                        onClick={removeShingles}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mb-4">
+                    Premium designer shingles with exceptional durability and style
+                  </p>
+                  <div className="space-y-2">
+                    {malarkeyVistaColors.map(shingle => (
                       <div
-                        className="w-10 h-10 rounded-lg border-2 border-gray-300"
-                        style={{ backgroundColor: material.color }}
+                        key={shingle.id}
+                        onClick={() => applyShingleColor(shingle)}
+                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border-2 ${
+                          appliedShingleColor?.id === shingle.id
+                            ? 'bg-blue-50 border-blue-500 shadow-md'
+                            : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div
+                          className="w-12 h-12 rounded-lg border-2 border-white shadow-sm"
+                          style={{ backgroundColor: shingle.color }}
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm text-gray-900">{shingle.name}</div>
+                          <div className="text-xs text-gray-500">{shingle.description}</div>
+                        </div>
+                        {appliedShingleColor?.id === shingle.id && (
+                          <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rime Lighting */}
+              {selectedLayer === 'lighting' && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-gray-900">Rime Lighting™</h3>
+                    {appliedLighting && (
+                      <button
+                        onClick={removeLighting}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-600 mb-4">
+                    Permanent LED lighting that enhances your home's beauty year-round
+                  </p>
+
+                  {/* Lighting Colors */}
+                  <div className="space-y-2 mb-4">
+                    {rimeLightingColors.map(light => (
+                      <div
+                        key={light.id}
+                        onClick={() => applyLighting(light)}
+                        className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all border-2 ${
+                          appliedLighting?.id === light.id
+                            ? 'bg-blue-50 border-blue-500 shadow-md'
+                            : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div
+                          className="w-12 h-12 rounded-lg border-2 border-white shadow-sm"
+                          style={{
+                            background: light.id === 'rgb-multicolor'
+                              ? light.color
+                              : light.color
+                          }}
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm text-gray-900">{light.name}</div>
+                          <div className="text-xs text-gray-500">RGB: {light.rgb}</div>
+                        </div>
+                        {appliedLighting?.id === light.id && (
+                          <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Lighting Intensity Slider */}
+                  {appliedLighting && (
+                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Brightness: {lightingIntensity}%
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={lightingIntensity}
+                        onChange={(e) => setLightingIntensity(parseInt(e.target.value))}
+                        className="w-full accent-blue-600"
                       />
-                      <span className="flex-1 font-medium text-sm text-gray-900">{material.name}</span>
-                      {selectedMaterial === material.id && (
-                        <Check className="w-5 h-5 text-blue-600" />
-                      )}
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Dim</span>
+                        <span>Bright</span>
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-
-              {/* Color Palette */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Color Palette</h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {colorPalette.map(color => (
-                    <button
-                      key={color.hex}
-                      onClick={() => setSelectedColor(color.hex)}
-                      className={`aspect-square rounded-lg border-2 transition-all hover:scale-110 ${
-                        selectedColor === color.hex
-                          ? 'border-blue-600 ring-2 ring-blue-200'
-                          : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Color */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Custom Color</h3>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={selectedColor}
-                    onChange={(e) => setSelectedColor(e.target.value)}
-                    className="w-12 h-12 rounded-lg cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={selectedColor}
-                    onChange={(e) => setSelectedColor(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono uppercase"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
-            <div className="p-4 border-t border-gray-200 space-y-2">
-              <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
-                <Check className="w-4 h-4" />
-                Apply Changes
-              </button>
-              <button className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
-                <RotateCcw className="w-4 h-4" />
-                Reset Design
-              </button>
+            <div className="p-4 border-t border-gray-200">
+              {/* Status Display */}
+              <div className="mb-3 p-3 bg-gray-50 rounded-lg text-xs">
+                <div className="font-semibold text-gray-700 mb-2">Applied Layers:</div>
+                <div className="space-y-1">
+                  {appliedShingleColor ? (
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded border border-gray-300"
+                        style={{ backgroundColor: appliedShingleColor.color }}
+                      />
+                      <span>{appliedShingleColor.name}</span>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">No shingles applied</div>
+                  )}
+                  {appliedLighting ? (
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded border border-gray-300"
+                        style={{ backgroundColor: appliedLighting.color }}
+                      />
+                      <span>Rime Lighting - {appliedLighting.name}</span>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">No lighting applied</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              {(appliedShingleColor || appliedLighting) && (
+                <button
+                  onClick={() => {
+                    removeShingles();
+                    removeLighting();
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset All
+                </button>
+              )}
             </div>
           </div>
         )}
