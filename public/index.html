@@ -95,6 +95,27 @@
       window.addEventListener('appinstalled', (evt) => {
         // App installed successfully (silent)
       });
+
+      // Suppress browser extension async listener errors (Grammarly, LastPass, etc.)
+      window.addEventListener('unhandledrejection', (event) => {
+        // Check if it's a browser extension error
+        if (event.reason &&
+            event.reason.message &&
+            event.reason.message.includes('message channel closed before a response was received')) {
+          // Suppress this error - it's from browser extensions, not our code
+          event.preventDefault();
+          return;
+        }
+
+        // Check if it's a CORS error from Google Apps Script (expected)
+        if (event.reason &&
+            event.reason.message &&
+            (event.reason.message.includes('CORS') || event.reason.message.includes('script.google.com'))) {
+          // Suppress CORS errors - handled by the app
+          event.preventDefault();
+          return;
+        }
+      });
     </script>
   </body>
 </html>
