@@ -127,7 +127,7 @@ SELECT
   c.type,
   c.disposition,
   c.follow_up_date,
-  c.notes AS last_notes,
+  c.message_content AS last_notes,
   c.timestamp AS last_contact,
   CASE
     WHEN c.follow_up_date = CURRENT_DATE THEN 'Today'
