@@ -51,7 +51,8 @@
       "Bash(where:*)",
       "Bash(choco install:*)",
       "Bash(node:*)",
-      "Read(//c/Users/PC_User/Pictures/**)"
+      "Read(//c/Users/PC_User/Pictures/**)",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []

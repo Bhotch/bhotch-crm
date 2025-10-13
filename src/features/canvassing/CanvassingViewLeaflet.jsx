@@ -211,63 +211,50 @@ const CanvassingViewLeaflet = ({ leads }) => {
     });
   }, [leads, properties, addProperty]);
 
-  // Handle map click to add property with debouncing and duplicate prevention
-  const handleMapClick = useCallback(async (lat, lng) => {
+  // Handle map click - OPTIMIZED to prevent 1000ms+ click handlers
+  const handleMapClick = useCallback((lat, lng) => {
     // Prevent multiple rapid clicks
-    if (isAddingProperty) {
-      console.log('[Canvassing] Already adding property, ignoring click');
-      return;
-    }
+    if (isAddingProperty) return;
 
-    // Check if property already exists at this exact location (within 5 meters)
-    const existingProperty = properties.find((p) => {
-      const distance = Math.sqrt(
-        Math.pow((p.latitude - lat) * 111000, 2) +
-        Math.pow((p.longitude - lng) * 111000, 2)
-      );
-      return distance < 5; // 5 meters threshold
+    // Quick proximity check (optimized - no expensive sqrt until necessary)
+    const hasNearby = properties.some((p) => {
+      const latDiff = Math.abs(p.latitude - lat);
+      const lngDiff = Math.abs(p.longitude - lng);
+      return latDiff < 0.00005 && lngDiff < 0.00005; // ~5 meters
     });
 
-    if (existingProperty) {
-      console.log('[Canvassing] Property already exists at this location');
-      return;
-    }
+    if (hasNearby) return;
 
     setIsAddingProperty(true);
 
-    try {
-      const propertyData = {
-        address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-        latitude: lat,
-        longitude: lng,
-        status: PROPERTY_STATUS.NOT_CONTACTED,
-        visits: [],
-        createdBy: 'map_click',
-        priority: 'normal',
-      };
+    // Add property immediately with coordinates (instant feedback)
+    const propertyData = {
+      address: `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      latitude: lat,
+      longitude: lng,
+      status: PROPERTY_STATUS.NOT_CONTACTED,
+      visits: [],
+      createdBy: 'map_click',
+      priority: 'normal',
+    };
 
-      // Try free geocoding with Nominatim
+    addProperty(propertyData);
+
+    // Geocode in background (doesn't block UI)
+    setTimeout(async () => {
       try {
         const geocoded = await geocodeNominatim(lat, lng);
-        if (geocoded) {
+        if (geocoded && propertyData) {
+          // Update with real address (silent update)
           propertyData.address = geocoded.formatted;
           propertyData.streetAddress = geocoded.streetAddress;
-          propertyData.city = geocoded.city;
-          propertyData.state = geocoded.state;
-          propertyData.zip = geocoded.zip;
         }
       } catch (error) {
-        console.warn('[Canvassing] Geocoding failed, using coordinates');
+        // Silent fail
+      } finally {
+        setTimeout(() => setIsAddingProperty(false), 500);
       }
-
-      addProperty(propertyData);
-      console.log('[Canvassing] Property added:', propertyData.address);
-    } finally {
-      // Reset after 1 second to prevent rapid duplicate clicks
-      setTimeout(() => {
-        setIsAddingProperty(false);
-      }, 1000);
-    }
+    }, 0);
   }, [addProperty, properties, isAddingProperty]);
 
   // Toggle tracking
@@ -476,16 +463,20 @@ const CanvassingViewLeaflet = ({ leads }) => {
             {/* User Location Marker */}
             {location && (
               <>
-                <Circle
-                  center={[location.lat, location.lng]}
-                  radius={location.accuracy || 50}
-                  pathOptions={{
-                    fillColor: '#4285F4',
-                    fillOpacity: 0.1,
-                    color: '#4285F4',
-                    weight: 1,
-                  }}
-                />
+                {/* Only show accuracy circle if reasonable (< 100m) */}
+                {location.accuracy && location.accuracy < 100 && (
+                  <Circle
+                    center={[location.lat, location.lng]}
+                    radius={location.accuracy}
+                    pathOptions={{
+                      fillColor: '#4285F4',
+                      fillOpacity: 0.03,
+                      color: '#4285F4',
+                      weight: 0.5,
+                      opacity: 0.2,
+                    }}
+                  />
+                )}
                 <Marker
                   position={[location.lat, location.lng]}
                   icon={L.divIcon({
