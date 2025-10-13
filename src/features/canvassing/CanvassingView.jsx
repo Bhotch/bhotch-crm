@@ -105,7 +105,7 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         throw new Error('Map container was removed during initialization.');
       }
 
-      // Create map instance
+      // Create map instance with Map ID for AdvancedMarkerElement support
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: mapView.center,
         zoom: mapView.zoom,
@@ -114,6 +114,8 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         streetViewControl: true,
         fullscreenControl: true,
         zoomControl: true,
+        mapId: 'CANVASSING_MAP', // Required for AdvancedMarkerElement
+        gestureHandling: 'greedy',
         styles: [
           { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
           { featureType: 'transit', stylers: [{ visibility: 'simplified' }] },
@@ -147,15 +149,24 @@ const CanvassingView = ({ leads, onMapLoad }) => {
         const lat = event.latLng.lat();
         const lng = event.latLng.lng();
 
+        // Create property with coordinates (skip geocoding if billing issues)
+        const propertyData = {
+          address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+          latitude: lat,
+          longitude: lng,
+          status: PROPERTY_STATUS.NOT_CONTACTED,
+          visits: [],
+          createdBy: 'map_click',
+          priority: 'normal',
+        };
+
         try {
-          // Reverse geocode to get address
+          // Try reverse geocoding (may fail if billing not enabled)
           const geocoder = new google.maps.Geocoder();
           const result = await geocoder.geocode({ location: { lat, lng } });
 
           if (result.results && result.results[0]) {
             const address = result.results[0].formatted_address;
-
-            // Extract address components
             const addressComponents = result.results[0].address_components;
             let streetNumber = '';
             let streetName = '';
@@ -169,39 +180,20 @@ const CanvassingView = ({ leads, onMapLoad }) => {
               }
             });
 
-            // Create new property at clicked location
-            addProperty({
-              address: address,
-              streetAddress: streetNumber && streetName ? `${streetNumber} ${streetName}` : address,
-              latitude: lat,
-              longitude: lng,
-              status: PROPERTY_STATUS.NOT_CONTACTED,
-              visits: [],
-              createdBy: 'map_click',
-            });
-          } else {
-            // No address found, still create property with coordinates
-            addProperty({
-              address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-              latitude: lat,
-              longitude: lng,
-              status: PROPERTY_STATUS.NOT_CONTACTED,
-              visits: [],
-              createdBy: 'map_click',
-            });
+            // Update with actual address
+            propertyData.address = address;
+            propertyData.streetAddress = streetNumber && streetName
+              ? `${streetNumber} ${streetName}`
+              : address;
           }
         } catch (error) {
-          console.error('Error geocoding location:', error);
-          // Still create property even if geocoding fails
-          addProperty({
-            address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-            latitude: lat,
-            longitude: lng,
-            status: PROPERTY_STATUS.NOT_CONTACTED,
-            visits: [],
-            createdBy: 'map_click',
-          });
+          // Silently handle geocoding errors (billing issues)
+          console.warn('[Canvassing] Geocoding unavailable:', error.message);
         }
+
+        // Always create the property
+        addProperty(propertyData);
+        console.log('[Canvassing] Property added at:', lat.toFixed(6), lng.toFixed(6));
       });
 
       // Notify parent component

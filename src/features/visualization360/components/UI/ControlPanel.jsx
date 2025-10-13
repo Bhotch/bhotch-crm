@@ -322,7 +322,16 @@ export default function ControlPanel() {
           className="hidden"
         />
         <button
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            console.log('Button clicked!');
+            console.log('fileInputRef.current:', fileInputRef.current);
+            if (fileInputRef.current) {
+              console.log('Triggering file input click');
+              fileInputRef.current.click();
+            } else {
+              console.error('File input ref is null!');
+            }
+          }}
           disabled={ui.isLoading}
           className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
