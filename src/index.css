@@ -10,6 +10,9 @@
     max-height: calc(100vh - 320px);
     overflow-x: auto;
     overflow-y: auto;
+    /* GPU acceleration for smooth scrolling */
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Better scrollbar visibility */
@@ -34,11 +37,12 @@
 
   /* Performance optimizations - reduce reflow/repaint */
   .optimized-table-row {
-    will-change: background-color, transform;
+    will-change: background-color;
     backface-visibility: hidden;
+    contain: layout style paint;
   }
 
-  /* Smooth animations */
+  /* Smooth animations with reduced motion support */
   @keyframes fade-in-right {
     from {
       opacity: 0;
@@ -52,5 +56,23 @@
 
   .animate-fade-in-right {
     animation: fade-in-right 0.3s ease-out;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in-right {
+      animation: none;
+      transition: opacity 0.1s;
+    }
+
+    .optimized-table-row {
+      transition: background-color 0.1s;
+    }
+  }
+
+  /* Canvas performance optimization */
+  canvas {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
   }
 }

@@ -74,7 +74,7 @@ export default function DesignerView() {
     { name: 'White', hex: '#ffffff' },
   ];
 
-  // Handle image upload
+  // Handle image upload (optimized for performance)
   const handleImageUpload = async (event) => {
     const files = event.target.files;
     console.log('Upload triggered, files:', files ? files.length : 0);
@@ -90,17 +90,40 @@ export default function DesignerView() {
       const photoArray = [];
       const maxFiles = Math.min(files.length, 8);
 
-      // Compress and prepare images
-      for (let i = 0; i < maxFiles; i++) {
-        const compressed = await compressImage(files[i], 2048, 0.9);
-        photoArray.push({
-          id: Date.now() + i,
-          angle: `photo-${i + 1}`,
-          name: files[i].name,
-          file: compressed.file,
-          preview: compressed.url,
-          timestamp: new Date().toISOString()
-        });
+      // Process images in batches to avoid blocking UI
+      const batchSize = 2;
+      for (let i = 0; i < maxFiles; i += batchSize) {
+        const batch = [];
+        const endIndex = Math.min(i + batchSize, maxFiles);
+
+        // Process batch in parallel
+        for (let j = i; j < endIndex; j++) {
+          batch.push(
+            compressImage(files[j], 2048, 0.9).then(compressed => ({
+              id: Date.now() + j,
+              angle: `photo-${j + 1}`,
+              name: files[j].name,
+              file: compressed.file,
+              preview: compressed.url,
+              timestamp: new Date().toISOString()
+            }))
+          );
+        }
+
+        // Wait for batch to complete before next batch
+        const batchResults = await Promise.all(batch);
+        photoArray.push(...batchResults);
+
+        // Yield to browser between batches for better responsiveness
+        if (i + batchSize < maxFiles) {
+          await new Promise(resolve => {
+            if ('requestIdleCallback' in window) {
+              requestIdleCallback(() => resolve(), { timeout: 100 });
+            } else {
+              setTimeout(resolve, 0);
+            }
+          });
+        }
       }
 
       // Set the first image as uploaded
@@ -110,15 +133,23 @@ export default function DesignerView() {
       if (photoArray.length >= 2) {
         console.log(`Generating 3D model from ${photoArray.length} images...`);
 
-        const modelData = await ai3DModelGenerator.generateModel(photoArray, {
-          quality: photoArray.length >= 8 ? 'high' : 'medium',
-          includeTextures: true,
-          optimizeForWeb: true,
-        });
+        // Defer 3D model generation to not block UI
+        requestIdleCallback(async () => {
+          try {
+            const modelData = await ai3DModelGenerator.generateModel(photoArray, {
+              quality: photoArray.length >= 8 ? 'high' : 'medium',
+              includeTextures: true,
+              optimizeForWeb: true,
+            });
 
-        setModel3D(modelData);
+            setModel3D(modelData);
+            alert(`✅ 3D Model generated!\n\nMethod: ${modelData.method}\nQuality: ${modelData.quality}\n\nImages: ${photoArray.length}`);
+          } catch (modelError) {
+            console.error('3D model generation error:', modelError);
+          }
+        }, { timeout: 1000 });
 
-        alert(`✅ 3D Model generated!\n\nMethod: ${modelData.method}\nQuality: ${modelData.quality}\n\nImages: ${photoArray.length}`);
+        alert('✅ Images uploaded successfully! 3D model generation in progress...');
       } else {
         alert('✅ Image uploaded successfully!');
       }

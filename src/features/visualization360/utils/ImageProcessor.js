@@ -57,7 +57,7 @@ export const validateImage = async (file) => {
 };
 
 /**
- * Compress and optimize image
+ * Compress and optimize image (optimized for performance)
  */
 export const compressImage = async (file, maxWidth = 2048, quality = 0.9) => {
   return new Promise((resolve, reject) => {
@@ -65,43 +65,66 @@ export const compressImage = async (file, maxWidth = 2048, quality = 0.9) => {
     const url = URL.createObjectURL(file);
 
     img.onload = () => {
-      URL.revokeObjectURL(url);
+      // Use requestIdleCallback to defer processing until browser is idle
+      const processImage = () => {
+        try {
+          URL.revokeObjectURL(url);
 
-      const canvas = document.createElement('canvas');
-      let { width, height } = img;
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
 
-      // Scale down if necessary
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve({
-              file: compressedFile,
-              url: URL.createObjectURL(blob),
-              width,
-              height,
-            });
-          } else {
-            reject(new Error('Failed to compress image'));
+          // Scale down if necessary
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
           }
-        },
-        'image/jpeg',
-        quality
-      );
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d', {
+            alpha: false,
+            willReadFrequently: false
+          });
+
+          // Use better image smoothing for quality
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve({
+                  file: compressedFile,
+                  url: URL.createObjectURL(blob),
+                  width,
+                  height,
+                });
+              } else {
+                reject(new Error('Failed to compress image'));
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      // Use requestIdleCallback if available for non-blocking processing
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => processImage(), { timeout: 2000 });
+      } else {
+        // Fallback: use setTimeout with minimal delay
+        setTimeout(processImage, 0);
+      }
     };
 
     img.onerror = () => {
@@ -109,6 +132,8 @@ export const compressImage = async (file, maxWidth = 2048, quality = 0.9) => {
       reject(new Error('Failed to load image'));
     };
 
+    // Optimize image loading
+    img.decoding = 'async';
     img.src = url;
   });
 };

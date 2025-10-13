@@ -371,13 +371,17 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
 
     const ColumnFilter = ({ column, value, onChange, type }) => {
         const placeholder = type === 'number' ? 'Min value...' : 'Filter...';
+        const inputId = `filter-${column}`;
         return (
             <div className="relative">
                 <input
+                    id={inputId}
+                    name={inputId}
                     type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
+                    aria-label={`Filter ${column}`}
                     className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     onClick={(e) => e.stopPropagation()}
                 />
@@ -430,19 +434,25 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                         <div className="relative md:col-span-2">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
+                                id="globalSearch"
+                                name="globalSearch"
                                 type="text"
                                 placeholder="Search across all fields..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                aria-label="Search across all lead fields"
                                 className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
+                                id="filterDate"
+                                name="filterDate"
                                 type="date"
                                 value={filterDate}
                                 onChange={(e) => setFilterDate(e.target.value)}
+                                aria-label="Filter leads by date"
                                 className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
@@ -496,11 +506,14 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
 
                         <div className="flex items-center space-x-3">
                             <select
+                                id="itemsPerPage"
+                                name="itemsPerPage"
                                 value={itemsPerPage}
                                 onChange={(e) => {
                                     setItemsPerPage(Number(e.target.value));
                                     setCurrentPage(1);
                                 }}
+                                aria-label="Items per page"
                                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value={10}>10 per page</option>
@@ -536,12 +549,16 @@ function LeadsView({ leads, onAddLead, onEditLead, onDeleteLead, onRefreshLeads,
                         {availableColumns.map(column => (
                             <label
                                 key={column.key}
+                                htmlFor={`col-toggle-${column.key}`}
                                 className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
                             >
                                 <input
+                                    id={`col-toggle-${column.key}`}
+                                    name={`col-toggle-${column.key}`}
                                     type="checkbox"
                                     checked={tempVisibleColumns[column.key]}
                                     onChange={() => toggleColumnVisibility(column.key)}
+                                    aria-label={`Toggle ${column.label} column visibility`}
                                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{column.label}</span>

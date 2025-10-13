@@ -9,6 +9,10 @@ import {
   Play,
   Square,
   ClipboardList,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Edit2,
 } from 'lucide-react';
 import { useCanvassingStore } from './store/canvassingStore';
 import { useGeoLocation } from './hooks/useGeoLocation';
@@ -154,6 +158,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
   const [showDaySummary, setShowDaySummary] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [shouldCenter, setShouldCenter] = useState(true);
+  const [legendMinimized, setLegendMinimized] = useState(false);
 
   // Store state
   const {
@@ -475,16 +480,56 @@ const CanvassingViewLeaflet = ({ leads }) => {
                 }}
               >
                 <Popup>
-                  <div className="text-sm">
-                    <strong>{property.address || 'Unknown Address'}</strong>
-                    <br />
-                    Status: {property.status}
-                    {property.customerName && (
-                      <>
-                        <br />
-                        Customer: {property.customerName}
-                      </>
-                    )}
+                  <div className="text-sm min-w-[200px]">
+                    <div className="font-bold text-gray-900 mb-2">
+                      {property.address || 'Unknown Address'}
+                    </div>
+                    <div className="text-gray-600 mb-2">
+                      <div className="mb-1">
+                        <span className="font-semibold">Status:</span>{' '}
+                        <span className="capitalize">{property.status?.replace(/_/g, ' ')}</span>
+                      </div>
+                      {property.customerName && (
+                        <div className="mb-1">
+                          <span className="font-semibold">Customer:</span> {property.customerName}
+                        </div>
+                      )}
+                      {property.quality && (
+                        <div className="mb-1">
+                          <span className="font-semibold">Quality:</span> {property.quality}
+                        </div>
+                      )}
+                      {property.createdBy === 'map_click' && (
+                        <div className="text-xs text-blue-600 italic mt-2">
+                          📍 Pin dropped on map
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => {
+                          setSelectedProperty(property);
+                          setShowPropertySheet(true);
+                        }}
+                        className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        View/Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Delete property at ${property.address}?`)) {
+                            deleteProperty(property.id);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
+                        title="Delete Property"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -503,28 +548,50 @@ const CanvassingViewLeaflet = ({ leads }) => {
           </button>
         )}
 
-        {/* Legend */}
-        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-gray-200 p-5 max-w-xs z-[1000]">
-          <h3 className="text-base font-black text-gray-900 mb-4 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></div>
-            Property Status Legend
-          </h3>
-          <div className="space-y-2 text-sm">
-            <LegendItem color="#F97316" label="Needs Inspection" />
-            <LegendItem color="#9CA3AF" label="Knock Not Home" />
-            <LegendItem color="#EAB308" label="Follow-up Needed" />
-            <LegendItem color="#A855F7" label="Door Hanger" />
-            <hr className="my-3 border-gray-300" />
-            <LegendItem color="#10B981" label="Interested" bold />
-            <LegendItem color="#3B82F6" label="Appointment" bold />
-            <LegendItem color="#8B5CF6" label="Sold" bold />
-            <LegendItem color="#EF4444" label="Not Interested" bold />
+        {/* Legend - Minimizable */}
+        <div className={`absolute top-4 right-4 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-gray-200 max-w-xs z-[1000] transition-all ${legendMinimized ? 'w-auto' : ''}`}>
+          {/* Legend Header - Always Visible */}
+          <div
+            className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 rounded-t-2xl transition-colors"
+            onClick={() => setLegendMinimized(!legendMinimized)}
+          >
+            <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></div>
+              {legendMinimized ? 'Legend' : 'Property Status Legend'}
+            </h3>
+            <button
+              className="p-1 hover:bg-gray-200 rounded-lg transition-colors"
+              title={legendMinimized ? 'Expand Legend' : 'Minimize Legend'}
+            >
+              {legendMinimized ? (
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ChevronUp className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
           </div>
-          <div className="mt-4 pt-4 border-t-2 border-gray-200">
-            <p className="text-xs text-gray-600 bg-green-50 p-3 rounded-lg border border-green-200 font-medium">
-              💡 <strong>Tip:</strong> Click anywhere on the map to drop a new property pin. FREE geocoding powered by OpenStreetMap!
-            </p>
-          </div>
+
+          {/* Legend Content - Collapsible */}
+          {!legendMinimized && (
+            <div className="px-4 pb-4">
+              <div className="space-y-2 text-sm">
+                <LegendItem color="#F97316" label="Needs Inspection" />
+                <LegendItem color="#9CA3AF" label="Knock Not Home" />
+                <LegendItem color="#EAB308" label="Follow-up Needed" />
+                <LegendItem color="#A855F7" label="Door Hanger" />
+                <hr className="my-3 border-gray-300" />
+                <LegendItem color="#10B981" label="Interested" bold />
+                <LegendItem color="#3B82F6" label="Appointment" bold />
+                <LegendItem color="#8B5CF6" label="Sold" bold />
+                <LegendItem color="#EF4444" label="Not Interested" bold />
+              </div>
+              <div className="mt-4 pt-4 border-t-2 border-gray-200">
+                <p className="text-xs text-gray-600 bg-green-50 p-3 rounded-lg border border-green-200 font-medium">
+                  💡 <strong>Tip:</strong> Click anywhere on map to add property. Click marker popup's delete button to remove.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
