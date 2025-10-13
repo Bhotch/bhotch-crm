@@ -3,8 +3,10 @@ import {
   Home, Layers, Palette, Image, Upload, Download, Share2,
   ZoomIn, ZoomOut, RotateCcw, Grid, Eye, EyeOff,
   ChevronLeft, ChevronRight, Check,
-  Plus, Move, Lock, Unlock
+  Plus, Move, Lock, Unlock, Loader2
 } from 'lucide-react';
+import { compressImage } from './utils/ImageProcessor';
+import { ai3DModelGenerator } from './services/AI3DModelGenerator';
 
 /**
  * DesignerView - Modern property design interface inspired by hover.to/designer
@@ -19,7 +21,11 @@ export default function DesignerView() {
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [zoom, setZoom] = useState(100);
   const [showGrid, setShowGrid] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [model3D, setModel3D] = useState(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Sample property data
   const properties = [
@@ -67,6 +73,62 @@ export default function DesignerView() {
     { name: 'Tan', hex: '#d6bc8a' },
     { name: 'White', hex: '#ffffff' },
   ];
+
+  // Handle image upload
+  const handleImageUpload = async (event) => {
+    const files = event.target.files;
+    console.log('Upload triggered, files:', files ? files.length : 0);
+
+    if (!files || files.length === 0) {
+      console.warn('No files selected');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const photoArray = [];
+      const maxFiles = Math.min(files.length, 8);
+
+      // Compress and prepare images
+      for (let i = 0; i < maxFiles; i++) {
+        const compressed = await compressImage(files[i], 2048, 0.9);
+        photoArray.push({
+          id: Date.now() + i,
+          angle: `photo-${i + 1}`,
+          name: files[i].name,
+          file: compressed.file,
+          preview: compressed.url,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Set the first image as uploaded
+      setUploadedImage(photoArray[0].preview);
+
+      // If multiple images, generate 3D model
+      if (photoArray.length >= 2) {
+        console.log(`Generating 3D model from ${photoArray.length} images...`);
+
+        const modelData = await ai3DModelGenerator.generateModel(photoArray, {
+          quality: photoArray.length >= 8 ? 'high' : 'medium',
+          includeTextures: true,
+          optimizeForWeb: true,
+        });
+
+        setModel3D(modelData);
+
+        alert(`✅ 3D Model generated!\n\nMethod: ${modelData.method}\nQuality: ${modelData.quality}\n\nImages: ${photoArray.length}`);
+      } else {
+        alert('✅ Image uploaded successfully!');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to process images: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-50">
@@ -119,9 +181,39 @@ export default function DesignerView() {
 
           <div className="h-6 w-px bg-gray-300"></div>
 
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
-            <Upload className="w-4 h-4" />
-            Upload Photo
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            id="photo-upload-input"
+            name="photo-upload"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+
+          <button
+            onClick={() => {
+              console.log('Upload button clicked');
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
+            disabled={isUploading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Upload Photo{uploadedImage ? ' (Change)' : 's (1-8)'}
+              </>
+            )}
           </button>
 
           <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
@@ -226,11 +318,30 @@ export default function DesignerView() {
                 />
               )}
 
-              {!selectedProperty ? (
+              {uploadedImage ? (
+                <div className="absolute inset-0">
+                  <img
+                    src={uploadedImage}
+                    alt="Uploaded property"
+                    className="w-full h-full object-contain"
+                  />
+                  {model3D && (
+                    <div className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg">
+                      ✓ 3D Model Generated
+                    </div>
+                  )}
+                </div>
+              ) : !selectedProperty ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
                   <Image className="w-20 h-20 mb-4" />
-                  <p className="text-lg font-medium">Select or upload a property image</p>
+                  <p className="text-lg font-medium">Upload a property image</p>
                   <p className="text-sm mt-2">to start designing</p>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Upload Photos
+                  </button>
                 </div>
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">

@@ -16,7 +16,7 @@ import MapView from './features/map/MapView';
 import InternalCalendar from './features/calendar/InternalCalendar';
 import CommunicationsView from './features/communications/CommunicationsView';
 import DesignerView from './features/visualization360/DesignerView';
-import CanvassingView from './features/canvassing/CanvassingView';
+import CanvassingViewLeaflet from './features/canvassing/CanvassingViewLeaflet';
 import LeadFormModal from './features/leads/LeadFormModal';
 import LeadDetailModal from './features/leads/LeadDetailModal';
 import JobCountFormModal from './features/jobcount/JobCountFormModal';
@@ -272,7 +272,7 @@ function CrmApplication({ onLogout }) {
         )}
         {currentView === 'canvassing' && (
           <div style={{ height: 'calc(100vh - 120px)' }}>
-            <CanvassingView leads={leads} />
+            <CanvassingViewLeaflet leads={leads} />
           </div>
         )}
       </main>
