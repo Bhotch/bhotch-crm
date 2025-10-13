@@ -159,6 +159,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
   const [mapReady, setMapReady] = useState(false);
   const [shouldCenter, setShouldCenter] = useState(true);
   const [legendMinimized, setLegendMinimized] = useState(false);
+  const [isAddingProperty, setIsAddingProperty] = useState(false);
 
   // Store state
   const {
@@ -210,31 +211,64 @@ const CanvassingViewLeaflet = ({ leads }) => {
     });
   }, [leads, properties, addProperty]);
 
-  // Handle map click to add property
+  // Handle map click to add property with debouncing and duplicate prevention
   const handleMapClick = useCallback(async (lat, lng) => {
-    const propertyData = {
-      address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-      latitude: lat,
-      longitude: lng,
-      status: PROPERTY_STATUS.NOT_CONTACTED,
-      visits: [],
-      createdBy: 'map_click',
-      priority: 'normal',
-    };
-
-    // Try free geocoding with Nominatim
-    const geocoded = await geocodeNominatim(lat, lng);
-    if (geocoded) {
-      propertyData.address = geocoded.formatted;
-      propertyData.streetAddress = geocoded.streetAddress;
-      propertyData.city = geocoded.city;
-      propertyData.state = geocoded.state;
-      propertyData.zip = geocoded.zip;
+    // Prevent multiple rapid clicks
+    if (isAddingProperty) {
+      console.log('[Canvassing] Already adding property, ignoring click');
+      return;
     }
 
-    addProperty(propertyData);
-    console.log('[Canvassing] Property added:', propertyData.address);
-  }, [addProperty]);
+    // Check if property already exists at this exact location (within 5 meters)
+    const existingProperty = properties.find((p) => {
+      const distance = Math.sqrt(
+        Math.pow((p.latitude - lat) * 111000, 2) +
+        Math.pow((p.longitude - lng) * 111000, 2)
+      );
+      return distance < 5; // 5 meters threshold
+    });
+
+    if (existingProperty) {
+      console.log('[Canvassing] Property already exists at this location');
+      return;
+    }
+
+    setIsAddingProperty(true);
+
+    try {
+      const propertyData = {
+        address: `Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        latitude: lat,
+        longitude: lng,
+        status: PROPERTY_STATUS.NOT_CONTACTED,
+        visits: [],
+        createdBy: 'map_click',
+        priority: 'normal',
+      };
+
+      // Try free geocoding with Nominatim
+      try {
+        const geocoded = await geocodeNominatim(lat, lng);
+        if (geocoded) {
+          propertyData.address = geocoded.formatted;
+          propertyData.streetAddress = geocoded.streetAddress;
+          propertyData.city = geocoded.city;
+          propertyData.state = geocoded.state;
+          propertyData.zip = geocoded.zip;
+        }
+      } catch (error) {
+        console.warn('[Canvassing] Geocoding failed, using coordinates');
+      }
+
+      addProperty(propertyData);
+      console.log('[Canvassing] Property added:', propertyData.address);
+    } finally {
+      // Reset after 1 second to prevent rapid duplicate clicks
+      setTimeout(() => {
+        setIsAddingProperty(false);
+      }, 1000);
+    }
+  }, [addProperty, properties, isAddingProperty]);
 
   // Toggle tracking
   const handleToggleTracking = useCallback(() => {
