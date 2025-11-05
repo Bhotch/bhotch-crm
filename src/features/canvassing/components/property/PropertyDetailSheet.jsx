@@ -24,12 +24,15 @@ import { format } from 'date-fns';
  * PropertyDetailSheet Component
  * Bottom sheet that displays detailed property information
  */
-const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }) => {
-  const { updateProperty, addVisit } = useCanvassingStore();
+const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit, onUpdate }) => {
+  const { updateProperty: storeUpdateProperty, addVisit } = useCanvassingStore();
   const [activeTab, setActiveTab] = useState('details'); // details, visits, notes
 
   const [newNote, setNewNote] = useState('');
   const [quickStatus, setQuickStatus] = useState(property.status);
+
+  // Use custom onUpdate handler if provided, otherwise use store's updateProperty
+  const updateProperty = onUpdate || storeUpdateProperty;
 
   if (!property) return null;
 
