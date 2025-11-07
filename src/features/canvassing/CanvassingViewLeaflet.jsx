@@ -320,7 +320,11 @@ const CanvassingViewLeaflet = ({ leads }) => {
         table: 'canvassing_properties'
       }, (payload) => {
         console.log('[Canvassing] Pin deleted via realtime:', payload.old);
-        deleteProperty(payload.old.id);
+        // Check if we have this pin before deleting (avoid duplicate delete operations)
+        const exists = properties.find((p) => p.id === payload.old.id);
+        if (exists) {
+          deleteProperty(payload.old.id);
+        }
       })
       .subscribe();
 
@@ -426,14 +430,14 @@ const CanvassingViewLeaflet = ({ leads }) => {
     }, 0);
   }, [addProperty, updateProperty, deleteProperty, properties, isAddingProperty]);
 
-  // Handle update property - update database and local store
-  const handleUpdateProperty = useCallback(async (propertyId, updates) => {
-    try {
-      // Update local store first for instant feedback
-      updateProperty(propertyId, updates);
+  // Handle update property - OPTIMISTIC: update local first, then sync to database
+  const handleUpdateProperty = useCallback((propertyId, updates) => {
+    // Update local store IMMEDIATELY for instant feedback
+    updateProperty(propertyId, updates);
 
-      // Update database (this will trigger realtime for other users)
-      if (supabase) {
+    // Sync to database in background (non-blocking)
+    if (supabase) {
+      setTimeout(async () => {
         try {
           const { error } = await supabase
             .from('canvassing_properties')
@@ -444,24 +448,26 @@ const CanvassingViewLeaflet = ({ leads }) => {
             .eq('id', propertyId);
 
           if (error) {
-            console.error('[Canvassing] Failed to update pin in database:', error);
+            console.error('[Canvassing] Failed to sync update to database:', error);
+            // Could implement rollback here if needed
           } else {
-            console.log('[Canvassing] Pin updated in database:', propertyId);
+            console.log('[Canvassing] Update synced to database:', propertyId);
           }
         } catch (error) {
-          console.error('[Canvassing] Error updating pin in database:', error);
+          console.error('[Canvassing] Error syncing update:', error);
         }
-      }
-    } catch (error) {
-      console.error('[Canvassing] Error updating property:', error);
+      }, 0);
     }
   }, [updateProperty]);
 
-  // Handle delete property - delete from database and local store
-  const handleDeleteProperty = useCallback(async (propertyId) => {
-    try {
-      // Delete from database first (this will trigger realtime for other users)
-      if (supabase) {
+  // Handle delete property - OPTIMISTIC: delete local first, then sync to database
+  const handleDeleteProperty = useCallback((propertyId) => {
+    // Delete from local store IMMEDIATELY for instant feedback
+    deleteProperty(propertyId);
+
+    // Delete from database in background (non-blocking)
+    if (supabase) {
+      setTimeout(async () => {
         try {
           const { error } = await supabase
             .from('canvassing_properties')
@@ -469,19 +475,14 @@ const CanvassingViewLeaflet = ({ leads }) => {
             .eq('id', propertyId);
 
           if (error) {
-            console.error('[Canvassing] Failed to delete pin from database:', error);
+            console.error('[Canvassing] Failed to sync delete to database:', error);
           } else {
-            console.log('[Canvassing] Pin deleted from database:', propertyId);
+            console.log('[Canvassing] Delete synced to database:', propertyId);
           }
         } catch (error) {
-          console.error('[Canvassing] Error deleting pin from database:', error);
+          console.error('[Canvassing] Error syncing delete:', error);
         }
-      }
-
-      // Delete from local store
-      deleteProperty(propertyId);
-    } catch (error) {
-      console.error('[Canvassing] Error deleting property:', error);
+      }, 0);
     }
   }, [deleteProperty]);
 
