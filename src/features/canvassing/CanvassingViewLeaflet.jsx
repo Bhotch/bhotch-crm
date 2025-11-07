@@ -785,12 +785,10 @@ const CanvassingViewLeaflet = ({ leads }) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Delete property at ${property.address}?`)) {
-                            handleDeleteProperty(property.id);
-                          }
+                          handleDeleteProperty(property.id);
                         }}
                         className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
-                        title="Delete Property"
+                        title="Delete Property (no undo)"
                       >
                         <Trash2 className="w-3 h-3" />
                         Delete
@@ -874,11 +872,9 @@ const CanvassingViewLeaflet = ({ leads }) => {
             console.log('[Canvassing] Edit property:', property);
           }}
           onDelete={(property) => {
-            if (window.confirm('Delete this property from canvassing list?')) {
-              handleDeleteProperty(property.id);
-              setShowPropertySheet(false);
-              setSelectedProperty(null);
-            }
+            handleDeleteProperty(property.id);
+            setShowPropertySheet(false);
+            setSelectedProperty(null);
           }}
         />
       )}

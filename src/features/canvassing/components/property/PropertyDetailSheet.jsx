@@ -88,7 +88,7 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-30 animate-fade-in">
+    <div className="fixed inset-0 z-[15000] flex items-end justify-center bg-black bg-opacity-30 animate-fade-in">
       <div className="w-full max-w-2xl bg-white rounded-t-2xl shadow-2xl max-h-[85vh] overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
