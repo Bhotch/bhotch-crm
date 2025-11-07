@@ -40,23 +40,33 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit, 
     setQuickStatus(newStatus);
     updateProperty(property.id, { status: newStatus });
 
-    // Add visit log
-    addVisit(property.id, {
-      type: 'status_change',
-      status: newStatus,
-      notes: `Status changed to ${newStatus}`,
-    });
+    // Add visit log only if property has a real database ID (not temporary)
+    if (property.id && !property.id.toString().startsWith('temp_')) {
+      addVisit(property.id, {
+        type: 'status_change',
+        status: newStatus,
+        notes: `Status changed to ${newStatus}`,
+      });
+    }
   };
 
   const handleAddNote = () => {
     if (!newNote.trim()) return;
 
-    addVisit(property.id, {
-      type: 'note',
-      notes: newNote,
-    });
-
-    setNewNote('');
+    // Add note only if property has a real database ID (not temporary)
+    if (property.id && !property.id.toString().startsWith('temp_')) {
+      addVisit(property.id, {
+        type: 'note',
+        notes: newNote,
+      });
+      setNewNote('');
+    } else {
+      // For temporary properties, just update the notes field directly
+      updateProperty(property.id, {
+        notes: newNote,
+      });
+      setNewNote('');
+    }
   };
 
   const getStatusBadgeColor = (status) => {

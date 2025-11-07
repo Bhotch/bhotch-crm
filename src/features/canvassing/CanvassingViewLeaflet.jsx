@@ -435,6 +435,12 @@ const CanvassingViewLeaflet = ({ leads }) => {
     // Update local store IMMEDIATELY for instant feedback
     updateProperty(propertyId, updates);
 
+    // Don't sync to database if this is a temporary property (still being saved)
+    if (!propertyId || propertyId.toString().startsWith('temp_')) {
+      console.log('[Canvassing] Skipping database sync for temporary property:', propertyId);
+      return;
+    }
+
     // Sync to database in background (non-blocking)
     if (supabase) {
       setTimeout(async () => {
@@ -464,6 +470,12 @@ const CanvassingViewLeaflet = ({ leads }) => {
   const handleDeleteProperty = useCallback((propertyId) => {
     // Delete from local store IMMEDIATELY for instant feedback
     deleteProperty(propertyId);
+
+    // Don't sync to database if this is a temporary property (not saved yet)
+    if (!propertyId || propertyId.toString().startsWith('temp_')) {
+      console.log('[Canvassing] Skipping database delete for temporary property:', propertyId);
+      return;
+    }
 
     // Delete from database in background (non-blocking)
     if (supabase) {
