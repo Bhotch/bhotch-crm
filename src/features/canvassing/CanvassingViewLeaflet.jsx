@@ -331,8 +331,8 @@ const CanvassingViewLeaflet = ({ leads }) => {
     };
   }, [addProperty, updateProperty, deleteProperty]);
 
-  // Handle map click - OPTIMIZED to prevent 1000ms+ click handlers
-  const handleMapClick = useCallback(async (lat, lng) => {
+  // Handle map click - OPTIMIZED for instant feedback
+  const handleMapClick = useCallback((lat, lng) => {
     // Prevent multiple rapid clicks
     if (isAddingProperty) return;
 
@@ -347,61 +347,84 @@ const CanvassingViewLeaflet = ({ leads }) => {
 
     setIsAddingProperty(true);
 
-    try {
-      // Geocode first to get address
-      const geocoded = await geocodeNominatim(lat, lng);
-      const address = geocoded?.formatted || `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    // Generate temporary ID for instant feedback
+    const tempId = `temp_${Date.now()}`;
+    const tempAddress = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
-      // Prepare property data for database
-      const propertyData = {
-        address,
-        latitude: lat,
-        longitude: lng,
-        status: PROPERTY_STATUS.NOT_CONTACTED,
-        notes: geocoded?.streetAddress || null,
-        visit_count: 0,
-      };
+    // Add to local store IMMEDIATELY for instant visual feedback
+    const tempProperty = {
+      id: tempId,
+      address: tempAddress,
+      latitude: lat,
+      longitude: lng,
+      status: PROPERTY_STATUS.NOT_CONTACTED,
+      visits: [],
+      createdBy: 'map_click',
+      priority: 'normal',
+      notes: null,
+    };
 
-      // Save to Supabase database (this will trigger realtime for all users)
-      if (supabase) {
-        try {
-          const savedProperty = await canvassingService.properties.create(propertyData);
-          console.log('[Canvassing] Pin saved to database:', savedProperty.id);
+    addProperty(tempProperty);
 
-          // Add to local store with the database ID
-          addProperty({
-            ...propertyData,
-            id: savedProperty.id,
-            visits: [],
-            createdBy: 'map_click',
-            priority: 'normal',
-            createdAt: savedProperty.created_at,
-          });
-        } catch (error) {
-          console.error('[Canvassing] Failed to save pin to database:', error);
-          // Fallback: add to local store only
-          addProperty({
-            ...propertyData,
-            visits: [],
-            createdBy: 'map_click',
-            priority: 'normal',
-          });
+    // Save to database and geocode in background (non-blocking)
+    setTimeout(async () => {
+      try {
+        // Geocode to get real address
+        const geocoded = await geocodeNominatim(lat, lng);
+        const address = geocoded?.formatted || tempAddress;
+
+        // Prepare property data for database
+        const propertyData = {
+          address,
+          latitude: lat,
+          longitude: lng,
+          status: PROPERTY_STATUS.NOT_CONTACTED,
+          notes: geocoded?.streetAddress || null,
+          visit_count: 0,
+        };
+
+        // Save to Supabase database (this will trigger realtime for OTHER users)
+        if (supabase) {
+          try {
+            const savedProperty = await canvassingService.properties.create(propertyData);
+            console.log('[Canvassing] Pin saved to database:', savedProperty.id);
+
+            // Remove temp property and add the one with real database ID
+            deleteProperty(tempId);
+            addProperty({
+              ...propertyData,
+              id: savedProperty.id,
+              visits: [],
+              createdBy: 'map_click',
+              priority: 'normal',
+              createdAt: savedProperty.created_at,
+            });
+          } catch (error) {
+            console.error('[Canvassing] Failed to save pin to database:', error);
+            // Update temp property with real address if geocoding succeeded
+            if (geocoded) {
+              updateProperty(tempId, {
+                address,
+                notes: geocoded.streetAddress,
+              });
+            }
+          }
+        } else {
+          // No Supabase - just update temp property with real address
+          if (geocoded) {
+            updateProperty(tempId, {
+              address,
+              notes: geocoded.streetAddress,
+            });
+          }
         }
-      } else {
-        // No Supabase configured, add to local store only
-        addProperty({
-          ...propertyData,
-          visits: [],
-          createdBy: 'map_click',
-          priority: 'normal',
-        });
+      } catch (error) {
+        console.error('[Canvassing] Error in background save:', error);
+      } finally {
+        setTimeout(() => setIsAddingProperty(false), 500);
       }
-    } catch (error) {
-      console.error('[Canvassing] Error creating pin:', error);
-    } finally {
-      setTimeout(() => setIsAddingProperty(false), 500);
-    }
-  }, [addProperty, properties, isAddingProperty]);
+    }, 0);
+  }, [addProperty, updateProperty, deleteProperty, properties, isAddingProperty]);
 
   // Handle update property - update database and local store
   const handleUpdateProperty = useCallback(async (propertyId, updates) => {
@@ -771,7 +794,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
         {location && (
           <button
             onClick={handleCenterOnUser}
-            className="absolute bottom-6 right-6 p-4 bg-white rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110 active:scale-95 border-2 border-green-500 z-[1000]"
+            className="absolute bottom-6 right-6 p-4 bg-white rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110 active:scale-95 border-2 border-green-500 z-[500]"
             title="Center on my location"
           >
             <Navigation className="w-6 h-6 text-green-600" />
@@ -779,7 +802,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
         )}
 
         {/* Legend - Minimizable */}
-        <div className={`absolute top-4 right-4 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-gray-200 max-w-xs z-[1000] transition-all ${legendMinimized ? 'w-auto' : ''}`}>
+        <div className={`absolute top-4 right-4 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-gray-200 max-w-xs z-[500] transition-all ${legendMinimized ? 'w-auto' : ''}`}>
           {/* Legend Header - Always Visible */}
           <div
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 rounded-t-2xl transition-colors"
