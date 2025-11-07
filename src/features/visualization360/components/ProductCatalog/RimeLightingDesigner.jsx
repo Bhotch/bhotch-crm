@@ -186,11 +186,31 @@ const HouseModel = () => {
         <meshStandardMaterial color="#E5E7EB" roughness={0.8} />
       </mesh>
 
-      {/* Roof */}
+      {/* Roof - Semi-transparent to show lights underneath */}
       <mesh position={[0, 2.5, 0]} rotation={[0, Math.PI / 4, 0]} receiveShadow>
         <coneGeometry args={[4.5, 1.5, 4]} />
-        <meshStandardMaterial color="#8B7355" roughness={0.85} />
+        <meshStandardMaterial
+          color="#8B7355"
+          roughness={0.85}
+          transparent={true}
+          opacity={0.7}
+        />
       </mesh>
+
+      {/* Eave edges (ridges) - highlighting where lights should mount */}
+      <group position={[0, 2, 0]}>
+        {[0, 1, 2, 3].map((i) => {
+          const angle = (i * Math.PI) / 2;
+          const x = Math.cos(angle) * 3.5;
+          const z = Math.sin(angle) * 3.5;
+          return (
+            <mesh key={i} position={[x, 0, z]} rotation={[0, angle, 0]}>
+              <boxGeometry args={[0.1, 0.1, 7]} />
+              <meshStandardMaterial color="#6B4423" />
+            </mesh>
+          );
+        })}
+      </group>
 
       {/* Ground plane */}
       <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -324,7 +344,7 @@ const ColorPicker = ({ value, onChange, label }) => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 overflow-hidden">
       <div className="flex items-center justify-between">
         <label className="text-sm text-slate-400 font-semibold">{label}</label>
         <span className="text-xs text-green-400">100M Colors</span>
@@ -385,7 +405,7 @@ const ColorPicker = ({ value, onChange, label }) => {
 
       {/* Holiday Scenes Mode */}
       {colorMode === 'scenes' && (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-96 overflow-y-auto">
           {scenePresets.map((scene) => (
             <button
               key={scene.name}
@@ -682,7 +702,7 @@ const RimeLightingDesigner = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Products & Patterns */}
-        <div className="w-80 bg-slate-800/50 border-r border-slate-700 overflow-y-auto p-4">
+        <div className="w-80 bg-slate-800/50 border-r border-slate-700 overflow-y-auto p-4 relative z-10">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <Zap className="w-5 h-5" />
             Lighting Products
@@ -783,7 +803,7 @@ const RimeLightingDesigner = () => {
         </div>
 
         {/* Center - 3D Viewer */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative z-0 overflow-hidden">
           <Canvas shadows>
             <LightingScene
               lights={lights}
@@ -813,7 +833,7 @@ const RimeLightingDesigner = () => {
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
-            className="w-80 bg-slate-800/50 border-l border-slate-700 overflow-y-auto p-4"
+            className="w-80 bg-slate-800/50 border-l border-slate-700 overflow-y-auto p-4 relative z-10"
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold flex items-center gap-2">
