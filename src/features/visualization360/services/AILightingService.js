@@ -387,6 +387,134 @@ export const generateLightingVisualization = async (
 };
 
 /**
+ * Detect roofline in image using edge detection
+ */
+export const detectRoofline = async (imageFile) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(imageFile);
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Simple edge detection for roof area
+        const topThird = Math.floor(canvas.height * 0.33);
+        let rooflinePoints = [];
+
+        // Scan horizontal lines in top third for significant edges
+        for (let y = 0; y < topThird; y += 5) {
+          for (let x = 0; x < canvas.width; x += 10) {
+            const idx = (y * canvas.width + x) * 4;
+            const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+
+            // Check for edge (significant brightness change)
+            if (x > 0) {
+              const prevIdx = (y * canvas.width + (x - 10)) * 4;
+              const prevBrightness = (data[prevIdx] + data[prevIdx + 1] + data[prevIdx + 2]) / 3;
+
+              if (Math.abs(brightness - prevBrightness) > 30) {
+                rooflinePoints.push({ x, y, brightness });
+              }
+            }
+          }
+        }
+
+        // Group points by height to find main roofline
+        const heightGroups = {};
+        rooflinePoints.forEach(point => {
+          const bucket = Math.floor(point.y / 20) * 20;
+          if (!heightGroups[bucket]) heightGroups[bucket] = [];
+          heightGroups[bucket].push(point);
+        });
+
+        // Find most prominent roofline (most points)
+        let mainRoofline = null;
+        let maxPoints = 0;
+        Object.entries(heightGroups).forEach(([height, points]) => {
+          if (points.length > maxPoints) {
+            maxPoints = points.length;
+            mainRoofline = parseInt(height);
+          }
+        });
+
+        URL.revokeObjectURL(url);
+
+        resolve({
+          rooflineY: mainRoofline || Math.floor(canvas.height * 0.25),
+          rooflinePoints: heightGroups[mainRoofline] || [],
+          imageWidth: canvas.width,
+          imageHeight: canvas.height,
+          suggestedFixtureCount: Math.ceil(canvas.width / 150), // Fixture every ~150px
+        });
+      } catch (error) {
+        URL.revokeObjectURL(url);
+        reject(error);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image for roofline detection'));
+    };
+
+    img.src = url;
+  });
+};
+
+/**
+ * Calculate cost estimate based on house dimensions
+ */
+export const calculateCostEstimate = (imageMetadata, rooflineData) => {
+  // Estimate house width in feet (assume typical house photo is 40-60 feet wide)
+  const estimatedWidthFeet = 50;
+  const pixelsPerFoot = rooflineData.imageWidth / estimatedWidthFeet;
+
+  // Calculate linear feet of eave track needed (perimeter estimate)
+  // Typical house: front + 2 sides visible
+  const linearFeet = Math.ceil(estimatedWidthFeet * 2.5); // Front + sides
+
+  // Rime Lighting Pricing
+  const pricePerFoot = 32; // Track cost per foot
+  const fixtureCount = rooflineData.suggestedFixtureCount || Math.ceil(linearFeet / 2);
+  const controllerCost = 450; // Smart control module
+  const powerSupplyCost = 125; // Power supply
+  const installationPerFoot = 15; // Installation labor
+
+  const materialsCost = linearFeet * pricePerFoot;
+  const installationCost = linearFeet * installationPerFoot;
+  const hardwareCost = controllerCost + powerSupplyCost;
+
+  const subtotal = materialsCost + installationCost + hardwareCost;
+  const tax = subtotal * 0.08; // 8% tax
+  const total = subtotal + tax;
+
+  return {
+    linearFeet,
+    fixtureCount,
+    breakdown: {
+      materials: materialsCost,
+      installation: installationCost,
+      controller: controllerCost,
+      powerSupply: powerSupplyCost,
+      subtotal,
+      tax,
+      total
+    },
+    pricePerFoot: total / linearFeet,
+    estimatedWidthFeet
+  };
+};
+
+/**
  * Helper: Convert file to base64
  */
 const fileToBase64 = (file) => {
@@ -413,6 +541,8 @@ export default {
   applyLightingOverlay,
   generateWithReplicate,
   generateWithFal,
+  detectRoofline,
+  calculateCostEstimate,
   getLightingStyles,
   getAIProviders
 };
