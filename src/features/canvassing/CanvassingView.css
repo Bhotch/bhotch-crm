@@ -1,6 +1,23 @@
 /* Canvassing View Styles */
 /* Ensures proper map container dimensions and styling */
 
+/*
+ * Z-INDEX HIERARCHY (Application-wide standard)
+ * =============================================
+ * 15000+ : Modals & Dialogs (PropertyDetailSheet, DaySummary, etc.)
+ * 10000  : Leaflet Popups (marker click popups)
+ * 700    : Leaflet Popup Pane
+ * 600    : Leaflet Marker Pane
+ * 500    : Floating UI Elements (Legend, FAB buttons)
+ * 400    : Leaflet Overlay Pane
+ * 200    : Leaflet Tile Pane (Map tiles)
+ * 100    : Map Canvas
+ * 1      : Base Map Container
+ *
+ * IMPORTANT: All modals, dialogs, and overlays should use z-[15000] or higher
+ * to ensure they appear above the Leaflet map and its popups.
+ */
+
 .canvassing-view {
   position: relative;
   width: 100%;
