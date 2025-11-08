@@ -110,15 +110,15 @@ const generateLightingPrompt = (lightingStyle, intensity = 100, customPrompt = '
 };
 
 /**
- * Canvas-based fallback: Apply lighting overlay effect
+ * Canvas-based lighting overlay that follows actual roofline
  * This provides instant preview while AI generation is processing
  */
-export const applyLightingOverlay = async (imageFile, lightingStyle, intensity = 100) => {
+export const applyLightingOverlay = async (imageFile, lightingStyle, intensity = 100, rooflineData = null) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(imageFile);
 
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { alpha: true });
@@ -130,38 +130,137 @@ export const applyLightingOverlay = async (imageFile, lightingStyle, intensity =
         ctx.drawImage(img, 0, 0);
 
         const style = LIGHTING_STYLES[lightingStyle] || LIGHTING_STYLES.warmWhite;
+        const alpha = intensity / 100;
 
-        // Detect roof/eave area (top 20-30% of image)
-        const eaveHeight = Math.floor(img.height * 0.25);
-
-        // Create gradient overlay for eave lighting effect
-        const gradient = ctx.createLinearGradient(0, 0, 0, eaveHeight);
-        gradient.addColorStop(0, style.color + Math.floor(intensity * 0.8).toString(16).padStart(2, '0'));
-        gradient.addColorStop(0.5, style.color + Math.floor(intensity * 0.5).toString(16).padStart(2, '0'));
-        gradient.addColorStop(1, style.color + '00'); // Transparent
-
-        // Apply glow effect to eave area
-        ctx.globalCompositeOperation = 'screen';
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, img.width, eaveHeight);
-
-        // Add spotlights effect along roofline
-        ctx.globalCompositeOperation = 'lighter';
-        const spotCount = 8;
-        for (let i = 0; i < spotCount; i++) {
-          const x = (img.width / spotCount) * i + (img.width / spotCount / 2);
-          const y = eaveHeight * 0.3;
-
-          const spotGradient = ctx.createRadialGradient(x, y, 10, x, y, 150);
-          spotGradient.addColorStop(0, style.color + 'CC');
-          spotGradient.addColorStop(0.3, style.color + '66');
-          spotGradient.addColorStop(1, style.color + '00');
-
-          ctx.fillStyle = spotGradient;
-          ctx.fillRect(x - 150, y - 150, 300, 300);
+        // If no roofline data provided, detect it now
+        let roofline = rooflineData;
+        if (!roofline) {
+          try {
+            roofline = await detectRoofline(imageFile);
+          } catch (err) {
+            console.warn('Roofline detection failed, using fallback', err);
+            // Fallback to top 25% of image
+            roofline = {
+              rooflineY: Math.floor(img.height * 0.25),
+              rooflinePoints: [],
+              imageWidth: img.width,
+              imageHeight: img.height,
+              suggestedFixtureCount: Math.ceil(img.width / 150)
+            };
+          }
         }
 
-        // Reset composite mode
+        // Parse hex color to RGB
+        const hexToRgb = (hex) => {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+          return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+          } : { r: 255, g: 229, b: 180 };
+        };
+
+        const rgb = hexToRgb(style.color);
+
+        // Calculate fixture positions along the roofline
+        const fixtureCount = roofline.suggestedFixtureCount || 8;
+        const fixtures = [];
+
+        // If we have detected roofline points, use them
+        if (roofline.rooflinePoints && roofline.rooflinePoints.length > 0) {
+          // Sample points evenly across the roofline
+          const step = Math.max(1, Math.floor(roofline.rooflinePoints.length / fixtureCount));
+          for (let i = 0; i < roofline.rooflinePoints.length; i += step) {
+            if (fixtures.length >= fixtureCount) break;
+            fixtures.push(roofline.rooflinePoints[i]);
+          }
+        } else {
+          // Create fixtures evenly across the width at the detected roofline height
+          const spacing = img.width / (fixtureCount + 1);
+          for (let i = 1; i <= fixtureCount; i++) {
+            fixtures.push({
+              x: spacing * i,
+              y: roofline.rooflineY,
+              brightness: 255
+            });
+          }
+        }
+
+        // Draw LED track along roofline (thin line)
+        if (fixtures.length > 0) {
+          ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.6})`;
+          ctx.lineWidth = 3;
+          ctx.shadowColor = style.color;
+          ctx.shadowBlur = 8;
+
+          // Draw continuous line through fixture points
+          ctx.beginPath();
+          ctx.moveTo(0, fixtures[0].y);
+
+          fixtures.forEach(fixture => {
+            ctx.lineTo(fixture.x, fixture.y);
+          });
+
+          ctx.lineTo(img.width, fixtures[fixtures.length - 1].y);
+          ctx.stroke();
+
+          // Reset shadow
+          ctx.shadowBlur = 0;
+        }
+
+        // Draw individual LED fixtures with realistic glow
+        fixtures.forEach((fixture) => {
+          const x = fixture.x;
+          const y = fixture.y;
+
+          // LED fixture body (small dot)
+          ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.9})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Bright core
+          ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.7})`;
+          ctx.beginPath();
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Glow effect - multiple layers for realistic spread
+          const glowLayers = [
+            { radius: 80, alpha: alpha * 0.4 },
+            { radius: 120, alpha: alpha * 0.25 },
+            { radius: 180, alpha: alpha * 0.15 },
+            { radius: 240, alpha: alpha * 0.08 }
+          ];
+
+          glowLayers.forEach(layer => {
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, layer.radius);
+            gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${layer.alpha})`);
+            gradient.addColorStop(0.4, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${layer.alpha * 0.6})`);
+            gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x - layer.radius, y - layer.radius, layer.radius * 2, layer.radius * 2);
+          });
+
+          // Downward light beam (simulating wall wash)
+          const beamGradient = ctx.createLinearGradient(x, y, x, y + 300);
+          beamGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.3})`);
+          beamGradient.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.15})`);
+          beamGradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+          ctx.fillStyle = beamGradient;
+          ctx.fillRect(x - 40, y, 80, 300);
+        });
+
+        // Optional: Add atmospheric glow below roofline
+        const atmosphereGradient = ctx.createLinearGradient(0, roofline.rooflineY, 0, roofline.rooflineY + 200);
+        atmosphereGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.15})`);
+        atmosphereGradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = atmosphereGradient;
+        ctx.fillRect(0, roofline.rooflineY, img.width, 200);
         ctx.globalCompositeOperation = 'source-over';
 
         // Convert to blob
@@ -175,7 +274,8 @@ export const applyLightingOverlay = async (imageFile, lightingStyle, intensity =
                 width: canvas.width,
                 height: canvas.height,
                 method: 'canvas-overlay',
-                style: style.name
+                style: style.name,
+                rooflineData: roofline
               });
             } else {
               reject(new Error('Failed to create lighting overlay'));
@@ -322,13 +422,19 @@ export const generateLightingVisualization = async (
   intensity = 100,
   options = {}
 ) => {
-  const { preferredProvider = AI_PROVIDERS.CANVAS_FALLBACK, apiKey = null, onProgress } = options;
+  const { preferredProvider = AI_PROVIDERS.CANVAS_FALLBACK, apiKey = null, onProgress, rooflineData = null } = options;
 
   try {
+    // Detect roofline if not provided
+    let roofline = rooflineData;
+    if (!roofline && onProgress) {
+      onProgress({ status: 'detecting-roofline', progress: 5 });
+    }
+
     // Always generate instant preview first
     if (onProgress) onProgress({ status: 'generating-preview', progress: 10 });
 
-    const preview = await applyLightingOverlay(imageFile, lightingStyle, intensity);
+    const preview = await applyLightingOverlay(imageFile, lightingStyle, intensity, roofline);
 
     if (onProgress) onProgress({
       status: 'preview-ready',
@@ -358,7 +464,8 @@ export const generateLightingVisualization = async (
       return {
         preview,
         final: aiResult,
-        style: LIGHTING_STYLES[lightingStyle]
+        style: LIGHTING_STYLES[lightingStyle],
+        rooflineData: preview.rooflineData
       };
     }
 
@@ -368,19 +475,21 @@ export const generateLightingVisualization = async (
     return {
       preview,
       final: preview,
-      style: LIGHTING_STYLES[lightingStyle]
+      style: LIGHTING_STYLES[lightingStyle],
+      rooflineData: preview.rooflineData
     };
 
   } catch (error) {
     console.error('Lighting visualization failed:', error);
 
     // Always fallback to canvas overlay
-    const fallback = await applyLightingOverlay(imageFile, lightingStyle, intensity);
+    const fallback = await applyLightingOverlay(imageFile, lightingStyle, intensity, rooflineData);
 
     return {
       preview: fallback,
       final: fallback,
       style: LIGHTING_STYLES[lightingStyle],
+      rooflineData: fallback.rooflineData,
       error: error.message
     };
   }

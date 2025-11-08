@@ -457,6 +457,7 @@ export default function HouseVisualizerWithLighting() {
           intensity,
           {
             preferredProvider: getAIProviders().CANVAS_FALLBACK,
+            rooflineData: i === 0 ? rooflineData : null, // Use detected roofline for first photo
             onProgress: (progress) => {
               setProcessingProgress(Math.floor((i / photos.length) * 100 + (progress.progress / photos.length)));
             }
@@ -474,7 +475,7 @@ export default function HouseVisualizerWithLighting() {
       setIsProcessing(false);
       setProcessingStatus('');
     }
-  }, [photos, selectedStyle, intensity]);
+  }, [photos, selectedStyle, intensity, rooflineData]);
 
   const handleDownload = useCallback(() => {
     if (generatedImages.length === 0) return;
