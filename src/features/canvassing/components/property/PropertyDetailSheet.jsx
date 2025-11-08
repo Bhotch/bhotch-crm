@@ -24,12 +24,15 @@ import { format } from 'date-fns';
  * PropertyDetailSheet Component
  * Bottom sheet that displays detailed property information
  */
-const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }) => {
-  const { updateProperty, addVisit } = useCanvassingStore();
+const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit, onUpdate }) => {
+  const { updateProperty: storeUpdateProperty, addVisit } = useCanvassingStore();
   const [activeTab, setActiveTab] = useState('details'); // details, visits, notes
 
   const [newNote, setNewNote] = useState('');
   const [quickStatus, setQuickStatus] = useState(property.status);
+
+  // Use custom onUpdate handler if provided, otherwise use store's updateProperty
+  const updateProperty = onUpdate || storeUpdateProperty;
 
   if (!property) return null;
 
@@ -37,23 +40,33 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }
     setQuickStatus(newStatus);
     updateProperty(property.id, { status: newStatus });
 
-    // Add visit log
-    addVisit(property.id, {
-      type: 'status_change',
-      status: newStatus,
-      notes: `Status changed to ${newStatus}`,
-    });
+    // Add visit log only if property has a real database ID (not temporary)
+    if (property.id && !property.id.toString().startsWith('temp_')) {
+      addVisit(property.id, {
+        type: 'status_change',
+        status: newStatus,
+        notes: `Status changed to ${newStatus}`,
+      });
+    }
   };
 
   const handleAddNote = () => {
     if (!newNote.trim()) return;
 
-    addVisit(property.id, {
-      type: 'note',
-      notes: newNote,
-    });
-
-    setNewNote('');
+    // Add note only if property has a real database ID (not temporary)
+    if (property.id && !property.id.toString().startsWith('temp_')) {
+      addVisit(property.id, {
+        type: 'note',
+        notes: newNote,
+      });
+      setNewNote('');
+    } else {
+      // For temporary properties, just update the notes field directly
+      updateProperty(property.id, {
+        notes: newNote,
+      });
+      setNewNote('');
+    }
   };
 
   const getStatusBadgeColor = (status) => {
@@ -75,7 +88,7 @@ const PropertyDetailSheet = ({ property, onClose, onEdit, onDelete, onAddVisit }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-30 animate-fade-in">
+    <div className="fixed inset-0 z-[15000] flex items-end justify-center bg-black bg-opacity-30 animate-fade-in">
       <div className="w-full max-w-2xl bg-white rounded-t-2xl shadow-2xl max-h-[85vh] overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">

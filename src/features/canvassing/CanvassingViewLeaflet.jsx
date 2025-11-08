@@ -19,6 +19,8 @@ import { useGeoLocation } from './hooks/useGeoLocation';
 import { PROPERTY_STATUS } from './components/map/PropertyMarker';
 import PropertyDetailSheet from './components/property/PropertyDetailSheet';
 import DaySummary from './components/summary/DaySummary';
+import { canvassingService } from '../../api/supabaseService';
+import { supabase } from '../../lib/supabase';
 import './CanvassingView.css';
 
 // Fix Leaflet default icon issue
@@ -165,6 +167,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
   const {
     properties,
     addProperty,
+    updateProperty,
     deleteProperty,
     propertyFilter,
     setPropertyFilter,
@@ -211,7 +214,128 @@ const CanvassingViewLeaflet = ({ leads }) => {
     });
   }, [leads, properties, addProperty]);
 
-  // Handle map click - OPTIMIZED to prevent 1000ms+ click handlers
+  // Load existing pins from database on mount
+  useEffect(() => {
+    const loadExistingPins = async () => {
+      if (!supabase) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('canvassing_properties')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('[Canvassing] Failed to load existing pins:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          console.log(`[Canvassing] Loaded ${data.length} pins from database`);
+
+          // Add each pin to local store if it doesn't already exist
+          data.forEach((dbProperty) => {
+            const exists = properties.find((p) => p.id === dbProperty.id);
+            if (!exists) {
+              addProperty({
+                id: dbProperty.id,
+                address: dbProperty.address,
+                latitude: parseFloat(dbProperty.latitude),
+                longitude: parseFloat(dbProperty.longitude),
+                status: dbProperty.status,
+                notes: dbProperty.notes,
+                visits: [],
+                createdBy: 'database',
+                priority: 'normal',
+                createdAt: dbProperty.created_at,
+                updatedAt: dbProperty.updated_at,
+              });
+            }
+          });
+        }
+      } catch (error) {
+        console.error('[Canvassing] Error loading pins:', error);
+      }
+    };
+
+    loadExistingPins();
+  }, [addProperty]);
+
+  // Set up realtime subscription for new pins
+  useEffect(() => {
+    if (!supabase) {
+      console.log('[Canvassing] Supabase not configured, skipping realtime subscription');
+      return;
+    }
+
+    console.log('[Canvassing] Setting up realtime subscription for pins');
+
+    const channel = supabase
+      .channel('canvassing-pins')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'canvassing_properties'
+      }, (payload) => {
+        console.log('[Canvassing] New pin detected via realtime:', payload.new);
+
+        const newProperty = payload.new;
+
+        // Check if we already have this pin (avoid duplicates)
+        const exists = properties.find((p) => p.id === newProperty.id);
+        if (!exists) {
+          addProperty({
+            id: newProperty.id,
+            address: newProperty.address,
+            latitude: parseFloat(newProperty.latitude),
+            longitude: parseFloat(newProperty.longitude),
+            status: newProperty.status,
+            notes: newProperty.notes,
+            visits: [],
+            createdBy: 'realtime',
+            priority: 'normal',
+            createdAt: newProperty.created_at,
+            updatedAt: newProperty.updated_at,
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'canvassing_properties'
+      }, (payload) => {
+        console.log('[Canvassing] Pin updated via realtime:', payload.new);
+
+        const updatedProperty = payload.new;
+        updateProperty(updatedProperty.id, {
+          address: updatedProperty.address,
+          status: updatedProperty.status,
+          notes: updatedProperty.notes,
+          updatedAt: updatedProperty.updated_at,
+        });
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'canvassing_properties'
+      }, (payload) => {
+        console.log('[Canvassing] Pin deleted via realtime:', payload.old);
+        // Check if we have this pin before deleting (avoid duplicate delete operations)
+        const exists = properties.find((p) => p.id === payload.old.id);
+        if (exists) {
+          deleteProperty(payload.old.id);
+        }
+      })
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('[Canvassing] Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [addProperty, updateProperty, deleteProperty]);
+
+  // Handle map click - OPTIMIZED for instant feedback
   const handleMapClick = useCallback((lat, lng) => {
     // Prevent multiple rapid clicks
     if (isAddingProperty) return;
@@ -227,35 +351,152 @@ const CanvassingViewLeaflet = ({ leads }) => {
 
     setIsAddingProperty(true);
 
-    // Add property immediately with coordinates (instant feedback)
-    const propertyData = {
-      address: `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    // Generate temporary ID for instant feedback
+    const tempId = `temp_${Date.now()}`;
+    const tempAddress = `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+    // Add to local store IMMEDIATELY for instant visual feedback
+    const tempProperty = {
+      id: tempId,
+      address: tempAddress,
       latitude: lat,
       longitude: lng,
       status: PROPERTY_STATUS.NOT_CONTACTED,
       visits: [],
       createdBy: 'map_click',
       priority: 'normal',
+      notes: null,
     };
 
-    addProperty(propertyData);
+    addProperty(tempProperty);
 
-    // Geocode in background (doesn't block UI)
+    // Save to database and geocode in background (non-blocking)
     setTimeout(async () => {
       try {
+        // Geocode to get real address
         const geocoded = await geocodeNominatim(lat, lng);
-        if (geocoded && propertyData) {
-          // Update with real address (silent update)
-          propertyData.address = geocoded.formatted;
-          propertyData.streetAddress = geocoded.streetAddress;
+        const address = geocoded?.formatted || tempAddress;
+
+        // Prepare property data for database
+        const propertyData = {
+          address,
+          latitude: lat,
+          longitude: lng,
+          status: PROPERTY_STATUS.NOT_CONTACTED,
+          notes: geocoded?.streetAddress || null,
+          visit_count: 0,
+        };
+
+        // Save to Supabase database (this will trigger realtime for OTHER users)
+        if (supabase) {
+          try {
+            const savedProperty = await canvassingService.properties.create(propertyData);
+            console.log('[Canvassing] Pin saved to database:', savedProperty.id);
+
+            // Remove temp property and add the one with real database ID
+            deleteProperty(tempId);
+            addProperty({
+              ...propertyData,
+              id: savedProperty.id,
+              visits: [],
+              createdBy: 'map_click',
+              priority: 'normal',
+              createdAt: savedProperty.created_at,
+            });
+          } catch (error) {
+            console.error('[Canvassing] Failed to save pin to database:', error);
+            // Update temp property with real address if geocoding succeeded
+            if (geocoded) {
+              updateProperty(tempId, {
+                address,
+                notes: geocoded.streetAddress,
+              });
+            }
+          }
+        } else {
+          // No Supabase - just update temp property with real address
+          if (geocoded) {
+            updateProperty(tempId, {
+              address,
+              notes: geocoded.streetAddress,
+            });
+          }
         }
       } catch (error) {
-        // Silent fail
+        console.error('[Canvassing] Error in background save:', error);
       } finally {
         setTimeout(() => setIsAddingProperty(false), 500);
       }
     }, 0);
-  }, [addProperty, properties, isAddingProperty]);
+  }, [addProperty, updateProperty, deleteProperty, properties, isAddingProperty]);
+
+  // Handle update property - OPTIMISTIC: update local first, then sync to database
+  const handleUpdateProperty = useCallback((propertyId, updates) => {
+    // Update local store IMMEDIATELY for instant feedback
+    updateProperty(propertyId, updates);
+
+    // Don't sync to database if this is a temporary property (still being saved)
+    if (!propertyId || propertyId.toString().startsWith('temp_')) {
+      console.log('[Canvassing] Skipping database sync for temporary property:', propertyId);
+      return;
+    }
+
+    // Sync to database in background (non-blocking)
+    if (supabase) {
+      setTimeout(async () => {
+        try {
+          const { error } = await supabase
+            .from('canvassing_properties')
+            .update({
+              ...updates,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', propertyId);
+
+          if (error) {
+            console.error('[Canvassing] Failed to sync update to database:', error);
+            // Could implement rollback here if needed
+          } else {
+            console.log('[Canvassing] Update synced to database:', propertyId);
+          }
+        } catch (error) {
+          console.error('[Canvassing] Error syncing update:', error);
+        }
+      }, 0);
+    }
+  }, [updateProperty]);
+
+  // Handle delete property - OPTIMISTIC: delete local first, then sync to database
+  const handleDeleteProperty = useCallback((propertyId) => {
+    // Delete from local store IMMEDIATELY for instant feedback
+    deleteProperty(propertyId);
+
+    // Don't sync to database if this is a temporary property (not saved yet)
+    if (!propertyId || propertyId.toString().startsWith('temp_')) {
+      console.log('[Canvassing] Skipping database delete for temporary property:', propertyId);
+      return;
+    }
+
+    // Delete from database in background (non-blocking)
+    if (supabase) {
+      setTimeout(async () => {
+        try {
+          const { error } = await supabase
+            .from('canvassing_properties')
+            .delete()
+            .eq('id', propertyId);
+
+          if (error) {
+            console.error('[Canvassing] Failed to sync delete to database:', error);
+          } else {
+            console.log('[Canvassing] Delete synced to database:', propertyId);
+          }
+        } catch (error) {
+          console.error('[Canvassing] Error syncing delete:', error);
+        }
+      }, 0);
+    }
+  }, [deleteProperty]);
 
   // Toggle tracking
   const handleToggleTracking = useCallback(() => {
@@ -544,12 +785,10 @@ const CanvassingViewLeaflet = ({ leads }) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Delete property at ${property.address}?`)) {
-                            deleteProperty(property.id);
-                          }
+                          handleDeleteProperty(property.id);
                         }}
                         className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-colors flex items-center justify-center gap-1"
-                        title="Delete Property"
+                        title="Delete Property (no undo)"
                       >
                         <Trash2 className="w-3 h-3" />
                         Delete
@@ -566,7 +805,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
         {location && (
           <button
             onClick={handleCenterOnUser}
-            className="absolute bottom-6 right-6 p-4 bg-white rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110 active:scale-95 border-2 border-green-500 z-[1000]"
+            className="absolute bottom-6 right-6 p-4 bg-white rounded-full shadow-2xl hover:shadow-3xl transition-all hover:scale-110 active:scale-95 border-2 border-green-500 z-[500]"
             title="Center on my location"
           >
             <Navigation className="w-6 h-6 text-green-600" />
@@ -574,7 +813,7 @@ const CanvassingViewLeaflet = ({ leads }) => {
         )}
 
         {/* Legend - Minimizable */}
-        <div className={`absolute top-4 right-4 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-gray-200 max-w-xs z-[1000] transition-all ${legendMinimized ? 'w-auto' : ''}`}>
+        <div className={`absolute top-4 right-4 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border-2 border-gray-200 max-w-xs z-[500] transition-all ${legendMinimized ? 'w-auto' : ''}`}>
           {/* Legend Header - Always Visible */}
           <div
             className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 rounded-t-2xl transition-colors"
@@ -628,15 +867,14 @@ const CanvassingViewLeaflet = ({ leads }) => {
             setShowPropertySheet(false);
             setSelectedProperty(null);
           }}
+          onUpdate={handleUpdateProperty}
           onEdit={(property) => {
             console.log('[Canvassing] Edit property:', property);
           }}
           onDelete={(property) => {
-            if (window.confirm('Delete this property from canvassing list?')) {
-              deleteProperty(property.id);
-              setShowPropertySheet(false);
-              setSelectedProperty(null);
-            }
+            handleDeleteProperty(property.id);
+            setShowPropertySheet(false);
+            setSelectedProperty(null);
           }}
         />
       )}

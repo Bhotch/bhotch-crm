@@ -1,6 +1,23 @@
 /* Canvassing View Styles */
 /* Ensures proper map container dimensions and styling */
 
+/*
+ * Z-INDEX HIERARCHY (Application-wide standard)
+ * =============================================
+ * 15000+ : Modals & Dialogs (PropertyDetailSheet, DaySummary, etc.)
+ * 10000  : Leaflet Popups (marker click popups)
+ * 700    : Leaflet Popup Pane
+ * 600    : Leaflet Marker Pane
+ * 500    : Floating UI Elements (Legend, FAB buttons)
+ * 400    : Leaflet Overlay Pane
+ * 200    : Leaflet Tile Pane (Map tiles)
+ * 100    : Map Canvas
+ * 1      : Base Map Container
+ *
+ * IMPORTANT: All modals, dialogs, and overlays should use z-[15000] or higher
+ * to ensure they appear above the Leaflet map and its popups.
+ */
+
 .canvassing-view {
   position: relative;
   width: 100%;
@@ -166,4 +183,61 @@ body,
 
 .canvassing-view .gmnoprint {
   z-index: 2 !important;
+}
+
+/* Leaflet popup z-index fixes */
+.leaflet-pane {
+  z-index: 400;
+}
+
+.leaflet-tile-pane {
+  z-index: 200;
+}
+
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+
+.leaflet-shadow-pane {
+  z-index: 500;
+}
+
+.leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+
+.leaflet-popup-pane {
+  z-index: 700 !important;
+}
+
+.leaflet-map-pane canvas {
+  z-index: 100;
+}
+
+.leaflet-map-pane svg {
+  z-index: 200;
+}
+
+/* Ensure popups appear above all other elements */
+.leaflet-popup {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+.leaflet-popup-content-wrapper {
+  pointer-events: auto !important;
+}
+
+/* Make sure legend doesn't overlap popups */
+.map-legend {
+  z-index: 500 !important;
+}
+
+/* Floating button below popups */
+.map-floating-button {
+  z-index: 500 !important;
 }
